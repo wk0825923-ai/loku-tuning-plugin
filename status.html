@@ -202,6 +202,12 @@
         <div class="kv"><div class="k why">なぜ</div><div class="v"><b>レビューで発見。</b>漏えい時は委員会報告（速報約3〜5日・確報30日）＋本人通知の義務。要配慮は1件でも対象。台帳が無いと期限を守れず、判断も属人的になる。</div></div>
       </div></div>
 
+      <div class="item"><div class="top"><span class="rn new">⑰</span><span class="t">Cookie/匿名IDの取得タイミング</span><span class="law">外部送信規律</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">通知前は計測しないポリシー（notice-policy）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">通知必須ポリシーをONにすると、<b>通知提示(notice_shown)前の計測を403で拒否</b>。既定OFFで非破壊。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>レビューで発見。</b>通知内容(⑥)はあっても「通知が出る前に計測しない」タイミング保証が無く、通知前にデータを溜め得た。取得タイミングを運用で保証できるように。</div></div>
+      </div></div>
+
     </div>
   </section>
 

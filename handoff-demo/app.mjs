@@ -52,6 +52,7 @@ function seedStore() {
     profiling_opt_out: new Set(), // プロファイリング（タグ付け）を拒否した friend_id
     purpose_version: 1, // 利用目的のバージョン。上げると旧同意は"再同意待ち"になる（目的外利用の防止）
     incidents: [], // 漏えい等インシデント台帳（APPI26条 報告・本人通知の管理）
+    require_notice: false, // trueで「外部送信の通知を出す前の計測」を拒否（取得タイミングの保証）
   };
 }
 
@@ -204,6 +205,8 @@ function handle(store, req, res, body) {
     if (!d.anon_id || !d.page_slug) return send(400, { error: 'anon_id, page_slug required' });
     const page = pageBySlug(store, d.page_slug);
     if (!page) return send(404, { error: 'unknown page' });
+    // 外部送信規律：通知を出す前に計測データを取らない（取得タイミングの保証）。ポリシーON時のみ強制。
+    if (store.require_notice && d.notice_shown !== true) return send(403, { error: '外部送信の通知が未提示（notice_shown required）' });
 
     // upsert session（同一 anon×page は1行）
     const sess = store.sessions.get(d.anon_id) || {
@@ -456,6 +459,17 @@ function handle(store, req, res, body) {
     store.audit_log.push({ action: 'export', friend_id: d.friend_id, actor: String(d.actor), rows, encrypted, subject_request: d.subject_request === true, identity_verified: d.identity_verified === true, at: Date.now() });
     if (encrypted) return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: true, payload: encryptCsv(csv, d.passphrase) });
     return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: false, csv });
+  }
+
+  // GET/POST /api/attn/notice-policy — 「通知前は計測しない」ポリシーの取得/設定（取得タイミングの保証）
+  if (url.pathname === '/api/attn/notice-policy') {
+    if (req.method === 'GET') return send(200, { require_notice: store.require_notice });
+    if (req.method === 'POST') {
+      let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+      if (typeof d.require !== 'boolean') return send(400, { error: 'require (boolean) required' });
+      store.require_notice = d.require;
+      return send(200, { ok: true, require_notice: store.require_notice });
+    }
   }
 
   // POST /api/attn/incident — 漏えい等インシデントを記録し、報告・本人通知の要否を判定（APPI26条）

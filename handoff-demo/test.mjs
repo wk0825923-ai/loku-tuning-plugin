@@ -186,6 +186,18 @@ async function suite() {
     eq((await post('/api/attn/incident', {})).status, 400, 'summary欠落→400');
   });
 
+  // 1i) 外部送信通知のタイミング保証：ポリシーON時は通知提示前の計測を拒否
+  await withServer(async ({ post, get }) => {
+    // 既定OFF：通知フラグ無しでも従来どおり計測できる（非破壊）
+    eq((await (await get('/api/attn/notice-policy')).json()).require_notice, false, '既定は通知必須OFF');
+    ok((await (await post('/api/attn/collect', { anon_id: 'NT0', page_slug: 'seitai-lp-a', boxes: HOT_BOXES })).json()).ok, 'OFF時は通知なしでも計測OK');
+    // ポリシーON
+    ok((await (await post('/api/attn/notice-policy', { require: true })).json()).ok, '通知必須ポリシーON');
+    eq((await post('/api/attn/collect', { anon_id: 'NT1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES })).status, 403, 'ON時は通知未提示の計測を拒否(403)');
+    ok((await (await post('/api/attn/collect', { anon_id: 'NT2', page_slug: 'seitai-lp-a', notice_shown: true, boxes: HOT_BOXES })).json()).ok, 'notice_shown:trueなら計測OK');
+    eq((await post('/api/attn/notice-policy', { require: 'yes' })).status, 400, 'requireは真偽値必須→400');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
