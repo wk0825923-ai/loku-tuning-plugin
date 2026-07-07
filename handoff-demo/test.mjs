@@ -311,6 +311,14 @@ async function suite() {
     // NG拡充：接骨院で「五十肩」等の適応症＋薬機表現をブロック
     ok((await (await post('/api/attn/check-copy', { text: '五十肩が改善します', industry: 'judo' })).json()).blocked, '接骨院で適応症「五十肩」＋改善をブロック');
     ok((await (await post('/api/attn/check-copy', { text: '根本改善で即効性', industry: 'rikaku' })).json()).blocked, '「根本改善/即効性」を薬機NGでブロック');
+    // 症状名×効能想起の共起（推知）：症状名単独は可、共起で整体=要承認/接骨院=ブロック
+    ok(!(await (await post('/api/attn/check-copy', { text: '肩こりでお悩みの方へ', industry: 'judo' })).json()).blocked, '症状名の単独言及はブロックしない');
+    {
+      const rk = await (await post('/api/attn/check-copy', { text: '肩こりがスッキリ軽くなります', industry: 'rikaku' })).json();
+      const jd = await (await post('/api/attn/check-copy', { text: '肩こりがスッキリ軽くなります', industry: 'judo' })).json();
+      ok(!rk.blocked && rk.violations.some(v => v.category === '要配慮の推知（適応症標榜）'), '整体は共起を要承認で検出（非ブロック）');
+      ok(jd.blocked && jd.violations.some(v => v.category === '要配慮の推知（適応症標榜）'), '接骨院は症状×効能の共起をブロック（適応症標榜）');
+    }
     // 健康語の推知フラグ
     await post('/api/attn/collect', { anon_id: 'h1', page_slug: 'seitai-lp-a', entry: { query: '肩こり 整体 世田谷' }, boxes: HOT_BOXES });
     await post('/api/attn/merge', { anon_id: 'h1', friend_id: 'f_h1', consented: true });

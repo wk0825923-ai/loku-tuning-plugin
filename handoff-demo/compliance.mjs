@@ -50,8 +50,15 @@ export function checkCopy(text = '', industry = 'rikaku') {
       }
     }
   }
+  // 要配慮の推知：症状名×効能想起語の共起（enumerated業種はhigh＝適応症標榜リスク）
+  const inf = detectSensitiveInference(text);
+  if (inf.inferred) {
+    const sev = prof.enumerated ? 'high' : 'medium';
+    violations.push({ term: `${inf.health.join('/')}×${inf.cues.join('/')}`, category: '要配慮の推知（適応症標榜）', severity: sev,
+      reason: sev === 'high' ? '公開不可（症状×効能の共起＝適応症標榜の芽）' : '要人承認（症状×効能の共起・推知に配慮）' });
+  }
   const blocked = violations.some(v => v.severity === 'high');
-  return { ok: violations.length === 0, blocked, industry, industryLabel: prof.label, violations };
+  return { ok: violations.length === 0, blocked, industry, industryLabel: prof.label, inference: inf, violations };
 }
 
 // ② 要配慮個人情報ガード：結合してはいけない健康・症状系フィールドを検出して除去
@@ -61,7 +68,21 @@ const SENSITIVE_KEYS = ['symptom', 'symptoms', 'diagnosis', 'disease', 'conditio
 const HEALTH_TERMS = ['肩こり', '腰痛', '頭痛', '神経痛', 'ヘルニア', '五十肩', '坐骨神経痛', 'ぎっくり腰', '産後', '骨盤', '冷え', 'むくみ', '自律神経', '不眠', 'めまい', '猫背'];
 /** テキストに含まれる健康・症状語を返す（空なら健康関連なし） */
 export function detectHealthTerms(text = '') {
-  return HEALTH_TERMS.filter(t => String(text).includes(t));
+  const norm = normalizeForCheck(text);
+  return HEALTH_TERMS.filter(t => norm.includes(normalizeForCheck(t)));
+}
+
+// 効能・改善を想起させる"やわらかい"語。単体では罰則語ではないが、
+// 症状名と共起すると「適応症の標榜」に近づく（enumerated業種で特に問題）。
+const BENEFIT_CUES = ['軽く', 'スッキリ', 'すっきり', '楽に', 'ラクに', '和ら'
+  , '緩和', 'アプローチ', 'ケア', 'ほぐす', 'ほぐし', '改善', '解消', '整え', 'すっと'];
+/** 健康語×効能想起語の共起を検出（要配慮の"推知"）。共起があれば cues を返す */
+export function detectSensitiveInference(text = '') {
+  const norm = normalizeForCheck(text);
+  const health = detectHealthTerms(text);
+  if (health.length === 0) return { inferred: false, health: [], cues: [] };
+  const cues = BENEFIT_CUES.filter(c => norm.includes(normalizeForCheck(c)));
+  return { inferred: cues.length > 0, health, cues };
 }
 
 /** collect ペイロードから要配慮フィールドを剥がす。剥がしたキー名を返す（記録・監査用） */
