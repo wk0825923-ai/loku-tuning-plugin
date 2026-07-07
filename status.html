@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>現在地レポート — Loku Tuning 法務ハードニング・ループ</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 70% -10%, #16324b33, transparent 60%),var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 22px}
+  .num{font-family:var(--num);font-feature-settings:"tnum"}
+  header{padding:50px 0 18px}
+  .badge{display:inline-block;font-size:11px;letter-spacing:.16em;color:var(--grn);border:1px solid #22c58b55;border-radius:999px;padding:6px 15px;margin-bottom:16px}
+  h1{font-size:clamp(24px,4.4vw,34px);font-weight:800}
+  .lead{color:var(--sub);margin-top:12px;font-size:15px}
+
+  .now{margin:24px 0 6px;background:linear-gradient(160deg,#12261c,#0f1a1a);border:1px solid #22c58b33;border-radius:16px;padding:20px 22px}
+  .now h2{font-size:15px;color:var(--grn);letter-spacing:.06em;margin-bottom:10px}
+  .now .row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:720px){.now .row{grid-template-columns:1fr 1fr}}
+  .stat{background:#0d1418;border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center}
+  .stat .b{font-family:var(--num);font-size:24px;font-weight:800;color:var(--ink)}
+  .stat .l{color:var(--mut);font-size:11.5px;margin-top:3px}
+  .now p{color:var(--sub);font-size:13px;margin-top:12px}
+
+  section{padding:26px 0;border-top:1px solid var(--line)}
+  .kicker{font-size:12px;letter-spacing:.14em;color:var(--gold);font-weight:700;margin-bottom:12px}
+  h2.sec{font-size:20px;font-weight:800}
+  .note{color:var(--sub);font-size:13.5px;margin-top:6px}
+
+  .layers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+  @media(max-width:720px){.layers{grid-template-columns:1fr}}
+  .layer{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--panel)}
+  .layer h3{font-size:14px;margin-bottom:6px}
+  .layer.done h3{color:var(--grn)} .layer.wip h3{color:var(--blue)} .layer.ops h3{color:var(--gold)}
+  .layer p{color:var(--sub);font-size:12.5px}
+  .layer .tag{font-family:var(--num);font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:5px;display:inline-block;margin-top:8px}
+  .layer.done .tag{color:#04180f;background:var(--grn)} .layer.wip .tag{color:#04180f;background:var(--grn)} .layer.ops .tag{color:#04180f;background:var(--gold)}
+
+  .log{margin-top:16px;display:flex;flex-direction:column;gap:12px}
+  .item{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
+  .item .top{display:flex;align-items:center;gap:12px;padding:13px 16px;background:#0f1620;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .rn{font-family:var(--num);font-weight:800;font-size:13px;color:#04180f;background:var(--grn);border-radius:6px;padding:3px 9px;white-space:nowrap}
+  .rn.new{background:var(--gold)}
+  .item .top .t{font-weight:800;font-size:14.5px}
+  .item .top .law{color:var(--mut);font-size:11px;margin-left:auto;font-family:var(--num)}
+  .item .bd{padding:6px 0}
+  .kv{display:grid;grid-template-columns:92px 1fr;gap:0;border-bottom:1px solid #1a2230}
+  .kv:last-child{border-bottom:0}
+  .kv .k{padding:11px 14px;font-size:11.5px;color:var(--mut);background:#0e151d;border-right:1px solid #1a2230}
+  .kv .v{padding:11px 14px;font-size:13px;color:var(--sub)}
+  .kv .v b{color:var(--ink)}
+  .why{color:var(--gold)!important}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;color:var(--mut);font-size:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:4px;display:inline-block}
+
+  .next{background:var(--panel);border:1px dashed var(--line);border-radius:14px;padding:18px 20px;margin-top:8px}
+  .next li{list-style:none;padding-left:22px;position:relative;margin-bottom:9px;color:var(--sub);font-size:13.5px}
+  .next li::before{content:"→";position:absolute;left:0;color:var(--gold)}
+  .next li b{color:var(--ink)}
+  footer{padding:26px 0 60px;color:var(--mut);font-size:12px;text-align:center}
+  footer a{color:var(--grn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">現在地レポート / STATUS</div>
+    <h1>Loku Tuning 法務ハードニング・ループ ― 現在地</h1>
+    <p class="lead">「何を・どんな改善を・なぜ（何に気づいて）行ったか」を1周ずつ記録。ここを見れば、いま何が済んでいて次に何をすべきかが分かる。</p>
+  </header>
+
+  <div class="now">
+    <h2>いまの現在地（TL;DR）</h2>
+    <div class="row">
+      <div class="stat"><div class="b num">14 / 14</div><div class="l">回した改善ループ</div></div>
+      <div class="stat"><div class="b num">①→⑭</div><div class="l">監査リスクの網羅（元は⑧まで）</div></div>
+      <div class="stat"><div class="b num">9,000</div><div class="l">回帰テスト pass（fail=0）</div></div>
+      <div class="stat"><div class="b num">運用層のみ</div><div class="l">残る未対応（機械で解消不可）</div></div>
+    </div>
+    <p><b>フェーズは2段階で進んだ。</b>前半 ①〜⑧＝<b>既知監査（legal-audit.html）の穴</b>をコード＋テストで解消。後半 ⑨〜⑭＝<b>網羅性レビューで"元の監査に無かった論点"を発掘</b>し、実装＋監査書への追記まで実施。<b>機械で解消できる層と設計層（RLS/保持/委託先）は全て実装＋テスト済</b>。残るは弁護士・運用でしか埋められない層だけ。</p>
+  </div>
+
+  <section>
+    <div class="kicker">3層モデル ― どこまで来たか</div>
+    <h2 class="sec">「法的に100%」は言い切れない。だから層で管理する</h2>
+    <div class="layers">
+      <div class="layer done"><h3>① 機械で解消済</h3><p>NG表現ブロック（正規化で回避も遮断）／症状の非結合／同意ゲート／削除・停止／推知フラグ／保持purge／外部送信通知／CSV安全管理／越境判定／プロファイリング開示・拒否／本人確認／監査ログ</p><span class="tag">コード＋回帰テスト</span></div>
+      <div class="layer wip"><h3>② 設計で低減 → 実装済へ</h3><p>RLSテナント分離（DBのRLS＋アプリ層のx-tenant-idで403）／アクセス制御／保持期間／委託先レジストリ。当初"設計止まり"だった項目もコード＋テストに格上げ完了。</p><span class="tag">実装＋テスト済</span></div>
+      <div class="layer ops"><h3>③ 運用・専門家</h3><p>DPA（委託契約）／従業者教育／特商法の個別表記／弁護士・個人情報保護委員会の最終確認。<b>ソフトウェアでは解消不可＝人が担う領域。</b></p><span class="tag">残タスク</span></div>
+    </div>
+    <p class="note">＝「解消できない」のではなく、機械で解消できる分は解消し切った状態。残りは性質上コードの外。</p>
+  </section>
+
+  <section>
+    <div class="kicker">改善ログ ― 何を / どんな改善 / なぜ至ったか</div>
+    <h2 class="sec">14周の記録（各周＝1つの穴を塞ぐ）</h2>
+    <div class="legend">
+      <span><span class="sw" style="background:var(--grn)"></span>①〜⑧ 既知監査の穴を解消</span>
+      <span><span class="sw" style="background:var(--gold)"></span>⑨〜⑭ レビューで新発見した論点</span>
+    </div>
+    <div class="log">
+
+      <div class="item"><div class="top"><span class="rn">①</span><span class="t">NG表現の正規化バイパス封じ</span><span class="law">柔整/あはき・薬機・景表</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">広告コピーのNGワードチェッカー（checkCopy）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">正規化 <b>normalizeForCheck</b>（NFKC＋全空白除去＋大文字化）を通してから照合。辞書側も同じ正規化。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v">実際に叩いたら <b>「Ｎｏ．１」「１００％」「絶　対」「な お る」</b> が素通りしていた。全角・文字間スペース・ひらがな開きで規制を回避でき、業務停止/罰金の芽になる。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn">②</span><span class="t">症状名×効能想起の共起ブロック</span><span class="law">柔整/あはき（適応症標榜）</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">要配慮の"推知"検出（detectSensitiveInference）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">「症状名＋効能を想起させる語」の<b>共起</b>を検出し、接骨院/鍼灸（enumerated業種）ではhighに格上げしてブロック。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>「肩こりがスッキリ軽くなります」がpassしていた。</b>症状名の単独言及は可でも、効能想起と組むと"適応症の標榜"に近づく。業種で厳格度を変える必要があった。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn">③</span><span class="t">英語/ローマ字＋カタカナ開き</span><span class="law">薬機・景表</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">NG辞書の言語カバレッジ</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">英語（cure/guaranteed/the best 等）とカタカナ変種（ゼッタイ/ナオリ）を追加。一般語と衝突する heal/best は誤検知回避でmedium。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>「Guaranteed to cure」「the BEST」「ゼッタイに良くなる」が素通り。</b>日本語辞書だけでは英語混じり・カタカナ開きの誇大表現を止められなかった。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn">④</span><span class="t">要配慮ガードの再帰対応</span><span class="law">APPI 要配慮個人情報</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">症状/診断の非結合ガード（stripSensitive）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">大文字小文字を無視＋<b>ネスト/配列を再帰走査</b>して剥離。剥がしたキーパスを記録。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>{ Symptom（大文字）, profile.diagnosis（ネスト） } が剥がれず</b>、要配慮情報が実名に結合され得た。トップ階層・小文字キーしか見ていなかった。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn">⑤</span><span class="t">保持期間 purge</span><span class="law">APPI 安全管理措置</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">計測データの保存期間管理（purgeExpired / POST purge）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">最終アクセスから既定<b>730日</b>を過ぎたセッション/box_stats/identity/tag_firesをカスケード消去（cron想定）。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>schema.sqlに「古い行をpurge」の方針はあるがコード実装が無く"設計止まり"だった。</b>保存期間の管理は安全管理措置の要。実行できる形に落とした。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn">⑥</span><span class="t">外部送信規律の通知</span><span class="law">改正電気通信事業法</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">外部送信の通知（buildDisclosure / GET disclosure）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">「何を・どこへ・何のため」を開示。第三者提供なし・要配慮除外を明示。ポリシーURLは店舗が設定（代筆しない）。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>コード内に通知の仕組みが1つも無かった（grep 0件）。</b>SDKが閲覧履歴等を送る以上、送信情報・送信先・目的の通知/公表義務が残る。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn">⑦</span><span class="t">CSV持ち出しの安全管理</span><span class="law">APPI 安全管理措置</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">開示請求向けCSVエクスポート（POST export）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v"><b>持ち出しログ（actor必須）＋CSV数式インジェクション対策＋任意AES-256-GCM暗号化</b>（scrypt鍵導出）。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v">監査がCSV持ち出しの漏えいリスクを挙げていたが<b>エクスポート機能自体が未実装だった</b>。作るなら最初から安全に。=csvは表計算での数式実行リスクもあるため無害化。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn">⑧</span><span class="t">Google連携のスコープ最小化</span><span class="law">Google APIs 規約</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">Search Console連携（assertReadonlyScope）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">必要スコープを <b>webmasters.readonly</b> に固定し、書込/サイト認証scopeが混じれば実行時に拒否。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>fetchSearchConsoleがスコープを強制しておらず</b>、過剰権限のトークンでも動いてしまう状態だった。スコープ最小化・目的外利用禁止の担保。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn new">⑨</span><span class="t">RLSテナント分離（アプリ層）</span><span class="law">APPI 安全管理措置</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">テナント間のデータ隔離（tenantOfFriend / x-tenant-id）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">2テナントのseedを用意し、<b>自テナント外のjourney/tags/export/disclosureを403</b>。DB側はschema.sqlのRLSポリシーと二重で担保。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v">RLSが<b>legal-audit/schema.sqlで"設計"止まり</b>で、デモは単一テナント＝アプリ層に分離が無かった。他店のデータが混ざる事故を防ぐため実装＋テストへ格上げ。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn new">⑩</span><span class="t">個人関連情報の第三者提供</span><span class="law">APPI 第31条</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">結合(merge)時の同意 確認・記録（consent_record）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">同意の由来（<b>誰が・どの方法で・いつ</b>取得したか）を記録。揃わない同意は"不完全"としてフラグ、証跡APIで引ける。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>網羅性レビューで発見。</b>Loku側では匿名視線＝「個人関連情報」。店舗が実名結合＝提供先で個人データ化する構図で、<b>提供元(Loku)に本人同意の確認・記録義務</b>が生じる。同意フラグを受けるだけでは足りなかった。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn new">⑪</span><span class="t">越境移転／委託先の監督</span><span class="law">APPI 第28/25条</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">委託先レジストリ＋越境判定（subprocessors）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">委託先（Supabase/Google/LINE）と処理目的・保管国を管理し越境を判定。<b>保管国"未設定"は"要確認"に倒す</b>（誤って国内扱いしない）。保管国は運用者が登録＝当方で断定しない。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>レビューで発見。</b>データが国外保管なら移転先国等の情報提供義務(28条)＋委託先監督(25条)。保管国を把握していないと越境の有無すら判定できない。事実に反する国名は書けないので"欄"にした。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn new">⑫</span><span class="t">プロファイリングの透明性・拒否権</span><span class="law">利用目的の特定／消費者保護</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">タグ付けロジックの開示と停止（profiling-info / opt-out）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">どのタグを・どの注視・どの閾値で付けるかを開示。拒否すると<b>既存タグを撤回＋以後は再付与しない</b>。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>レビューで発見。</b>「ホットリード」等のタグ付け＝見込み度合いの自動プロファイリング。本人が基準を知れず断れないのは不透明で、消費者の納得感・利用目的特定の観点で望ましくない。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn new">⑬</span><span class="t">未成年の同意（保護者同意）</span><span class="law">APPI 同意能力</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">未成年フラグ＋保護者同意の記録（is_minor / guardian_consent）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">未成年は「本人＋<b>保護者同意</b>」が揃って初めて記録完全。保護者同意なしは不完全フラグ。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>レビューで発見。</b>施術所の患者には未成年が含まれ得て、症状（要配慮）も絡む。低年齢本人の同意は有効と認められにくく、法定代理人の同意が要る。</div></div>
+      </div></div>
+
+      <div class="item"><div class="top"><span class="rn new">⑭</span><span class="t">開示・削除請求への本人確認</span><span class="law">APPI 開示・利用停止等</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">本人起点の請求の本人確認（subject_request / identity_verified）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">本人起点(subject_request)の開示/削除は<b>identity_verified必須</b>、未了なら403。確認の有無を証跡に記録。社内運用の請求とは区別。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>レビューで発見。</b>export/forgetがactor(操作スタッフ)しか見ておらず、<b>請求者＝本人の担保が無い</b>。なりすましで他人のデータを開示・不正削除される恐れがあった。</div></div>
+      </div></div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">次の一手 ― まだ発掘余地のある論点</div>
+    <h2 class="sec">ここから先に回せる候補</h2>
+    <div class="next"><ul>
+      <li><b>⑮ 目的外利用の防止／利用目的の変更・再同意</b> ― 目的を後から広げる時に再同意を要求する仕組み</li>
+      <li><b>⑯ 漏えい時の報告・本人通知（APPI26条）への備え</b> ― インシデント記録と通知フローの型</li>
+      <li><b>⑰ Cookie/匿名IDの取得タイミング</b> ― 取得前通知/同意の精緻化（現行は取得＋通知）</li>
+      <li><b>⑱ 保有個人データに関する事項の公表</b> ― 利用目的・請求手続きの常時開示ページの型</li>
+    </ul></div>
+    <p class="note">前半＝既知の穴を塞ぐ／後半＝監査そのものを成長させる、の2フェーズを継続中。⑮以降も「発掘→実装→監査追記→回帰テスト→コミット」で回す。</p>
+  </section>
+
+  <footer>現在地レポート ― Loku Tuning 法務ハードニング・ループ ／ 内部資料・noindex ／ 2026-07-08 ／ <a href="test-report.html">テスト結果へ</a>・<a href="legal-audit.html">法務監査へ</a></footer>
+</div>
+</body>
+</html>
