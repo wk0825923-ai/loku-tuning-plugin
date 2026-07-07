@@ -198,6 +198,19 @@ async function suite() {
     eq((await post('/api/attn/notice-policy', { require: 'yes' })).status, 400, 'requireは真偽値必須→400');
   });
 
+  // 1j) 保有個人データに関する事項の公表：利用目的・種類・委託先・請求手続きを本人が知り得る状態に
+  await withServer(async ({ post, get }) => {
+    const pn = await (await get('/api/attn/public-notice?page_slug=seitai-lp-a')).json();
+    ok(pn.purposes.length > 0 && pn.retained_data_kinds.length > 0, '利用目的と保有データの種類を公表');
+    ok(pn.subject_rights.disclosure && pn.subject_rights.deletion && pn.subject_rights.stop_profiling, '開示・削除・プロファイリング停止の請求手続きを明示');
+    ok('transfer' in pn && 'purpose_version' in pn, '委託先/越境の状況と利用目的バージョンを含む');
+    eq(pn.subject_rights.contact, null, '苦情窓口は空欄（運用者が補う・代筆しない）');
+    // 店舗がポリシーURLを設定すると公表に反映
+    await post('/api/attn/privacy-policy', { page_slug: 'seitai-lp-a', url: 'https://example.com/privacy' });
+    eq((await (await get('/api/attn/public-notice?page_slug=seitai-lp-a')).json()).privacy_policy_url, 'https://example.com/privacy', '設定したポリシーURLが公表に載る');
+    eq((await get('/api/attn/public-notice?page_slug=nope')).status, 404, '未知ページ→404');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });

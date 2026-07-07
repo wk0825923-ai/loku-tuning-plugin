@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Tuning — 尖らせる戦略（内部）</title>
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#12161d; --panel2:#161b24; --line:#232a35;
+    --ink:#eef2f7; --mut:#8c97a6; --sub:#aab4c2;
+    --grn:#3ddc97; --grn2:#28b982; --red:#ff6b6b; --amb:#ffcf5c; --blu:#6cb6ff;
+    --num:"SF Mono",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.75;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto;padding:56px 24px 96px}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:44px}
+  .kicker{font-size:12px;letter-spacing:.18em;color:var(--grn);font-weight:700;text-transform:uppercase}
+  h1{font-size:34px;line-height:1.3;margin:14px 0 10px;letter-spacing:.01em}
+  h1 .g{color:var(--grn)}
+  .lead{color:var(--sub);font-size:16px;margin:0}
+  .meta{color:var(--mut);font-size:12.5px;margin-top:14px}
+
+  section{margin:52px 0}
+  .sec-no{font-family:var(--num);color:var(--grn);font-size:13px;font-weight:700}
+  h2{font-size:23px;margin:6px 0 18px;letter-spacing:.01em}
+  h2 .g{color:var(--grn)} h2 .r{color:var(--red)}
+  p{margin:0 0 14px;color:var(--sub)} p.ink{color:var(--ink)}
+  b{color:var(--ink)} .em{color:var(--grn);font-weight:700}
+
+  .quote{border-left:3px solid var(--grn);background:var(--panel);
+    padding:16px 20px;border-radius:0 10px 10px 0;margin:18px 0;color:var(--ink);font-size:17px}
+
+  .flip{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+  @media(max-width:640px){.flip{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+  .card.bad{border-color:#3a2226} .card.good{border-color:#1e3a30}
+  .tag{font-size:12px;font-weight:700;letter-spacing:.04em;margin-bottom:8px}
+  .bad .tag{color:var(--red)} .good .tag{color:var(--grn)}
+  .card p{margin:0;color:var(--sub);font-size:14.5px}
+
+  .axes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  @media(max-width:640px){.axes{grid-template-columns:1fr}}
+  .axis{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .axis .n{font-family:var(--num);color:var(--grn);font-size:12px;font-weight:700}
+  .axis h3{margin:6px 0 8px;font-size:16px}
+  .axis p{margin:0;font-size:14px}
+
+  .steps{counter-reset:s;margin:20px 0 0;padding:0;list-style:none}
+  .steps li{position:relative;padding:16px 18px 16px 60px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;margin-bottom:12px}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:16px;
+    width:30px;height:30px;border-radius:8px;background:#0f2a20;color:var(--grn);
+    font-family:var(--num);font-weight:700;display:grid;place-items:center;border:1px solid #1e3a30}
+  .steps .t{font-weight:700;color:var(--ink);font-size:15px}
+  .steps .d{color:var(--mut);font-size:13.5px;margin-top:3px}
+  .arrow{color:var(--grn);text-align:center;font-family:var(--num);margin:2px 0;font-size:12px}
+
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+  th,td{text-align:left;padding:13px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{color:var(--mut);font-size:12px;font-weight:600;letter-spacing:.03em;border-bottom:1px solid var(--line)}
+  td.svc{color:var(--sub)} td.mine{color:var(--ink);font-weight:600}
+  tr.win td{background:rgba(61,220,151,.05)}
+  .chk{color:var(--grn)} .x{color:var(--red)} .tri{color:var(--amb)}
+
+  .wedge{margin-top:8px}
+  .wedge .row{display:grid;grid-template-columns:1fr;gap:12px}
+  .pick{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px}
+  .pick h3{margin:0 0 4px;font-size:16px}
+  .pick h3 .badge{font-family:var(--num);font-size:11px;color:var(--bg);background:var(--grn);
+    padding:2px 7px;border-radius:6px;margin-left:8px;vertical-align:middle}
+  .pick p{margin:0;font-size:14px}
+  .criteria{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 0}
+  .criteria span{font-size:12.5px;color:var(--sub);background:var(--panel2);
+    border:1px solid var(--line);border-radius:20px;padding:5px 12px}
+
+  .verdict{background:linear-gradient(180deg,#10241c,#0f1a16);border:1px solid #1e3a30;
+    border-radius:14px;padding:24px 26px;margin-top:10px}
+  .verdict .l{font-size:12px;letter-spacing:.14em;color:var(--grn);font-weight:700;text-transform:uppercase}
+  .verdict p{color:var(--ink);font-size:18px;line-height:1.7;margin:10px 0 0}
+
+  footer{border-top:1px solid var(--line);margin-top:60px;padding-top:20px;color:var(--mut);font-size:12px}
+  .pill{display:inline-block;font-size:11px;color:var(--grn);border:1px solid #1e3a30;
+    background:#0f2a20;border-radius:20px;padding:3px 11px;margin-right:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Loku Tuning · 内部戦略メモ</div>
+    <h1>尖らせる。<span class="g">誰にも追いつかれない</span>ところまで。</h1>
+    <p class="lead">広げない。削る。「実名 × 視線 × 因果」の一点に、全リソースを集中する。</p>
+    <div class="meta">旧 Loku Attention / 旧 LP秘書 ｜ Loku本体プラグイン・1機能 ｜ 2026-07-08 ｜ noindex・社内検討用</div>
+  </header>
+
+  <!-- 0 現在地 -->
+  <section>
+    <div class="sec-no">00</div>
+    <h2>現在地 ＝ 何者か</h2>
+    <p class="ink"><b>Loku Tuning</b> は単独SaaSではなく、<b>Loku本体に組み込む1機能（プラグイン）</b>。施術所などのLPで、訪問者の<b>視線・行動を実名で計測</b>し、<b>導線（見せ方）をチューニング</b>する。<span class="em">"作る"は持たない。"測って直す"に一点集中。</span></p>
+    <div class="flip">
+      <div class="card bad"><div class="tag">✕ 持たない</div><p>LP制作 / コピー生成 / 効果・保証の主張。コモディティで殴り合わず、法務直撃点にも触れない。</p></div>
+      <div class="card good"><div class="tag">✓ 持つ</div><p>実名 × ボックス単位の視線計測、離脱の因果の言語化、次アクションの提案、Loku全機能との地続き。</p></div>
+    </div>
+  </section>
+
+  <!-- 1 LPは残るのか -->
+  <section>
+    <div class="sec-no">01</div>
+    <h2>原点の懐疑 — <span class="r">「LPはこの世に残るのか？」</span></h2>
+    <p>正直、<b>"LP" という言葉と "1枚のHTML" という形式は縮む。</b>決断の場は LINE遷移先 / Instagram / AIチャットの回答 / 予約フロー に散る。だから「LPをチューニングする道具」と定義すると<b>土台が砂</b>になる。この懐疑は正しい。</p>
+    <div class="quote">死ぬのは “LP”。死なないのは「<span class="em">知らない人が、信じるか・1アクションするかを決める面</span>」。</div>
+    <p>この<b>「決断の面」</b>は形を変えて必ず残る。Loku Tuning の武器は "LPのHTML" ではなく <b>「実名の来訪者 × 視線/行動の因果」</b>——<b>面がどこに移っても効く</b>。Lokuは<b>LINE友だちグラフ</b>を持つ＝最も重要な決断の面に最初から座っている。<span class="em">LPが死ぬほど、Lokuの上でしか測れない面に価値が寄る。懐疑が、むしろ堀を深くする。</span></p>
+    <div class="flip">
+      <div class="card bad"><div class="tag">✕ 砂の定義</div><p>「LPを測って直す」＝ LPと心中する。</p></div>
+      <div class="card good"><div class="tag">✓ 岩盤の定義</div><p>「実名の来訪者が “決断する面” を、面がどこにあろうと測って直す」。</p></div>
+    </div>
+  </section>
+
+  <!-- 2 尖りの2軸 -->
+  <section>
+    <div class="sec-no">02</div>
+    <h2>尖りの<span class="g">2軸</span> — これに効かない機能は入れない</h2>
+    <p>削るのが尖りの燃料。制作もコピー生成も捨てるから、リソースを全部この2軸に注げる。</p>
+    <div class="axes">
+      <div class="axis"><div class="n">AXIS 1</div><h3>分析の解像度</h3><p>GA4/ヒートマップは<b>匿名の集計</b>止まり。Lokuは「<b>実名の友だち × ボックス単位の視線</b>」で結合できる＝構造的に他社が持てない堀。「誰が・なぜ離脱したか」まで言い切る。</p></div>
+      <div class="axis"><div class="n">AXIS 2</div><h3>Loku互換の途切れなさ</h3><p>単独SaaSは “連携” 止まり。1機能だから<b>計測→LINE配信→予約→EC→Mall</b>まで一本の線で途切れない。外部ツールが構造的に真似できない。</p></div>
+    </div>
+    <p style="margin-top:16px">この2軸は<b>「持たない機能」の裏返しで手に入る</b>。今後の "入れる/入れない" は、すべてこの2軸に照らして判定する（＝本末転倒チェックの自動化）。</p>
+  </section>
+
+  <!-- 3 GA4/サチコ 要らん -->
+  <section>
+    <div class="sec-no">03</div>
+    <h2>ビジョン — <span class="g">「GA4もサチコも要らん。Loku Tuningだけでいい」</span></h2>
+    <p>ただし勝ち方を間違えない。GA4を機能ごと全部作り直す＝<b>肥大化への逆戻り</b>。正しいのは再実装じゃなく<span class="em">"飲み込んで超える"</span>。</p>
+    <div class="quote">データは飲み込む。人間が GA4/サチコを “開いて解釈する作業” を<span class="em">ゼロ</span>にする。</div>
+    <table>
+      <thead><tr><th>ツール</th><th>役割</th><th>止まる場所</th><th>Loku Tuningの扱い</th></tr></thead>
+      <tbody>
+        <tr><td class="svc">サチコ</td><td class="svc">流入（どう見つけられたか）</td><td><span class="tri">流入で止まる</span></td><td><code>search-console.mjs</code> で readonly 吸込</td></tr>
+        <tr><td class="svc">GA4</td><td class="svc">何が起きたか（匿名集計）</td><td><span class="tri">数値で止まる</span></td><td>数値だけ吸って実名×視線と結合</td></tr>
+        <tr class="win"><td class="mine">Loku Tuning</td><td class="mine">誰が・なぜ・次に何を</td><td><span class="chk">次の一手まで走る</span></td><td>表を見せず「因果」を言語で言い切る</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:14px">商品は "ダッシュボード" じゃなく<b>解釈そのもの</b>。GA4/サチコを「開く理由」を消せば、"要らん" は自動的に成立する。</p>
+  </section>
+
+  <!-- 4 因果3段 -->
+  <section>
+    <div class="sec-no">04</div>
+    <h2>全て因果を<span class="g">言語化</span>する — 3段のエンジン</h2>
+    <ol class="steps">
+      <li><div class="t">数値化</div><div class="d">どのボックスを・誰が・何秒見て・どこで折れたか（実名 × 視線）。</div></li>
+      <li><div class="t">因果</div><div class="d">「FVで3.2秒滞留 → 料金セクションで直帰。理由＝不安が解消される前に価格に当たった」と “なぜ” を結ぶ。</div></li>
+      <li><div class="t">次アクション</div><div class="d">「料金の前に実績を1枚差す」＝導線チューニング案（作る側ではなく直す側で完結）。</div></li>
+    </ol>
+    <div class="verdict">
+      <div class="l">“勝った” の判定文</div>
+      <p>「この友だちは “料金への不安” で離脱した。<b>だから離脱の翌朝、実績事例つきの一言を LINE で自動で撃った。</b>」<br>——分析が次の一手を<span class="em">撃つ</span>。もう計測ツールですらない。</p>
+    </div>
+  </section>
+
+  <!-- 5 業種の楔 -->
+  <section>
+    <div class="sec-no">05</div>
+    <h2>ニッチのニッチ — <span class="g">絞るのは “楔”、エンジンではない</span></h2>
+    <p>「ニッチのニッチ」は正しい。ただし<b>絞るのはエンジン（実名×視線×因果）ではなく、楔（GTM／最初のキラー事例／法務テンプレ）</b>。エンジンを業種で削ると汎用の堀まで捨てる。楔だけ、"ここでしか勝てない" まで深く刺す。</p>
+    <div class="criteria">
+      <span>① LINE予約が生命線（決断の面が最初からLoku上）</span>
+      <span>② 客単価/継続が高い（離脱の因果が金額に直結）</span>
+      <span>③ 広告規制がキツい（“主張を作らない” が参入障壁になる）</span>
+    </div>
+    <p style="margin:16px 0 4px">この3つが揃うのが<b>施術所</b>。しかも規制対応の <code>compliance.mjs</code> を<b>9周</b>積んでいる＝<span class="em">その業種でしか回収できない埋没コスト＝堀</span>。規制のゆるいニッチへ逃げると、この法務資産がムダになる。</p>
+
+    <h3 style="font-size:15px;margin:26px 0 10px;color:var(--sub)">▶ 第1の楔を1つだけ選ぶなら（要・意思決定）</h3>
+    <div class="wedge"><div class="row">
+      <div class="pick"><h3>接骨院 / 整骨院</h3><p>数が多い・保険/自費の混在・<b>規制が最も重い</b>＝法務エンジンが最も効く。母数で攻める楔。</p></div>
+      <div class="pick"><h3>自費の鍼灸（不妊・自律神経系）</h3><p>単価高・継続長・<b>“効果を謳えない” 制約が最もキツい</b>＝差別化が最大化。尖りで攻める楔。</p></div>
+      <div class="pick"><h3>パーソナル系（ピラティス等）<span class="badge">着火が速い</span></h3><p>規制ゆるめ・単価高・LINE濃い。既に <code>demo-pilates-lp</code> がある＝<b>最速で1件目に着火</b>。ただし法務の堀は最も薄い。</p></div>
+    </div></div>
+  </section>
+
+  <!-- 尖りの最終形 -->
+  <section>
+    <div class="sec-no">→</div>
+    <h2>尖りの<span class="g">最終形</span></h2>
+    <div class="verdict" style="background:linear-gradient(180deg,#122a20,#0e1a15)">
+      <div class="l">One-liner</div>
+      <p>LINE予約が命で・単価が高く・広告規制がキツい業種の、<b>実名来訪者が “決断する面”</b> を、面がどこに移ろうと<b>測って・因果で言い切り・次の一手を撃つ</b>。<br>第1の楔 ＝ <span class="em">施術所</span>。</p>
+    </div>
+    <p style="margin-top:16px">これなら —— <b>LPが死んでも生き残る</b>。<b>法務の埋没投資が活きる</b>。<b>GA4/サチコが構造的に踏み込めない領域</b>に立てる。</p>
+  </section>
+
+  <footer>
+    <span class="pill">1機能・単独SaaSにしない</span>
+    <span class="pill">作らない・測って直す</span>
+    <span class="pill">2軸に効かない機能は入れない</span>
+    <span class="pill">飲み込んで超える</span>
+    <br style="line-height:2.4">
+    Loku Tuning 内部戦略メモ ／ 社内検討用・noindex ／ 2026-07-08 ／ 関連: legal-audit.html・ga4-comparison.html
+  </footer>
+
+</div>
+</body>
+</html>

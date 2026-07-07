@@ -78,12 +78,12 @@
   <div class="now">
     <h2>いまの現在地（TL;DR）</h2>
     <div class="row">
-      <div class="stat"><div class="b num">14 / 14</div><div class="l">回した改善ループ</div></div>
-      <div class="stat"><div class="b num">①→⑭</div><div class="l">監査リスクの網羅（元は⑧まで）</div></div>
-      <div class="stat"><div class="b num">9,000</div><div class="l">回帰テスト pass（fail=0）</div></div>
+      <div class="stat"><div class="b num">18 / 18</div><div class="l">回した改善ループ</div></div>
+      <div class="stat"><div class="b num">①→⑱</div><div class="l">監査リスクの網羅（元は⑧まで）</div></div>
+      <div class="stat"><div class="b num">1,025</div><div class="l">回帰テスト pass/周（fail=0）</div></div>
       <div class="stat"><div class="b num">運用層のみ</div><div class="l">残る未対応（機械で解消不可）</div></div>
     </div>
-    <p><b>フェーズは2段階で進んだ。</b>前半 ①〜⑧＝<b>既知監査（legal-audit.html）の穴</b>をコード＋テストで解消。後半 ⑨〜⑭＝<b>網羅性レビューで"元の監査に無かった論点"を発掘</b>し、実装＋監査書への追記まで実施。<b>機械で解消できる層と設計層（RLS/保持/委託先）は全て実装＋テスト済</b>。残るは弁護士・運用でしか埋められない層だけ。</p>
+    <p><b>フェーズは2段階で進んだ。</b>前半 ①〜⑧＝<b>既知監査（legal-audit.html）の穴</b>をコード＋テストで解消。後半 ⑨〜⑱＝<b>網羅性レビューで"元の監査に無かった論点"を10件発掘</b>し、実装＋監査書への追記まで実施。<b>機械で解消できる層と設計層（RLS/保持/委託先）は全て実装＋テスト済</b>。残るは弁護士・運用でしか埋められない層だけ。</p>
   </div>
 
   <section>
@@ -208,19 +208,25 @@
         <div class="kv"><div class="k why">なぜ</div><div class="v"><b>レビューで発見。</b>通知内容(⑥)はあっても「通知が出る前に計測しない」タイミング保証が無く、通知前にデータを溜め得た。取得タイミングを運用で保証できるように。</div></div>
       </div></div>
 
+      <div class="item"><div class="top"><span class="rn new">⑱</span><span class="t">保有個人データに関する事項の公表</span><span class="law">APPI 周知義務</span></div><div class="bd">
+        <div class="kv"><div class="k">何を</div><div class="v">公表オブジェクト（public-notice）</div></div>
+        <div class="kv"><div class="k">どんな改善</div><div class="v">利用目的・保有データの種類・委託先/越境・<b>請求手続き（開示/削除/配信停止/プロファイリング停止）</b>を1か所で提示。事業者名/窓口は運用者欄。</div></div>
+        <div class="kv"><div class="k why">なぜ</div><div class="v"><b>レビューで発見。</b>各機能はバラバラに実装済でも、本人が"知り得る状態"で辿れる一覧が無かった。周知義務を満たす入口を1つに束ねた。</div></div>
+      </div></div>
+
     </div>
   </section>
 
   <section>
-    <div class="kicker">次の一手 ― まだ発掘余地のある論点</div>
-    <h2 class="sec">ここから先に回せる候補</h2>
+    <div class="kicker">現在地 ― コードで潰せる論点は出し切った</div>
+    <h2 class="sec">残るは「人が担う層」だけ</h2>
     <div class="next"><ul>
-      <li><b>⑮ 目的外利用の防止／利用目的の変更・再同意</b> ― 目的を後から広げる時に再同意を要求する仕組み</li>
-      <li><b>⑯ 漏えい時の報告・本人通知（APPI26条）への備え</b> ― インシデント記録と通知フローの型</li>
-      <li><b>⑰ Cookie/匿名IDの取得タイミング</b> ― 取得前通知/同意の精緻化（現行は取得＋通知）</li>
-      <li><b>⑱ 保有個人データに関する事項の公表</b> ― 利用目的・請求手続きの常時開示ページの型</li>
+      <li><b>DPA（委託契約）の締結</b> ― 店舗＝取扱事業者、Loku＝委託先を書面化</li>
+      <li><b>従業者教育・就業規則</b> ― アクセス権限・秘密保持・退職時のアクセス削除の運用</li>
+      <li><b>特商法の個別表記</b> ― 商品訴求時の表示</li>
+      <li><b>弁護士・個人情報保護委員会の最終確認</b> ― 実運用前のレビュー</li>
     </ul></div>
-    <p class="note">前半＝既知の穴を塞ぐ／後半＝監査そのものを成長させる、の2フェーズを継続中。⑮以降も「発掘→実装→監査追記→回帰テスト→コミット」で回す。</p>
+    <p class="note">①〜⑱で<b>機械で解消できる法務論点は網羅し尽くした</b>（監査を⑧→⑱に拡張）。以後ループを回すなら「新機能を足した時の再監査」がトリガー。上記の運用層はソフトウェアの外＝人が担う領域。</p>
   </section>
 
   <footer>現在地レポート ― Loku Tuning 法務ハードニング・ループ ／ 内部資料・noindex ／ 2026-07-08 ／ <a href="test-report.html">テスト結果へ</a>・<a href="legal-audit.html">法務監査へ</a></footer>

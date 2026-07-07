@@ -58,9 +58,9 @@
   <header>
     <div class="allgreen"><span class="d"></span>ALL GREEN — 2026-07-08</div>
     <h1>Loku Tuning テスト結果</h1>
-    <p class="lead">バックエンド・ブラウザ実行・クロスプロセスの3層で検証。ランタイムエラーゼロ。<br>法務ハードニングを改善ループで継続中（監査論点⑭まで実装＋回帰テスト）。</p>
+    <p class="lead">バックエンド・ブラウザ実行・クロスプロセスの3層で検証。ランタイムエラーゼロ。<br>法務ハードニングを改善ループで完走（監査論点⑱まで実装＋回帰テスト）。</p>
     <div class="totals">
-      <div class="tot"><div class="big num">9,000</div><div class="lb">バックエンド</div><div class="sub">180項目 × 50周（法務⑭論点まで）</div></div>
+      <div class="tot"><div class="big num">10,250</div><div class="lb">バックエンド</div><div class="sub">205項目 × 50周（法務⑱論点まで）</div></div>
       <div class="tot"><div class="big num">390</div><div class="lb">使用ユーザー(jsdom)</div><div class="sub">全11ページ × 10周</div></div>
       <div class="tot"><div class="big num">0</div><div class="lb">失敗 / エラー</div><div class="sub">fail=0 exit=0</div></div>
     </div>
@@ -69,7 +69,7 @@
   <section>
     <div class="kicker">① バックエンド（ロジック）</div>
     <div class="card">
-      <div class="h"><span class="t">全API ＋ 異常系・型頑健・並行・境界・契約 ＋ 法務ハードニング・監査ログ</span><span class="badge">pass 9,000 · fail 0</span></div>
+      <div class="h"><span class="t">全API ＋ 異常系・型頑健・並行・境界・契約 ＋ 法務ハードニング・監査ログ</span><span class="badge">pass 10,250 · fail 0</span></div>
       <p>視線→結合→ジャーニー→タグ→サチコ→実測CVR に加え、異常系・型・並行・境界・契約、さらにNG拡充／健康語の推知フラグ／配信オプトアウト／機微操作の監査ログまで検証。各テストは新インスタンスで状態隔離、22シナリオを50周で安定確認。</p>
       <ul class="chk">
         <li>同意ゲート：consent=false は journey 除外・タグ不適用（プライバシー）</li>
@@ -79,8 +79,8 @@
         <li>バリデーション：欠落=400 / 未知ページ=404 / 壊れJSON=400</li>
       </ul>
       <pre>=== Loku Tuning handoff テスト（50周） ===
-周回 50/50: OK  (累計 pass=9000 fail=0)
-結果: pass=9000 fail=0
+周回 50/50: OK  (累計 pass=10250 fail=0)
+結果: pass=10250 fail=0
 <span class="g">✅ 全テスト通過（手戻りゼロ確認）</span></pre>
     </div>
   </section>
@@ -88,8 +88,8 @@
   <section>
     <div class="kicker">法務ハードニング・ループ（続き — 2026-07-08 継続改善の記録）</div>
     <div class="card">
-      <div class="h"><span class="t">監査の穴をコード＋テストで塞ぎ、監査そのものを成長させ続けている</span><span class="badge">14周 · pass 475→900/周相当</span></div>
-      <p>「法務面を改善→ループ→成長」を継続。前半①〜⑧で<b>既知監査（legal-audit.html）の穴</b>をコード＋回帰テストで解消。後半⑨〜⑭は<b>網羅性レビューで"元の監査に無かった論点"を発掘</b>し、実装＋監査書追記まで回した。各周ごとにgitコミット、手戻りゼロ（fail=0）を維持。</p>
+      <div class="h"><span class="t">監査の穴をコード＋テストで塞ぎ、監査そのものを成長させ切った</span><span class="badge">18周 · pass 475→1,025/周</span></div>
+      <p>「法務面を改善→ループ→成長」を完走。前半①〜⑧で<b>既知監査（legal-audit.html）の穴</b>をコード＋回帰テストで解消。後半⑨〜⑱は<b>網羅性レビューで"元の監査に無かった論点"を10件発掘</b>し、実装＋監査書追記まで回した。各周ごとにgitコミット、手戻りゼロ（fail=0）を維持。<b>機械で解消できる法務論点は出し切り</b>、残りは運用・専門家層のみ。</p>
       <ul class="chk">
         <li><b>① NG正規化</b>：NFKC＋空白除去＋大小文字で、全角/文字間スペース/ひらがな開きの回避を遮断</li>
         <li><b>② 症状×効能の共起</b>：接骨院/鍼灸で「症状名×効能想起語」をブロック（適応症標榜）</li>
@@ -105,12 +105,16 @@
         <li><b>⑫ プロファイリング</b>：付与根拠の開示＋拒否権（既存タグ撤回＋再付与停止）</li>
         <li><b>⑬ 未成年の同意</b>：is_minor＋保護者同意を記録し、未成年は保護者同意で初めて完全</li>
         <li><b>⑭ 開示・削除請求の本人確認</b>：本人起点はidentity_verified必須（未了は403）＋証跡</li>
+        <li><b>⑮ 利用目的の変更・再同意</b>：同意に目的バージョンを紐づけ、目的拡大で旧同意は再同意待ち（タグ付与停止）</li>
+        <li><b>⑯ 漏えい時の報告・本人通知</b>：incident台帳＋要否自動判定（要配慮1件/不正アクセス/1,000人超）＋報告期限</li>
+        <li><b>⑰ 取得タイミング</b>：notice-policyをONで通知未提示の計測を403（既定OFFで非破壊）</li>
+        <li><b>⑱ 保有個人データの公表</b>：public-noticeで利用目的/種類/委託先・越境/請求手続きを一括提示</li>
       </ul>
-      <pre>監査 legal-audit.html のリスクを ①〜⑧ → <span class="g">①〜⑭</span> に拡張
+      <pre>監査 legal-audit.html のリスクを ①〜⑧ → <span class="g">①〜⑱</span> に拡張（レビューで10論点を発掘）
 機械で解消できる層＋設計層(RLS/保持/委託先) = <span class="g">全て実装＋テスト済</span>
 残るは運用・専門家層のみ（DPA契約 / 従業者教育 / 弁護士・個情委の最終確認）
-テスト：開始 pass=475 → <span class="g">現在 pass=900/周（180項目 × 50周 = 9,000・fail=0）</span>
-<span class="m"># 各周ごとにgitコミット（deba88c → e4e2808・計14本・手戻りゼロ）</span></pre>
+テスト：開始 pass=475 → <span class="g">現在 pass=1,025/周（205項目 × 50周 = 10,250・fail=0）</span>
+<span class="m"># 各周ごとにgitコミット（deba88c → ⑱・計18本・手戻りゼロ）</span></pre>
     </div>
   </section>
 

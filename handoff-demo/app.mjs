@@ -461,6 +461,32 @@ function handle(store, req, res, body) {
     return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: false, csv });
   }
 
+  // GET /api/attn/public-notice?page_slug= — 保有個人データに関する事項の公表（本人が知り得る状態に置く）
+  if (req.method === 'GET' && url.pathname === '/api/attn/public-notice') {
+    const slug = url.searchParams.get('page_slug');
+    const page = slug ? pageBySlug(store, slug) : null;
+    if (slug && !page) return send(404, { error: 'unknown page' });
+    if (page && denyCrossTenant(page.tenant_id)) return send(403, { error: 'tenant scope violation' });
+    const ppUrl = (page && store.privacy_policy_urls?.get(page.tenant_id)) || null;
+    const disclosure = buildDisclosure({ privacyPolicyUrl: ppUrl });
+    return send(200, {
+      business_operator: 'Loku（本サービス運営者）', // 実際の事業者名・所在地・代表者は運用者が設定
+      purposes: disclosure.purposes,                   // 利用目的
+      purpose_version: store.purpose_version,
+      retained_data_kinds: disclosure.items,           // 保有個人データの種類
+      transfer: transferAssessment(store.subprocessors), // 委託先・越境の状況
+      subject_rights: {                                // 開示・訂正・利用停止・削除の請求手続き
+        disclosure: 'POST /api/attn/export（本人起点はidentity_verified必須）',
+        deletion: 'POST /api/attn/forget（本人起点はidentity_verified必須）',
+        stop_delivery: 'POST /api/attn/opt-out',
+        stop_profiling: 'POST /api/attn/profiling-opt-out',
+        contact: null, // 苦情・請求の窓口は運用者が設定（当方で代筆しない）
+      },
+      privacy_policy_url: ppUrl,
+      note: '本オブジェクトは「本人が知り得る状態」に置くための公表用。事業者名/所在地/窓口は運用者が補う欄。',
+    });
+  }
+
   // GET/POST /api/attn/notice-policy — 「通知前は計測しない」ポリシーの取得/設定（取得タイミングの保証）
   if (url.pathname === '/api/attn/notice-policy') {
     if (req.method === 'GET') return send(200, { require_notice: store.require_notice });
