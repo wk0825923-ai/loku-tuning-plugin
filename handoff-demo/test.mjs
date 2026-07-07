@@ -1,7 +1,8 @@
 // 自動テスト（依存ゼロ）。各テストは createServer() で新インスタンス＝状態隔離。
 // フルスイートを N 回ループして安定性・冪等性を確認する。
-import { createServer } from './app.mjs';
+import { createServer, csvCell, encryptCsv } from './app.mjs';
 import { stripSensitive } from './compliance.mjs';
+import crypto from 'node:crypto';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -228,6 +229,37 @@ async function suite() {
     eq((await (await get('/api/attn/disclosure?page_slug=seitai-lp-a')).json()).privacy_policy_url, 'https://example.com/privacy', '登録後は通知にURLが載る');
     eq((await post('/api/attn/privacy-policy', { page_slug: 'seitai-lp-a', url: 'javascript:alert(1)' })).status, 400, 'http(s)以外のURLは拒否');
     eq((await post('/api/attn/privacy-policy', { url: 'https://x' })).status, 400, 'page_slug欠落→400');
+  });
+
+  // 12d) CSVエクスポートの安全管理：持ち出しログ・数式インジェクション対策・任意AES暗号化
+  // csvCell 数式インジェクション（=,+,-,@ 始まりを無害化・区切り文字はクォート）
+  eq(csvCell('=SUM(A1)'), "'=SUM(A1)", 'CSV数式(=)を無害化');
+  eq(csvCell('+1234'), "'+1234", 'CSV数式(+)を無害化');
+  eq(csvCell('a,b"c'), '"a,b""c"', 'カンマ/クォートはRFC4180でエスケープ');
+  // 暗号化ラウンドトリップ（AES-256-GCM）
+  {
+    const enc = encryptCsv('h\r\nv', 'pw');
+    eq(enc.alg, 'aes-256-gcm', 'AES-256-GCMで暗号化');
+    const key = crypto.scryptSync('pw', Buffer.from(enc.salt, 'base64'), 32);
+    const dec = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(enc.iv, 'base64'));
+    dec.setAuthTag(Buffer.from(enc.tag, 'base64'));
+    const pt = Buffer.concat([dec.update(Buffer.from(enc.ciphertext, 'base64')), dec.final()]).toString('utf8');
+    eq(pt, 'h\r\nv', '正パスフレーズで復号一致');
+  }
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'X1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'X1', friend_id: 'f_X', consented: true });
+    // actor必須（持ち出しログ）
+    eq((await post('/api/attn/export', { friend_id: 'f_X' })).status, 400, 'actor欠落→400(誰が持ち出したか必須)');
+    eq((await post('/api/attn/export', { actor: 'staff_a' })).status, 400, 'friend_id欠落→400');
+    // 平文CSV＋持ち出しログ
+    const ex = await (await post('/api/attn/export', { friend_id: 'f_X', actor: 'staff_a' })).json();
+    ok(ex.ok && !ex.encrypted && ex.csv.includes('friend_id'), '平文CSVを返す');
+    const log = await (await get('/api/attn/audit-log')).json();
+    ok(log.entries.some(e => e.action === 'export' && e.actor === 'staff_a'), '持ち出しログにactorが残る');
+    // 暗号化エクスポート
+    const enc2 = await (await post('/api/attn/export', { friend_id: 'f_X', actor: 'staff_a', passphrase: 's3cret' })).json();
+    ok(enc2.encrypted && enc2.payload.alg === 'aes-256-gcm' && !enc2.csv, 'passphrase指定で暗号化・平文は返さない');
   });
 
   // 13) サチコ連携：APIで引っ張った行を取り込み、来る前をjourneyに搭載

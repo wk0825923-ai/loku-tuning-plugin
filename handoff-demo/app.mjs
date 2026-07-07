@@ -5,6 +5,7 @@
 // createServer() は「その都度まっさらなストア」を持つサーバを返す（テスト隔離のため）。
 
 import http from 'node:http';
+import crypto from 'node:crypto';
 import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure } from './compliance.mjs';
 import { ingestSearchConsole, searchSummary } from './search-console.mjs';
 
@@ -64,6 +65,49 @@ export function purgeExpired(store, cutoff) {
     store.tag_fires = store.tag_fires.filter(f => !gone.has(f.session_anon));
   }
   return { purgedAnons, boxStatsRemoved };
+}
+
+// CSVセル安全化：数式インジェクション対策（=,+,-,@,tab,CR で始まる値はクォート内に'を前置）
+// ＋ダブルクォート/カンマ/改行を含む値はRFC4180でクォート。
+export function csvCell(value) {
+  let s = value == null ? '' : String(value);
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // 表計算ソフトでの数式実行を防ぐ
+  if (/[",\r\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+  return s;
+}
+
+// friend単位の計測データをCSV文字列に。開示請求・データポータビリティ対応。
+export function buildFriendCsv(store, friendId) {
+  const header = ['friend_id', 'page_slug', 'page_kind', 'entry_query', 'entry_pos', 'device', 'entry_health', 'active_sec', 'box_engagement'];
+  const lines = [header.join(',')];
+  let count = 0;
+  for (const [anon, id] of store.identity) {
+    if (id.friend_id !== friendId || !id.consented) continue; // 同意ゲートを踏襲
+    const sess = store.sessions.get(anon);
+    if (!sess) continue;
+    const page = store.pages.find(p => p.id === sess.page_id);
+    const be = {};
+    for (const b of store.boxes.filter(x => x.page_id === sess.page_id)) {
+      const st = store.box_stats.get(`${anon}::${b.box_key}`);
+      be[b.box_key] = st ? Math.round(st.engagement) : 0;
+    }
+    lines.push([friendId, page?.slug, page?.kind, sess.entry_query, sess.entry_pos, sess.device,
+      !!sess.entry_health, sess.active_sec, JSON.stringify(be)].map(csvCell).join(','));
+    count++;
+  }
+  return { csv: lines.join('\r\n'), rows: count };
+}
+
+// パスフレーズでCSVをAES-256-GCM暗号化（持ち出しCSVの漏洩対策）。scryptで鍵導出。
+export function encryptCsv(plaintext, passphrase) {
+  const salt = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
+  const key = crypto.scryptSync(String(passphrase), salt, 32);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const ct = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return { alg: 'aes-256-gcm', salt: salt.toString('base64'), iv: iv.toString('base64'),
+    tag: tag.toString('base64'), ciphertext: ct.toString('base64') };
 }
 
 const pageBySlug = (s, slug) => s.pages.find(p => p.slug === slug);
@@ -319,6 +363,20 @@ function handle(store, req, res, body) {
     if (d.friend_id) store.friend_tags.delete(d.friend_id); // 付与済みタグも撤回
     store.audit_log.push({ action: 'forget', friend_id: d.friend_id || anons.join(','), at: Date.now() });
     return send(200, { ok: true, forgotten: anons, boxStatsRemoved: removed });
+  }
+
+  // POST /api/attn/export — friend単位の計測データをCSVで持ち出し（開示請求対応）
+  // 安全管理：actor必須(誰が)＝持ち出しログ・数式インジェクション対策・任意でAES暗号化。
+  if (req.method === 'POST' && url.pathname === '/api/attn/export') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.friend_id) return send(400, { error: 'friend_id required' });
+    if (!d.actor) return send(400, { error: 'actor required（持ち出しログのため誰が実行したか必須）' });
+    const { csv, rows } = buildFriendCsv(store, d.friend_id);
+    const encrypted = d.passphrase != null && d.passphrase !== '';
+    // 持ち出しログ（安全管理措置・従業者の監督）
+    store.audit_log.push({ action: 'export', friend_id: d.friend_id, actor: String(d.actor), rows, encrypted, at: Date.now() });
+    if (encrypted) return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: true, payload: encryptCsv(csv, d.passphrase) });
+    return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: false, csv });
   }
 
   // POST /api/attn/privacy-policy — 店舗が自らのプライバシーポリシーURLを登録（当方で代筆しない）
