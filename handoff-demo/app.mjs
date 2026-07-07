@@ -6,7 +6,7 @@
 
 import http from 'node:http';
 import crypto from 'node:crypto';
-import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure, defaultSubprocessors, transferAssessment } from './compliance.mjs';
+import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure, defaultSubprocessors, transferAssessment, assessBreach } from './compliance.mjs';
 import { ingestSearchConsole, searchSummary } from './search-console.mjs';
 
 // ---- サンプルページ定義（本番は loku_attn_pages / _boxes 相当） ----
@@ -51,6 +51,7 @@ function seedStore() {
     subprocessors: defaultSubprocessors(), // 委託先レジストリ（越境移転28条・委託先監督25条）
     profiling_opt_out: new Set(), // プロファイリング（タグ付け）を拒否した friend_id
     purpose_version: 1, // 利用目的のバージョン。上げると旧同意は"再同意待ち"になる（目的外利用の防止）
+    incidents: [], // 漏えい等インシデント台帳（APPI26条 報告・本人通知の管理）
   };
 }
 
@@ -455,6 +456,23 @@ function handle(store, req, res, body) {
     store.audit_log.push({ action: 'export', friend_id: d.friend_id, actor: String(d.actor), rows, encrypted, subject_request: d.subject_request === true, identity_verified: d.identity_verified === true, at: Date.now() });
     if (encrypted) return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: true, payload: encryptCsv(csv, d.passphrase) });
     return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: false, csv });
+  }
+
+  // POST /api/attn/incident — 漏えい等インシデントを記録し、報告・本人通知の要否を判定（APPI26条）
+  if (req.method === 'POST' && url.pathname === '/api/attn/incident') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.summary) return send(400, { error: 'summary required（インシデントの概要）' });
+    const assessment = assessBreach(d);
+    const incident = { id: `inc_${store.incidents.length + 1}`, summary: String(d.summary),
+      affected: assessment.affected, includes_sensitive: d.includes_sensitive === true,
+      unauthorized_access: d.unauthorized_access === true, assessment, at: Date.now() };
+    store.incidents.push(incident);
+    store.audit_log.push({ action: 'incident', friend_id: incident.id, must_report: assessment.must_report, at: Date.now() });
+    return send(200, { ok: true, incident });
+  }
+  // GET /api/attn/incidents — インシデント台帳（報告義務の管理）
+  if (req.method === 'GET' && url.pathname === '/api/attn/incidents') {
+    return send(200, { incidents: store.incidents, open_report_obligations: store.incidents.filter(i => i.assessment.must_report).length });
   }
 
   // GET/POST /api/attn/purpose-version — 利用目的のバージョン。上げると旧同意は再同意待ちに（目的外利用の防止）

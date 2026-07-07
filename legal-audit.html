@@ -290,6 +290,17 @@
         </ul></div>
       </div>
     </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev md">中</span><div><div class="t">⑯ 漏えい時の報告・本人通知</div><div class="law">個人情報保護法 第26条／施行規則</div></div></div>
+      <div class="bd">
+        漏えい等が発生すると、一定の場合<b>個人情報保護委員会への報告（速報・確報）と本人への通知</b>が義務。<b>要配慮個人情報が含まれれば1件でも対象</b>、ほか不正アクセス・財産的被害のおそれ・1,000人超も対象。インシデントを記録・追跡する台帳が無いと、報告期限（速報約3〜5日／確報30日・不正アクセス等60日）を守れない。
+        <div class="fix"><div class="ft">対策</div><ul>
+          <li><b>インシデント台帳</b>（incident API）で記録し、要否を自動判定（要配慮/不正アクセス/件数）</li>
+          <li>報告義務のある未対応件数を集計し、<b>報告期限</b>を提示</li>
+        </ul></div>
+      </div>
+    </div>
   </section>
 
   <section>
@@ -322,6 +333,7 @@
       <li><b>未成年は保護者同意を記録</b>（同意能力）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge時にis_minor/guardian_consentを記録・未成年で保護者同意なしは不完全フラグ・回帰テスト済</span></li>
       <li><b>開示・削除請求への本人確認</b>（なりすまし防止）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> subject_requestはidentity_verified必須(未了は403)・確認の有無を証跡に記録・回帰テスト済</span></li>
       <li><b>利用目的の変更時に再同意</b>（目的外利用の防止）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 同意に利用目的バージョンを紐づけ・目的拡大で旧同意は再同意待ち・その間タグ付与停止・回帰テスト済</span></li>
+      <li><b>漏えい時の報告・本人通知の備え</b>（APPI26条）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> incident台帳＋要否自動判定(要配慮1件/不正アクセス/1000人超)・報告期限提示・回帰テスト済</span></li>
       <li><b>開示・削除・オプトアウト</b>（friend単位で削除）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> forget API</span></li>
       <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意・buildDisclosure()/GET disclosureで「何を/どこへ/何のため」をLP埋め込み(第三者提供なし・要配慮除外を明示・ポリシーURLは店舗設定)</span></li>
       <li><b>安全管理措置</b>：テナント分離（RLS）・アクセス制御<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> DB=schema.sqlのRLSポリシー(tenant_id=auth.jwt)／アプリ層もtenantOfFriend+x-tenant-idで自テナント外のjourney/tags/export/disclosureを403(回帰テスト済)</span>／<b>保持期間purge</b><span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> purgeExpired()/POST purge・最終アクセスから既定730日で計測データを消去(cron想定)・回帰テスト済</span></li>

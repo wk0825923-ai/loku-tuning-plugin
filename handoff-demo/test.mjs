@@ -168,6 +168,24 @@ async function suite() {
     eq((await post('/api/attn/purpose-version', { version: 2 })).status, 400, '現行以下のバージョンは拒否');
   });
 
+  // 1h) 漏えい時の報告・本人通知（APPI26条）：インシデント記録＋要否判定
+  await withServer(async ({ post, get }) => {
+    // 要配慮を含む漏えいは1件でも報告・本人通知の対象
+    const s = await (await post('/api/attn/incident', { summary: '症状メモの誤送信', affected: 1, includes_sensitive: true })).json();
+    ok(s.incident.assessment.must_report && s.incident.assessment.must_notify_subjects, '要配慮1件でも報告＋本人通知');
+    ok(s.incident.assessment.reasons.includes('要配慮個人情報を含む'), '理由に要配慮が入る');
+    // 通常データ500件は報告対象外／1001件は対象
+    ok(!(await (await post('/api/attn/incident', { summary: '軽微', affected: 500 })).json()).incident.assessment.must_report, '通常500件は報告対象外');
+    ok((await (await post('/api/attn/incident', { summary: '大規模', affected: 1001 })).json()).incident.assessment.must_report, '1000人超は報告対象');
+    // 不正アクセスは件数不問で対象＋期限が出る
+    const ua = await (await post('/api/attn/incident', { summary: '不正アクセス', affected: 3, unauthorized_access: true })).json();
+    ok(ua.incident.assessment.must_report && ua.incident.assessment.deadlines, '不正アクセスは対象＋報告期限を提示');
+    // 台帳に残り、報告義務ありの件数が数えられる
+    const list = await (await get('/api/attn/incidents')).json();
+    ok(list.incidents.length === 4 && list.open_report_obligations === 3, '台帳に記録・報告義務3件を集計');
+    eq((await post('/api/attn/incident', {})).status, 400, 'summary欠落→400');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });

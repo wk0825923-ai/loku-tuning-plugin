@@ -124,6 +124,26 @@ export function transferAssessment(subprocessors = defaultSubprocessors()) {
   return { subprocessors: withClass, cross_border, unknown, needs_notice: cross_border.length > 0 || unknown.length > 0 };
 }
 
+// 漏えい等の「個人情報保護委員会への報告・本人通知」要否判定（APPI26条＋施行規則7条）。
+// 報告対象＝①要配慮個人情報が含まれる ②財産的被害のおそれ(不正目的) ③1,000人超 のいずれか、
+// または不正アクセス等（故意）。1件でも要配慮を含めば対象になる点に注意。
+export function assessBreach({ affected = 0, includes_sensitive = false, unauthorized_access = false, risk_of_property_harm = false } = {}) {
+  const n = Number(affected) || 0;
+  const reasons = [];
+  if (includes_sensitive) reasons.push('要配慮個人情報を含む');
+  if (risk_of_property_harm) reasons.push('財産的被害のおそれ（不正利用目的）');
+  if (unauthorized_access) reasons.push('不正アクセス等（故意による漏えい）');
+  if (n > 1000) reasons.push('1,000人を超える');
+  const must_report = reasons.length > 0;
+  return {
+    affected: n,
+    must_report,                 // 個人情報保護委員会への報告義務
+    must_notify_subjects: must_report, // 本人通知義務（原則）
+    reasons,
+    deadlines: must_report ? { prompt_report: '速報：概ね3〜5日以内', full_report: '確報：30日以内（不正アクセス等は60日以内）' } : null,
+  };
+}
+
 // ② 要配慮個人情報ガード：結合してはいけない健康・症状系フィールドを検出して除去
 const SENSITIVE_KEYS = ['symptom', 'symptoms', 'diagnosis', 'disease', 'condition', 'health', 'medical', 'injury', '症状', '病名', '既往歴'];
 
