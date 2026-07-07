@@ -150,6 +150,24 @@ async function suite() {
     ok((await (await post('/api/attn/export', { friend_id: 'f_IV2', actor: 'staff_a' })).json()).ok, '社内運用は従来どおり本人確認不要');
   });
 
+  // 1g) 利用目的の変更→再同意（目的外利用の防止）：目的バージョンを上げると旧同意は再同意待ち・タグ付与停止
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'PV1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'PV1', friend_id: 'f_PV', consented: true });
+    ok((await (await get('/api/attn/friend-tags?friend_id=f_PV')).json()).tags.length > 0, '目的変更前はタグあり');
+    eq((await (await get('/api/attn/reconsent-status?friend_id=f_PV')).json()).needs_reconsent, false, '変更前は再同意不要');
+    // 目的バージョンを上げる（目的の拡大）
+    ok((await (await post('/api/attn/purpose-version', { version: 2, purpose: '広告配信にも利用' })).json()).ok, '目的バージョンを2へ');
+    eq((await (await get('/api/attn/reconsent-status?friend_id=f_PV')).json()).needs_reconsent, true, '旧同意は再同意待ちになる');
+    // 再同意待ちの間は後追いcollectでもタグが増えない
+    await post('/api/attn/collect', { anon_id: 'PV1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    // 再同意（新バージョンでmerge）すると再同意待ち解消
+    await post('/api/attn/merge', { anon_id: 'PV1', friend_id: 'f_PV', consented: true });
+    eq((await (await get('/api/attn/reconsent-status?friend_id=f_PV')).json()).needs_reconsent, false, '再同意で解消');
+    // バリデーション：現行以下のバージョンは拒否
+    eq((await post('/api/attn/purpose-version', { version: 2 })).status, 400, '現行以下のバージョンは拒否');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });

@@ -50,6 +50,7 @@ function seedStore() {
     privacy_policy_urls: new Map(), // tenant_id -> 店舗が設定したプライバシーポリシーURL
     subprocessors: defaultSubprocessors(), // 委託先レジストリ（越境移転28条・委託先監督25条）
     profiling_opt_out: new Set(), // プロファイリング（タグ付け）を拒否した friend_id
+    purpose_version: 1, // 利用目的のバージョン。上げると旧同意は"再同意待ち"になる（目的外利用の防止）
   };
 }
 
@@ -122,6 +123,17 @@ const pageBySlug = (s, slug) => s.pages.find(p => p.slug === slug);
 
 // RLS(tenant_id = auth.jwt()->>'tenant_id')のアプリ層ミラー。
 // friendが属するテナント＝その友だちに結合されたセッションのテナント。
+// 同意が現在の利用目的に対して有効か（目的バージョンが上がると旧同意は"再同意待ち"）。
+// 記録が無い古い同意は現行扱い（後方互換）。friendが再同意待ちなら true。
+export function needsReconsent(store, friendId) {
+  for (const [, id] of store.identity) {
+    if (id.friend_id !== friendId || !id.consented) continue;
+    const v = id.consent_purpose_version ?? store.purpose_version;
+    if (v < store.purpose_version) return true;
+  }
+  return false;
+}
+
 export function tenantOfFriend(store, friendId) {
   for (const [anon, id] of store.identity) {
     if (id.friend_id !== friendId) continue;
@@ -169,6 +181,7 @@ function recordFires(store, anon_id, fired) {
 
 function applyTagsToFriend(store, friend_id, tags) {
   if (store.profiling_opt_out?.has(friend_id)) return; // プロファイリング拒否者にはタグを付けない
+  if (needsReconsent(store, friend_id)) return; // 再同意待ち（目的変更後）はタグを付けない
   if (!store.friend_tags.has(friend_id)) store.friend_tags.set(friend_id, new Set());
   const set = store.friend_tags.get(friend_id);
   for (const t of tags) set.add(t);
@@ -252,8 +265,9 @@ function handle(store, req, res, body) {
       && (!is_minor || consent_record.guardian_consent === true));
 
     // idempotent：同じ結合は上書きのみ、重複行を作らない
-    store.identity.set(d.anon_id, { friend_id: d.friend_id, consented, consent_record, consent_record_complete });
-    store.audit_log.push({ action: 'merge', friend_id: d.friend_id, consented, consent_record_complete, at: Date.now() });
+    // 同意は「その時点の利用目的バージョン」に紐づく（後で目的を広げたら再同意が要る）
+    store.identity.set(d.anon_id, { friend_id: d.friend_id, consented, consent_record, consent_record_complete, consent_purpose_version: store.purpose_version });
+    store.audit_log.push({ action: 'merge', friend_id: d.friend_id, consented, consent_record_complete, purpose_version: store.purpose_version, at: Date.now() });
 
     // tag_fires に friend_id を後埋め
     for (const f of store.tag_fires) if (f.session_anon === d.anon_id) f.friend_id = d.friend_id;
@@ -441,6 +455,26 @@ function handle(store, req, res, body) {
     store.audit_log.push({ action: 'export', friend_id: d.friend_id, actor: String(d.actor), rows, encrypted, subject_request: d.subject_request === true, identity_verified: d.identity_verified === true, at: Date.now() });
     if (encrypted) return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: true, payload: encryptCsv(csv, d.passphrase) });
     return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: false, csv });
+  }
+
+  // GET/POST /api/attn/purpose-version — 利用目的のバージョン。上げると旧同意は再同意待ちに（目的外利用の防止）
+  if (url.pathname === '/api/attn/purpose-version') {
+    if (req.method === 'GET') return send(200, { purpose_version: store.purpose_version });
+    if (req.method === 'POST') {
+      let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+      const v = Number(d.version);
+      if (!Number.isInteger(v) || v <= store.purpose_version) return send(400, { error: `version must be an integer > ${store.purpose_version}` });
+      store.purpose_version = v;
+      store.audit_log.push({ action: 'purpose-version-bump', friend_id: `v${v}`, purpose: d.purpose || null, at: Date.now() });
+      return send(200, { ok: true, purpose_version: v, note: '旧バージョンで同意した友だちは再同意が必要（それまでタグ付与は停止）' });
+    }
+  }
+  // GET /api/attn/reconsent-status?friend_id= — 目的変更後に再同意が必要か
+  if (req.method === 'GET' && url.pathname === '/api/attn/reconsent-status') {
+    const fid = url.searchParams.get('friend_id');
+    if (!fid) return send(400, { error: 'friend_id required' });
+    if (denyCrossTenant(tenantOfFriend(store, fid))) return send(403, { error: 'tenant scope violation' });
+    return send(200, { friend_id: fid, current_version: store.purpose_version, needs_reconsent: needsReconsent(store, fid) });
   }
 
   // GET /api/attn/profiling-info?page_slug= — プロファイリングの透明化（どのタグを何を根拠に付けるか）
