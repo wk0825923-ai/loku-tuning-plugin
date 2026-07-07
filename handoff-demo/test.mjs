@@ -191,6 +191,30 @@ async function suite() {
     const r = await post('/api/attn/forget', {}); eq(r.status, 400, 'anon/friend欠落→400');
   });
 
+  // 12b) 保持期間purge：保存期間を過ぎた計測データを消去（now注入で古さを再現）
+  await withServer(async ({ post, get }) => {
+    const DAY = 86400000, now = Date.now();
+    await post('/api/attn/collect', { anon_id: 'P_old', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/collect', { anon_id: 'P_new', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    // now を 800日先に進めて実行 → P_old(=約800日前)は消え、直前collectのP_newは… 両方古くなるので個別に確認
+    // まず未来800日: 両方expire
+    let pg = await (await post('/api/attn/purge', { retention_days: 730, now: now + 800 * DAY })).json();
+    ok(pg.ok && pg.purgedAnons.includes('P_old') && pg.purgedAnons.includes('P_new'), '保持超過の全セッションをpurge');
+    // 再投入して現在時刻でpurge → 新しいので残る
+    await post('/api/attn/collect', { anon_id: 'P_fresh', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    pg = await (await post('/api/attn/purge', { retention_days: 730 })).json();
+    ok(!pg.purgedAnons.includes('P_fresh'), '保持期間内の新しいデータは残す');
+    // purge後は journey も空（結合済みでも生データ消去で復活しない）
+    await post('/api/attn/collect', { anon_id: 'P_j', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'P_j', friend_id: 'f_Pj', consented: true });
+    await post('/api/attn/purge', { retention_days: 0, now: now + DAY });
+    const j = await (await get('/api/attn/journey?friend_id=f_Pj')).json();
+    eq(j.journeys.length, 0, 'purge後は journey 空');
+    // バリデーション
+    eq((await post('/api/attn/purge', { retention_days: -1 })).status, 400, '負のretention_days→400');
+    eq((await post('/api/attn/purge', { retention_days: 'x' })).status, 400, '非数値retention_days→400');
+  });
+
   // 13) サチコ連携：APIで引っ張った行を取り込み、来る前をjourneyに搭載
   await withServer(async ({ post, get }) => {
     const rows = [

@@ -43,6 +43,28 @@ function seedStore() {
   };
 }
 
+// 保持期間purge：last_seen_at が cutoff より古いセッションと関連データを消す。
+// forget と同じカスケード（sessions/box_stats/identity/tag_fires）。付与済み friend_tags は残す
+// （生の計測データのみ消去。友だち単位の完全削除は forget 側の責務）。
+export function purgeExpired(store, cutoff) {
+  const purgedAnons = [];
+  for (const [anon, sess] of store.sessions) {
+    const last = sess.last_seen_at ?? sess.started_at ?? 0;
+    if (last < cutoff) purgedAnons.push(anon);
+  }
+  let boxStatsRemoved = 0;
+  for (const anon of purgedAnons) {
+    store.sessions.delete(anon);
+    for (const key of [...store.box_stats.keys()]) if (key.startsWith(anon + '::')) { store.box_stats.delete(key); boxStatsRemoved++; }
+    store.identity.delete(anon);
+  }
+  if (purgedAnons.length) {
+    const gone = new Set(purgedAnons);
+    store.tag_fires = store.tag_fires.filter(f => !gone.has(f.session_anon));
+  }
+  return { purgedAnons, boxStatsRemoved };
+}
+
 const pageBySlug = (s, slug) => s.pages.find(p => p.slug === slug);
 const rulesForPage = (s, page_id) => s.tag_rules.filter(r => r.page_id === page_id);
 
@@ -296,6 +318,19 @@ function handle(store, req, res, body) {
     if (d.friend_id) store.friend_tags.delete(d.friend_id); // 付与済みタグも撤回
     store.audit_log.push({ action: 'forget', friend_id: d.friend_id || anons.join(','), at: Date.now() });
     return send(200, { ok: true, forgotten: anons, boxStatsRemoved: removed });
+  }
+
+  // POST /api/attn/purge — 保持期間を過ぎた計測データを消去（安全管理措置・保存期間の管理）
+  // 本番は cron で定期実行する想定。retention_days 既定=730(24ヶ月・schema.sql準拠)。
+  if (req.method === 'POST' && url.pathname === '/api/attn/purge') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    const days = d.retention_days == null ? 730 : Number(d.retention_days);
+    if (!Number.isFinite(days) || days < 0) return send(400, { error: 'retention_days must be >= 0' });
+    const now = Number.isFinite(d.now) ? d.now : Date.now();
+    const cutoff = now - days * 86400000;
+    const res2 = purgeExpired(store, cutoff);
+    store.audit_log.push({ action: 'purge', friend_id: `retention:${days}d`, purged: res2.purgedAnons.length, at: now });
+    return send(200, { ok: true, retention_days: days, cutoff, ...res2 });
   }
 
   // デモ専用：graceful shutdown（allowShutdown時のみ有効。本番には載せない）
