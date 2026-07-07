@@ -1,6 +1,7 @@
 // 自動テスト（依存ゼロ）。各テストは createServer() で新インスタンス＝状態隔離。
 // フルスイートを N 回ループして安定性・冪等性を確認する。
 import { createServer } from './app.mjs';
+import { stripSensitive } from './compliance.mjs';
 
 let pass = 0, fail = 0;
 const fails = [];
@@ -156,6 +157,14 @@ async function suite() {
     ok((await (await post('/api/attn/check-copy', { text: 'カンチします', industry: 'rikaku' })).json()).blocked, 'カタカナ「カンチ(完治)」もブロック');
     // 誤検知防止：正常な日本語コピーは通過
     ok((await (await post('/api/attn/check-copy', { text: '丁寧なカウンセリングと予約制', industry: 'judo' })).json()).ok, '正常コピーはクリーン(英語辞書追加の副作用なし)');
+    // 要配慮ガード stripSensitive：大文字キー・ネスト・配列内も剥がす
+    {
+      const r = stripSensitive({ box: 'a', Symptom: '腰痛', profile: { diagnosis: 'ヘルニア', name: '田中' }, items: [{ condition: 'x', box: 'b' }] });
+      ok(r.stripped.includes('Symptom'), '大文字「Symptom」も剥がす');
+      ok(r.stripped.includes('profile.diagnosis'), 'ネスト「profile.diagnosis」も剥がす');
+      ok(r.stripped.includes('items[0].condition'), '配列内「condition」も剥がす');
+      ok(r.clean.profile.name === '田中' && r.clean.items[0].box === 'b', '非該当フィールドは保持する');
+    }
   });
 
   // 11) 要配慮個人情報ガード：症状フィールドは結合させず剥がす

@@ -241,7 +241,7 @@
     <ul class="chklist">
       <li><b>文言の自動公開を無効</b>（構造/導線提案まで・コピーは人承認）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 同意ゲート＋公開ブロック</span></li>
       <li><b>NGワードチェッカー</b>（柔整・あはき・薬機・景表）＋業種フラグで出し分け<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> compliance.mjs / check-copy API・正規化(NFKC＋空白除去＋大小文字)で全角/文字間スペース/ひらがな開きの回避も遮断・症状名×効能想起の共起は接骨院/鍼灸でブロック(適応症標榜)</span></li>
-      <li><b>結合は行動データのみ・症状は非結合</b>（要配慮該当を回避）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> stripSensitive()</span></li>
+      <li><b>結合は行動データのみ・症状は非結合</b>（要配慮該当を回避）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> stripSensitive()・大文字キー/ネスト/配列内も再帰剥離</span></li>
       <li><b>友だち追加時の明示同意</b>／非同意は匿名集計のみ<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge consentゲート</span></li>
       <li><b>開示・削除・オプトアウト</b>（friend単位で削除）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> forget API</span></li>
       <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意</span></li>

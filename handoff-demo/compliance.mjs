@@ -93,12 +93,29 @@ export function detectSensitiveInference(text = '') {
   return { inferred: cues.length > 0, health, cues };
 }
 
-/** collect ペイロードから要配慮フィールドを剥がす。剥がしたキー名を返す（記録・監査用） */
+const SENSITIVE_KEYS_LC = SENSITIVE_KEYS.map(k => k.toLowerCase());
+const isSensitiveKey = (k) => SENSITIVE_KEYS_LC.includes(String(k).toLowerCase());
+
+/**
+ * collect ペイロードから要配慮フィールドを剥がす。
+ * 大文字小文字を無視し、ネストしたオブジェクト/配列も再帰的に走査する
+ * （症状・診断が入れ子や表記ゆれで結合されるのを防ぐ）。剥がしたキーパスを返す。
+ */
 export function stripSensitive(payload = {}) {
   const stripped = [];
-  const clean = { ...payload };
-  for (const k of Object.keys(clean)) {
-    if (SENSITIVE_KEYS.includes(k)) { delete clean[k]; stripped.push(k); }
-  }
+  const walk = (node, path) => {
+    if (Array.isArray(node)) return node.map((v, i) => walk(v, `${path}[${i}]`));
+    if (node && typeof node === 'object') {
+      const out = {};
+      for (const k of Object.keys(node)) {
+        const p = path ? `${path}.${k}` : k;
+        if (isSensitiveKey(k)) { stripped.push(p); continue; }
+        out[k] = walk(node[k], p);
+      }
+      return out;
+    }
+    return node;
+  };
+  const clean = walk(payload, '');
   return { clean, stripped };
 }
