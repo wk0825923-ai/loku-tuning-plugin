@@ -129,6 +129,27 @@ async function suite() {
       consent_record: { obtained_by: 'LIFF', method: 'liff_optin' } })).json()).consent_record_complete, '成人は従来どおり完全');
   });
 
+  // 1f) 開示・削除請求への本人確認：本人起点の請求は identity_verified 必須（なりすまし防止）
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'IV1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'IV1', friend_id: 'f_IV', consented: true });
+    // 本人起点＋本人確認なし → 403（削除も開示も）
+    eq((await post('/api/attn/forget', { friend_id: 'f_IV', subject_request: true })).status, 403, '本人起点の削除で本人確認なし→403');
+    eq((await post('/api/attn/export', { friend_id: 'f_IV', actor: 'self', subject_request: true })).status, 403, '本人起点の開示で本人確認なし→403');
+    // データはまだ消えていない
+    ok((await (await get('/api/attn/journey?friend_id=f_IV')).json()).journeys.length > 0, '本人確認前は削除されていない');
+    // 本人確認あり → 実行できる
+    const ex = await (await post('/api/attn/export', { friend_id: 'f_IV', actor: 'self', subject_request: true, identity_verified: true })).json();
+    ok(ex.ok, '本人確認ありの開示は実行');
+    const log = await (await get('/api/attn/audit-log?friend_id=f_IV')).json();
+    ok(log.entries.some(e => e.action === 'export' && e.subject_request && e.identity_verified), '本人確認の有無が証跡に残る');
+    ok((await (await post('/api/attn/forget', { friend_id: 'f_IV', subject_request: true, identity_verified: true })).json()).ok, '本人確認ありの削除は実行');
+    // 社内運用（subject_request無し）は従来どおり本人確認不要
+    await post('/api/attn/collect', { anon_id: 'IV2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'IV2', friend_id: 'f_IV2', consented: true });
+    ok((await (await post('/api/attn/export', { friend_id: 'f_IV2', actor: 'staff_a' })).json()).ok, '社内運用は従来どおり本人確認不要');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });

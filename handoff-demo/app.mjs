@@ -409,6 +409,8 @@ function handle(store, req, res, body) {
   if (req.method === 'POST' && url.pathname === '/api/attn/forget') {
     let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
     if (!d.anon_id && !d.friend_id) return send(400, { error: 'anon_id or friend_id required' });
+    // 本人起点の削除請求は本人確認が必須（なりすまし削除の防止）。社内運用(subject_request無し)は対象外。
+    if (d.subject_request === true && d.identity_verified !== true) return send(403, { error: '本人確認が未了（identity_verified required）' });
     // 対象 anon_id 群を決定
     let anons = [];
     if (d.anon_id) anons = [d.anon_id];
@@ -421,7 +423,7 @@ function handle(store, req, res, body) {
       store.tag_fires = store.tag_fires.filter(f => f.session_anon !== anon);
     }
     if (d.friend_id) store.friend_tags.delete(d.friend_id); // 付与済みタグも撤回
-    store.audit_log.push({ action: 'forget', friend_id: d.friend_id || anons.join(','), at: Date.now() });
+    store.audit_log.push({ action: 'forget', friend_id: d.friend_id || anons.join(','), subject_request: d.subject_request === true, identity_verified: d.identity_verified === true, at: Date.now() });
     return send(200, { ok: true, forgotten: anons, boxStatsRemoved: removed });
   }
 
@@ -431,11 +433,12 @@ function handle(store, req, res, body) {
     let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
     if (!d.friend_id) return send(400, { error: 'friend_id required' });
     if (!d.actor) return send(400, { error: 'actor required（持ち出しログのため誰が実行したか必須）' });
+    if (d.subject_request === true && d.identity_verified !== true) return send(403, { error: '本人確認が未了（identity_verified required）' }); // 本人起点の開示請求は本人確認必須
     if (denyCrossTenant(tenantOfFriend(store, d.friend_id))) return send(403, { error: 'tenant scope violation' }); // 他テナントの持ち出し禁止
     const { csv, rows } = buildFriendCsv(store, d.friend_id);
     const encrypted = d.passphrase != null && d.passphrase !== '';
     // 持ち出しログ（安全管理措置・従業者の監督）
-    store.audit_log.push({ action: 'export', friend_id: d.friend_id, actor: String(d.actor), rows, encrypted, at: Date.now() });
+    store.audit_log.push({ action: 'export', friend_id: d.friend_id, actor: String(d.actor), rows, encrypted, subject_request: d.subject_request === true, identity_verified: d.identity_verified === true, at: Date.now() });
     if (encrypted) return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: true, payload: encryptCsv(csv, d.passphrase) });
     return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: false, csv });
   }
