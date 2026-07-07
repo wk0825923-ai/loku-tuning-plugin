@@ -5,7 +5,7 @@
 // createServer() は「その都度まっさらなストア」を持つサーバを返す（テスト隔離のため）。
 
 import http from 'node:http';
-import { checkCopy, stripSensitive, detectHealthTerms } from './compliance.mjs';
+import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure } from './compliance.mjs';
 import { ingestSearchConsole, searchSummary } from './search-console.mjs';
 
 // ---- サンプルページ定義（本番は loku_attn_pages / _boxes 相当） ----
@@ -40,6 +40,7 @@ function seedStore() {
     bookings: new Set(),      // 予約が入った friend_id（実測CVRの母数）
     opt_out: new Set(),       // 配信停止した friend_id（送らない）
     audit_log: [],            // 機微操作の証跡（安全管理措置・従業者の監督）
+    privacy_policy_urls: new Map(), // tenant_id -> 店舗が設定したプライバシーポリシーURL
   };
 }
 
@@ -318,6 +319,27 @@ function handle(store, req, res, body) {
     if (d.friend_id) store.friend_tags.delete(d.friend_id); // 付与済みタグも撤回
     store.audit_log.push({ action: 'forget', friend_id: d.friend_id || anons.join(','), at: Date.now() });
     return send(200, { ok: true, forgotten: anons, boxStatsRemoved: removed });
+  }
+
+  // POST /api/attn/privacy-policy — 店舗が自らのプライバシーポリシーURLを登録（当方で代筆しない）
+  if (req.method === 'POST' && url.pathname === '/api/attn/privacy-policy') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.page_slug || !d.url) return send(400, { error: 'page_slug and url required' });
+    const page = pageBySlug(store, d.page_slug);
+    if (!page) return send(404, { error: 'unknown page' });
+    if (!/^https?:\/\//.test(String(d.url))) return send(400, { error: 'url must be http(s)' });
+    store.privacy_policy_urls.set(page.tenant_id, d.url);
+    return send(200, { ok: true, tenant_id: page.tenant_id, url: d.url });
+  }
+
+  // GET /api/attn/disclosure?page_slug= — 外部送信の通知（何を・どこへ・何のため）をLPに埋め込む
+  if (req.method === 'GET' && url.pathname === '/api/attn/disclosure') {
+    const slug = url.searchParams.get('page_slug');
+    const page = slug ? pageBySlug(store, slug) : null;
+    if (slug && !page) return send(404, { error: 'unknown page' });
+    // 店舗が設定したポリシーURLがあれば載せる（無ければ空欄のまま）
+    const ppUrl = (page && store.privacy_policy_urls?.get(page.tenant_id)) || null;
+    return send(200, buildDisclosure({ privacyPolicyUrl: ppUrl }));
   }
 
   // POST /api/attn/purge — 保持期間を過ぎた計測データを消去（安全管理措置・保存期間の管理）

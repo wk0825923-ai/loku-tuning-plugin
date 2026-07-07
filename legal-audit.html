@@ -244,7 +244,7 @@
       <li><b>結合は行動データのみ・症状は非結合</b>（要配慮該当を回避）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> stripSensitive()・大文字キー/ネスト/配列内も再帰剥離</span></li>
       <li><b>友だち追加時の明示同意</b>／非同意は匿名集計のみ<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge consentゲート</span></li>
       <li><b>開示・削除・オプトアウト</b>（friend単位で削除）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> forget API</span></li>
-      <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意</span></li>
+      <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意・buildDisclosure()/GET disclosureで「何を/どこへ/何のため」をLP埋め込み(第三者提供なし・要配慮除外を明示・ポリシーURLは店舗設定)</span></li>
       <li><b>安全管理措置</b>：テナント分離（RLS）・アクセス制御<span class="st plan">設計</span>／<b>保持期間purge</b><span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> purgeExpired()/POST purge・最終アクセスから既定730日で計測データを消去(cron想定)・回帰テスト済</span></li>
       <li><b>委託契約（DPA）</b>：店舗＝取扱事業者、Loku＝委託先を書面化<span class="st ops">運用</span></li>
       <li><b>配信頻度の上限＋配信停止（オプトアウト）導線</b>（LINE規約・特商法）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 頻度上限＋停止を明示</span></li>

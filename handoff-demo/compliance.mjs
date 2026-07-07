@@ -69,6 +69,34 @@ export function checkCopy(text = '', industry = 'rikaku') {
   return { ok: violations.length === 0, blocked, industry, industryLabel: prof.label, inference: inf, violations };
 }
 
+/**
+ * 外部送信規律（改正電気通信事業法）の通知文を生成。
+ * 「何を・どこへ・何のため」を明示する。事実の開示のみで、効果・優良性の主張はしない。
+ * privacyPolicyUrl は店舗が自ら設定する欄（未設定なら null＝空欄のまま出さない）。
+ * @returns {{legal_basis, items, destination, purposes, sensitive_excluded, opt_in_required_for_merge, privacy_policy_url}}
+ */
+export function buildDisclosure({ serviceName = 'Loku Attention 計測', privacyPolicyUrl = null } = {}) {
+  return {
+    legal_basis: '改正電気通信事業法 外部送信規律',
+    service_name: serviceName,
+    items: [
+      'ページの閲覧・到達',
+      'ボックスごとの表示・滞在時間・再訪',
+      '流入時の検索クエリ（健康・症状語は"推知"として配慮）',
+      '端末種別（PC/スマホ等）',
+      '匿名の識別子（Cookie/ローカル保存の匿名ID）',
+    ],
+    destination: { name: 'Loku（本サービス運営者）', is_third_party: false, note: '1st-party。広告等の第三者提供は行わない' },
+    purposes: [
+      '来訪の分析とページ導線の改善',
+      '（お客様の同意がある場合のみ）LINE友だちと結合したご案内',
+    ],
+    sensitive_excluded: true, // 症状・診断など要配慮個人情報は送信・結合しない（stripSensitive）
+    opt_in_required_for_merge: true, // 実名結合には明示同意が必要
+    privacy_policy_url: privacyPolicyUrl, // 店舗が設定（未設定は空欄・当方で代筆しない）
+  };
+}
+
 // ② 要配慮個人情報ガード：結合してはいけない健康・症状系フィールドを検出して除去
 const SENSITIVE_KEYS = ['symptom', 'symptoms', 'diagnosis', 'disease', 'condition', 'health', 'medical', 'injury', '症状', '病名', '既往歴'];
 

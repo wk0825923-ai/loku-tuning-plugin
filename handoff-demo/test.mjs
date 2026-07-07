@@ -215,6 +215,21 @@ async function suite() {
     eq((await post('/api/attn/purge', { retention_days: 'x' })).status, 400, '非数値retention_days→400');
   });
 
+  // 12c) 外部送信規律の通知（改正電通法）：何を・どこへ・何のため を開示
+  await withServer(async ({ post, get }) => {
+    const disc = await (await get('/api/attn/disclosure?page_slug=seitai-lp-a')).json();
+    ok(disc.items.length > 0 && disc.purposes.length > 0, '送信情報と利用目的を明示');
+    eq(disc.destination.is_third_party, false, '送信先はLoku(1st-party)・第三者提供なし');
+    eq(disc.sensitive_excluded, true, '要配慮(症状/診断)は送信対象外を明示');
+    eq(disc.privacy_policy_url, null, 'ポリシーURL未設定は空欄（代筆しない）');
+    eq((await get('/api/attn/disclosure?page_slug=nope')).status, 404, '未知ページ→404');
+    // 店舗がポリシーURLを登録すると通知に反映
+    ok((await (await post('/api/attn/privacy-policy', { page_slug: 'seitai-lp-a', url: 'https://example.com/privacy' })).json()).ok, 'ポリシーURL登録OK');
+    eq((await (await get('/api/attn/disclosure?page_slug=seitai-lp-a')).json()).privacy_policy_url, 'https://example.com/privacy', '登録後は通知にURLが載る');
+    eq((await post('/api/attn/privacy-policy', { page_slug: 'seitai-lp-a', url: 'javascript:alert(1)' })).status, 400, 'http(s)以外のURLは拒否');
+    eq((await post('/api/attn/privacy-policy', { url: 'https://x' })).status, 400, 'page_slug欠落→400');
+  });
+
   // 13) サチコ連携：APIで引っ張った行を取り込み、来る前をjourneyに搭載
   await withServer(async ({ post, get }) => {
     const rows = [
