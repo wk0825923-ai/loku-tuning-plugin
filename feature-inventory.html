@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Tuning — 機能棚卸し（内部）</title>
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#12161d; --panel2:#161b24; --line:#232a35;
+    --ink:#eef2f7; --mut:#8c97a6; --sub:#aab4c2;
+    --grn:#3ddc97; --red:#ff6b6b; --amb:#ffcf5c; --blu:#6cb6ff;
+    --num:"SF Mono",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:56px 24px 96px}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  code{font-family:var(--num);font-size:.86em;color:var(--blu);background:#0e1620;
+    padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:26px}
+  .kicker{font-size:12px;letter-spacing:.18em;color:var(--grn);font-weight:700;text-transform:uppercase}
+  h1{font-size:31px;line-height:1.3;margin:14px 0 8px}
+  .lead{color:var(--sub);font-size:15.5px;margin:0}
+  .meta{color:var(--mut);font-size:12.5px;margin-top:12px}
+
+  /* thickness legend */
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:22px 0 0;font-size:12.5px;color:var(--mut)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .d-thick{background:var(--grn)} .d-mid{background:var(--amb)} .d-thin{background:var(--red)}
+
+  section{margin:30px 0}
+  .grp{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:16px}
+  .grp.thin{border-color:#3a2226} .grp.thick{border-color:#1e3a30}
+  .grp-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .grp-head .l{display:flex;align-items:center;gap:11px}
+  .grp-no{font-family:var(--num);font-size:13px;font-weight:700;color:var(--grn)}
+  .grp-head h2{font-size:17px;margin:0;letter-spacing:.01em}
+  .badge{font-family:var(--num);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .b-thick{color:#0c0f14;background:var(--grn)}
+  .b-mid{color:#0c0f14;background:var(--amb)}
+  .b-thin{color:#fff;background:var(--red)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  td{padding:11px 20px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.feat{color:var(--ink);width:52%} td.impl{color:var(--mut);font-size:13px}
+  .tag-imp{font-family:var(--num);font-size:10.5px;color:var(--grn);border:1px solid #1e3a30;
+    background:#0f2a20;border-radius:5px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+  .tag-gap{font-family:var(--num);font-size:10.5px;color:var(--red);border:1px solid #3a2226;
+    background:#241417;border-radius:5px;padding:1px 6px;margin-left:6px;white-space:nowrap}
+
+  .compact{padding:16px 20px;color:var(--sub);font-size:13.5px;line-height:1.9}
+  .compact b{color:var(--ink)}
+
+  /* findings */
+  .findings{margin-top:40px}
+  .finding{display:flex;gap:14px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:16px 18px;margin-bottom:12px}
+  .finding .ic{font-size:20px;line-height:1.2}
+  .finding.warn{border-color:#3a3322;background:linear-gradient(180deg,#1c1a12,#12161d)}
+  .finding.ok{border-color:#1e3a30}
+  .finding h3{margin:0 0 4px;font-size:15px}
+  .finding p{margin:0;color:var(--sub);font-size:13.5px}
+  .finding .em{color:var(--grn);font-weight:700} .finding .rr{color:var(--red);font-weight:700}
+
+  /* spine map */
+  .spine{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px}
+  @media(max-width:680px){.spine{grid-template-columns:1fr}}
+  .step{border:1px solid var(--line);border-radius:12px;padding:16px 16px;background:var(--panel2)}
+  .step.full{border-color:#1e3a30} .step.empty{border-color:#3a2226}
+  .step .s{font-family:var(--num);font-size:11px;color:var(--mut)}
+  .step h4{margin:5px 0 8px;font-size:15px}
+  .step .bar{height:6px;border-radius:4px;background:#0e1620;overflow:hidden;margin-bottom:8px}
+  .step .bar i{display:block;height:100%}
+  .step.full .bar i{width:92%;background:var(--grn)}
+  .step.mid .bar i{width:55%;background:var(--amb)}
+  .step.empty .bar i{width:18%;background:var(--red)}
+  .step p{margin:0;font-size:12.5px;color:var(--mut)}
+
+  footer{border-top:1px solid var(--line);margin-top:52px;padding-top:18px;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Loku Tuning · 機能棚卸し</div>
+    <h1>今あるもの、全部並べる。</h1>
+    <p class="lead">動くプロトタイプ（<code>handoff-demo</code>）＋各UIから抽出。尖り「数値化→因果→次アクション」の3段で並べ替え。</p>
+    <div class="legend">
+      <span><i class="dot d-thick"></i>厚い（実装済・磨かれてる）</span>
+      <span><i class="dot d-mid"></i>中（動くが浅い）</span>
+      <span><i class="dot d-thin"></i>薄い（型/候補止まり＝要投資）</span>
+    </div>
+    <div class="meta">2026-07-08 ｜ noindex・社内資料 ｜ 関連: strategy.html / legal-audit.html / status.html</div>
+  </header>
+
+  <!-- 3段スパインマップ -->
+  <section>
+    <div class="spine">
+      <div class="step full"><div class="s">STAGE 1</div><h4>数値化</h4><div class="bar"><i></i></div><p>視線・行動・流入・CV・EC。実名結合まで厚い。</p></div>
+      <div class="step mid"><div class="s">STAGE 2</div><h4>因果</h4><div class="bar"><i></i></div><p>「今声をかけるとよい人」＝候補抽出まで。"なぜ"は未言語化。</p></div>
+      <div class="step empty"><div class="s">STAGE 3</div><h4>次アクション</h4><div class="bar"><i></i></div><p>提案→承認→公開の"型"だけ。撃つエンジンは未実装。</p></div>
+    </div>
+  </section>
+
+  <!-- ① 計測 -->
+  <section>
+    <div class="grp thick">
+      <div class="grp-head"><div class="l"><span class="grp-no">①</span><h2>計測 / 数値化</h2></div><span class="badge b-thick">★ 厚い</span></div>
+      <table><tbody>
+        <tr><td class="feat">ボックス単位の視線計測（Attention Score）</td><td class="impl"><code>loku-attn.js</code> → <code>POST /attn/collect</code></td></tr>
+        <tr><td class="feat">Live Attention（リアルタイム表示）</td><td class="impl">index / ec-product UI</td></tr>
+        <tr><td class="feat">匿名 → 実名マージ（Friend Profile）</td><td class="impl"><code>POST /attn/merge</code></td></tr>
+        <tr><td class="feat">来訪ジャーニー</td><td class="impl"><code>GET /attn/journey</code></td></tr>
+        <tr><td class="feat">流入計測（検索語）＝サチコ取込</td><td class="impl"><code>search-console.mjs</code> ingest / summary（readonly）</td></tr>
+        <tr><td class="feat">CV計測（予約）</td><td class="impl"><code>POST /attn/booking</code></td></tr>
+        <tr><td class="feat">タグ別コンバージョン</td><td class="impl"><code>GET /attn/conversion-by-tag</code></td></tr>
+        <tr><td class="feat">EC：商品イベント / ファネル / カゴ落ち検知</td><td class="impl"><code>product-event</code> / <code>product-funnel</code></td></tr>
+      </tbody></table>
+    </div>
+  </section>
+
+  <!-- ② 実名結合 -->
+  <section>
+    <div class="grp thick">
+      <div class="grp-head"><div class="l"><span class="grp-no">②</span><h2>実名結合 / Loku互換</h2></div><span class="badge b-thick">★ 厚い</span></div>
+      <table><tbody>
+        <tr><td class="feat">自動タグ付与（ルールエンジン：route / box × 閾値）</td><td class="impl"><code>GET /attn/friend-tags</code>・事前タグ設計</td></tr>
+        <tr><td class="feat">🔥 今、声をかけるとよい人（行動ベースの候補抽出）</td><td class="impl">loku-admin-view</td></tr>
+        <tr><td class="feat">配信頻度の上限（撃ちすぎ防止）</td><td class="impl"><code>GET /attn/can-send</code></td></tr>
+      </tbody></table>
+    </div>
+  </section>
+
+  <!-- ③ 因果→次アクション -->
+  <section>
+    <div class="grp thin">
+      <div class="grp-head"><div class="l"><span class="grp-no">③</span><h2>因果 → 次アクション</h2></div><span class="badge b-thin">⚠ 一番薄い＝尖りの中核</span></div>
+      <table><tbody>
+        <tr><td class="feat">導線チューニング提案（提案 → 店主承認 → 公開）</td><td class="impl">self-optimization に<b style="color:var(--amb)">型だけ</b>（「料金セクションを上に移動」例）<span class="tag-gap">型止まり</span></td></tr>
+        <tr><td class="feat">声かけ候補の抽出</td><td class="impl">②の候補止まり＝<b style="color:var(--red)">"なぜ"の言語化は未実装</b><span class="tag-gap">未実装</span></td></tr>
+        <tr><td class="feat">離脱理由に合わせた一言を自動で撃つ</td><td class="impl">— <span class="tag-gap">未着手</span></td></tr>
+      </tbody></table>
+    </div>
+  </section>
+
+  <!-- ④ 法務 -->
+  <section>
+    <div class="grp thick">
+      <div class="grp-head"><div class="l"><span class="grp-no">④</span><h2>コンプラ / 法務</h2></div><span class="badge b-thick">★★ 超厚い（18周）</span></div>
+      <div class="compact">
+        NGコピー<b>チェッカー</b>（<code>check-copy</code>・業種別 INDUSTRIES）／ 要配慮情報の非結合（<code>stripSensitive</code>・<code>detectHealthTerms</code>・<code>detectSensitiveInference</code>）／ 同意ゲート・取得前計測を403（<code>notice-policy</code>）／ opt-out・プロファイリング拒否 ／ 保持 purge・本人削除（<code>forget</code>）／ 開示削除の本人確認 ／ 外部送信通知（<code>disclosure</code>）／ CSV安全管理（暗号化・持出しログ・数式インジェクション対策）／ 越境移転（<code>subprocessors</code>）／ 漏えい報告（<code>incident</code>・<code>assessBreach</code>）／ 再同意（<code>purpose-version</code>）／ 未成年（guardian consent）／ 保有個人データ公表（<code>public-notice</code>）／ サチコ readonly スコープ強制（<code>assertReadonlyScope</code>）／ RLSテナント分離（<code>x-tenant-id</code> → 403）／ 監査ログ
+      </div>
+    </div>
+  </section>
+
+  <!-- ⑤ 運営UI -->
+  <section>
+    <div class="grp">
+      <div class="grp-head"><div class="l"><span class="grp-no">⑤</span><h2>運営 / 管理UI</h2></div><span class="badge b-mid">● 中</span></div>
+      <div class="compact">
+        運営ダッシュボード（全テナント横断 ＋ コンプラ監視）／ 代理店ダッシュボード（導入進捗・今月の成果）／ 店主設定（自動タグ・配信頻度・お知らせ文・データ取扱）／ オンボーディング（ページ接続・LINE接続・検索語接続・案内文・完了）／ 自己改善（自分の画面を計測して直す）
+      </div>
+    </div>
+  </section>
+
+  <!-- 棚卸しで見えた事実 -->
+  <section class="findings">
+    <h2 style="font-size:20px;margin:0 0 16px">棚卸しで見えた事実</h2>
+
+    <div class="finding warn">
+      <div class="ic">🎯</div>
+      <div><h3>尖りの中核 ③ が、一番スカスカ</h3>
+      <p>数値化（①）と法務（④）は超厚い。でも今日 “尖り” に決めた <span class="em">③「因果の言語化 → 次アクションを撃つ」</span>＝ <b>GA4/サチコを要らなくする心臓部</b>が、型と候補抽出止まり。「誰が・どこで折れたか」は撃てるが「<span class="rr">なぜ</span>折れたか」を言い切れていない。</p></div>
+    </div>
+
+    <div class="finding warn">
+      <div class="ic">⚖️</div>
+      <div><h3>本末転倒チェック：守りが商品より厚い</h3>
+      <p>法務を <b>18周</b> 磨いた一方、プロダクトの心臓（因果エンジン）は未着手。守りは「機械で出し切った」と自分で結論済み。<span class="em">次の投資は明確に ③ へ寄せる</span>のが筋。</p></div>
+    </div>
+
+    <div class="finding ok">
+      <div class="ic">✅</div>
+      <div><h3>方針との整合はクリーン</h3>
+      <p>コピーは <code>check-copy</code> ＝ “チェッカー” のみで、<b>生成機能はどこにも無い</b>。「作らない／主張は触らない」と矛盾なし。</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Loku Tuning 機能棚卸し ／ 社内資料・noindex ／ 2026-07-08 ／ 出所: handoff-demo（app.mjs / compliance.mjs / search-console.mjs）＋各UI ／ 関連: strategy.html・legal-audit.html・status.html
+  </footer>
+
+</div>
+</body>
+</html>

@@ -46,6 +46,20 @@
   .bars .bar{flex:1;height:9px;border-radius:5px;background:#1b2432;overflow:hidden}.bars .bar>i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--pur),#7c4fd6)}
   .bars .v{width:60px;text-align:right;font-family:var(--num);font-size:12px;color:var(--sub)}
 
+  /* コンプライアンス（18論点を1画面に畳む） */
+  .cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  @media(max-width:820px){.cgrid{grid-template-columns:1fr}}
+  .cgroup h3{font-size:13.5px;margin-bottom:4px}
+  .cgroup .gsub{color:var(--mut);font-size:11.5px;margin-bottom:10px}
+  .citem{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #1a2230}
+  .citem:last-child{border-bottom:0}
+  .citem .rn{font-family:var(--num);font-size:10.5px;font-weight:800;color:#04180f;background:var(--grn);border-radius:5px;padding:1px 6px;flex:0 0 auto}
+  .citem .rn.gold{background:var(--gold)}
+  .citem .nm{flex:1;font-size:12.5px;color:var(--ink)}
+  .citem .api{font-family:var(--num);font-size:10.5px;color:var(--mut)}
+  .citem .st{font-family:var(--num);font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;color:#04180f;background:var(--grn)}
+  .citem .st.ops{background:var(--gold)}
+
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:14px}
   .card h3{font-size:14px;margin-bottom:4px}.card p{color:var(--mut);font-size:12.5px}
   .rule{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
@@ -63,6 +77,7 @@
   <div class="brand">Loku <span class="d">Tuning</span><small>管理者コンソール</small></div>
   <div class="roles">
     <button class="on" data-role="ops">🏢 Loku運営</button>
+    <button data-role="compliance">🛡️ コンプライアンス</button>
     <button data-role="agency">🤝 代理店</button>
     <button data-role="store">⚙️ 店主の詳細設定</button>
   </div>
@@ -97,6 +112,65 @@
       <div id="ngDone" style="display:none;color:var(--grn);font-size:12.5px;margin-top:8px">✅ 「体験談」を外した安全な代替コピーを店主のLINEに送りました。承認待ちに移行。</div>
     </div>
     <p class="note">※ 運営は個票（個人の視線）は見ない。集計と稼働・コンプラのみ（プライバシー原則）。</p>
+  </div>
+
+  <!-- コンプライアンス（18論点を1画面に畳む） -->
+  <div class="pane" data-pane="compliance">
+    <h2 class="sec">コンプライアンス状況（1画面で把握）</h2>
+    <div class="subttl">法務監査の全論点を、機能ごとに散らさず1枚に集約。詳細は <a href="legal-audit.html" style="color:var(--grn)">法務監査</a>・<a href="status.html" style="color:var(--grn)">現在地レポート</a>。</div>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      <div class="kpi"><div class="v g num">18 / 18</div><div class="l">機械で解消できる論点</div></div>
+      <div class="kpi"><div class="v num">①→⑱</div><div class="l">監査リスク網羅</div></div>
+      <div class="kpi"><div class="v g num">10,250</div><div class="l">回帰テスト pass（fail=0）</div></div>
+      <div class="kpi"><div class="v gold num">4</div><div class="l">残り＝運用・専門家層</div></div>
+    </div>
+
+    <div class="cgrid">
+      <div class="card cgroup">
+        <h3>広告規制（業務停止の芽）</h3><div class="gsub">柔整/あはき・薬機・景表 ― コピーは自動公開せず人承認</div>
+        <div class="citem"><span class="rn">①</span><span class="nm">NG表現ブロック＋正規化（全角/空白/かな回避も遮断）</span><span class="api">check-copy</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">②</span><span class="nm">症状×効能の共起を接骨院/鍼灸でブロック（適応症標榜）</span><span class="api">check-copy</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">③</span><span class="nm">英語/ローマ字＋カタカナ開きもNG化</span><span class="api">check-copy</span><span class="st">実装</span></div>
+      </div>
+
+      <div class="card cgroup">
+        <h3>要配慮・同意</h3><div class="gsub">症状は結合しない／同意は由来まで記録</div>
+        <div class="citem"><span class="rn">④</span><span class="nm">症状/診断の非結合（大文字/ネスト/配列も再帰剥離）</span><span class="api">collect stripSensitive</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑩</span><span class="nm">個人関連情報31条：同意の確認・記録（誰が/方法/日時）</span><span class="api">merge consent_record</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑬</span><span class="nm">未成年は保護者同意が揃って初めて記録完全</span><span class="api">is_minor/guardian</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑮</span><span class="nm">目的を広げたら再同意待ち（タグ付与停止）</span><span class="api">purpose-version</span><span class="st">実装</span></div>
+      </div>
+
+      <div class="card cgroup">
+        <h3>本人の権利対応</h3><div class="gsub">開示・削除・停止・公表 ― なりすまし防止つき</div>
+        <div class="citem"><span class="rn">–</span><span class="nm">削除（忘れられる権利）／配信停止</span><span class="api">forget / opt-out</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑫</span><span class="nm">プロファイリングの開示＋拒否（既存タグ撤回）</span><span class="api">profiling-info/opt-out</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑭</span><span class="nm">開示・削除の本人確認（未了は403）＋証跡</span><span class="api">identity_verified</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑱</span><span class="nm">保有個人データの公表（目的/種類/請求手続き）</span><span class="api">public-notice</span><span class="st">実装</span></div>
+      </div>
+
+      <div class="card cgroup">
+        <h3>データ管理・送信・インシデント</h3><div class="gsub">保持・分離・外部送信・漏えいの型</div>
+        <div class="citem"><span class="rn">⑤</span><span class="nm">保持期間purge（既定730日でカスケード消去）</span><span class="api">purge</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑨</span><span class="nm">RLSテナント分離（他テナントは403）</span><span class="api">x-tenant-id</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑦</span><span class="nm">CSV安全管理（持ち出しログ/数式対策/AES暗号化）</span><span class="api">export</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑧</span><span class="nm">Google連携はreadonlyスコープ強制</span><span class="api">assertReadonlyScope</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑥</span><span class="nm">外部送信の通知（何を/どこへ/何のため）</span><span class="api">disclosure</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑰</span><span class="nm">通知前は計測しない（取得タイミング保証）</span><span class="api">notice-policy</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑪</span><span class="nm">越境移転／委託先の把握（保管国未設定は要確認）</span><span class="api">subprocessors</span><span class="st">実装</span></div>
+        <div class="citem"><span class="rn">⑯</span><span class="nm">漏えい時の報告・本人通知の要否判定＋台帳</span><span class="api">incident</span><span class="st">実装</span></div>
+      </div>
+    </div>
+
+    <div class="card cgroup" style="margin-top:14px;border-color:#e7b84f44">
+      <h3 style="color:var(--gold)">残り＝人が担う層（ソフトウェアでは解消不可）</h3>
+      <div class="gsub">ここだけはコードの外。実運用の前に人が用意する。</div>
+      <div class="citem"><span class="rn gold">運</span><span class="nm">DPA（委託契約）の締結：店舗＝取扱事業者／Loku＝委託先</span><span class="st ops">運用</span></div>
+      <div class="citem"><span class="rn gold">運</span><span class="nm">従業者教育・就業規則・退職時アクセス削除</span><span class="st ops">運用</span></div>
+      <div class="citem"><span class="rn gold">運</span><span class="nm">特商法の個別表記（商品訴求時）</span><span class="st ops">運用</span></div>
+      <div class="citem"><span class="rn gold">運</span><span class="nm">弁護士・個人情報保護委員会の最終確認</span><span class="st ops">運用</span></div>
+    </div>
+    <p class="note">※ 機械で解消できる論点（①〜⑱）はコード＋回帰テストで担保。散らばっていた各機能を、この1画面で状態把握できるように畳んだ。</p>
   </div>
 
   <!-- 代理店 -->
