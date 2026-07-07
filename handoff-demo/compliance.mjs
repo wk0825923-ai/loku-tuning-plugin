@@ -18,6 +18,14 @@ const RULES = [
   // 景表法：優良誤認・断定・最上級
   { cat: '景表法', sev: 'high',   terms: ['No.1', 'NO.1', 'No1', 'ナンバーワン', 'ナンバー1', '日本一', '地域一番', '最高', '最強', '絶対', 'ぜったい', '必ず', 'かならず', '100%', '完全に治', '唯一', '他院より', '業界初', '特許取得'] },
   { cat: '景表法', sev: 'medium', terms: ['人気', 'おすすめ', '安心', '実績多数'] },
+  // 英語・ローマ字での効能/最上級（正規化で大文字化して比較）。一般語衝突リスクのある heal/best は medium
+  { cat: '薬機法', sev: 'high',   terms: ['CURE', 'GUARANTEED', 'GUARANTEE', 'MIRACLE', '100PERCENT'] },
+  { cat: '薬機法', sev: 'medium', terms: ['HEAL', 'EFFECTIVE', 'PERMANENT'] },
+  { cat: '景表法', sev: 'high',   terms: ['NUMBER ONE', 'NUMBERONE', 'THE BEST', 'PERFECT', 'ONLY ONE'] },
+  { cat: '景表法', sev: 'medium', terms: ['BEST'] },
+  // カタカナ開きでの回避（ゼッタイ/カナラズ/ナオル/カンチ）
+  { cat: '薬機法', sev: 'high',   terms: ['ナオル', 'ナオリ', 'カンチ', 'コンチ', 'ソッコウ'] },
+  { cat: '景表法', sev: 'high',   terms: ['ゼッタイ', 'カナラズ', 'サイキョウ', 'ニホンイチ'] },
   // 柔整/あはき 広告可能事項の逸脱（enumerated業種で high 格上げ）
   { cat: '柔整・あはき広告', sev: 'medium', terms: ['体験談', '口コミ', 'お客様の声', 'ビフォーアフター', 'before/after', '症例', '肩こりに効く', '腰痛に効く', '神経痛', 'ダイエット', '小顔', '骨盤矯正で', '五十肩', '坐骨神経痛', 'ぎっくり腰', '自律神経', 'ヘルニア', '産後の骨盤'] },
 ];

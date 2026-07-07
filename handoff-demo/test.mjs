@@ -148,6 +148,14 @@ async function suite() {
     ok((await (await post('/api/attn/check-copy', { text: '１００％効く', industry: 'rikaku' })).json()).blocked, '全角「１００％」もブロック');
     ok((await (await post('/api/attn/check-copy', { text: '絶　対', industry: 'rikaku' })).json()).blocked, '文字間スペース「絶　対」もブロック');
     ok((await (await post('/api/attn/check-copy', { text: 'ぜっ たい に な お る', industry: 'rikaku' })).json()).blocked, 'ひらがな開き＋スペース「ぜったい/なおる」もブロック');
+    // 英語・ローマ字での効能/最上級
+    ok((await (await post('/api/attn/check-copy', { text: 'Guaranteed to cure your pain', industry: 'rikaku' })).json()).blocked, '英語「guaranteed/cure」もブロック');
+    ok((await (await post('/api/attn/check-copy', { text: 'We are the BEST, Number One', industry: 'rikaku' })).json()).blocked, '英語「the best/number one」もブロック');
+    // カタカナ開き
+    ok((await (await post('/api/attn/check-copy', { text: 'ゼッタイに良くなる', industry: 'rikaku' })).json()).blocked, 'カタカナ「ゼッタイ」もブロック');
+    ok((await (await post('/api/attn/check-copy', { text: 'カンチします', industry: 'rikaku' })).json()).blocked, 'カタカナ「カンチ(完治)」もブロック');
+    // 誤検知防止：正常な日本語コピーは通過
+    ok((await (await post('/api/attn/check-copy', { text: '丁寧なカウンセリングと予約制', industry: 'judo' })).json()).ok, '正常コピーはクリーン(英語辞書追加の副作用なし)');
   });
 
   // 11) 要配慮個人情報ガード：症状フィールドは結合させず剥がす
