@@ -49,6 +49,7 @@ function seedStore() {
     audit_log: [],            // 機微操作の証跡（安全管理措置・従業者の監督）
     privacy_policy_urls: new Map(), // tenant_id -> 店舗が設定したプライバシーポリシーURL
     subprocessors: defaultSubprocessors(), // 委託先レジストリ（越境移転28条・委託先監督25条）
+    profiling_opt_out: new Set(), // プロファイリング（タグ付け）を拒否した friend_id
   };
 }
 
@@ -167,6 +168,7 @@ function recordFires(store, anon_id, fired) {
 }
 
 function applyTagsToFriend(store, friend_id, tags) {
+  if (store.profiling_opt_out?.has(friend_id)) return; // プロファイリング拒否者にはタグを付けない
   if (!store.friend_tags.has(friend_id)) store.friend_tags.set(friend_id, new Set());
   const set = store.friend_tags.get(friend_id);
   for (const t of tags) set.add(t);
@@ -431,6 +433,34 @@ function handle(store, req, res, body) {
     store.audit_log.push({ action: 'export', friend_id: d.friend_id, actor: String(d.actor), rows, encrypted, at: Date.now() });
     if (encrypted) return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: true, payload: encryptCsv(csv, d.passphrase) });
     return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: false, csv });
+  }
+
+  // GET /api/attn/profiling-info?page_slug= — プロファイリングの透明化（どのタグを何を根拠に付けるか）
+  if (req.method === 'GET' && url.pathname === '/api/attn/profiling-info') {
+    const slug = url.searchParams.get('page_slug');
+    const page = slug ? pageBySlug(store, slug) : null;
+    if (slug && !page) return send(404, { error: 'unknown page' });
+    if (page && denyCrossTenant(page.tenant_id)) return send(403, { error: 'tenant scope violation' });
+    const rules = page ? rulesForPage(store, page.id) : store.tag_rules;
+    const basis = (r) => r.kind === 'route' ? 'ページに到達したら付与'
+      : r.kind === 'heat' ? `「${r.box_key}」への注視度が${r.threshold}以上で付与`
+      : r.kind === 'aggregate' ? `ページ全体の注視度の平均が${r.threshold}以上で付与` : 'その他';
+    return send(200, {
+      page_slug: slug || null,
+      note: '視線・行動データからタグ（見込み度合い）を自動付与します。付与を望まない場合は停止できます。',
+      profiles: rules.map(r => ({ tag: r.tag, basis: basis(r) })),
+      opt_out_endpoint: 'POST /api/attn/profiling-opt-out',
+    });
+  }
+  // POST /api/attn/profiling-opt-out — プロファイリング（タグ付け）の拒否。既存タグも撤回。
+  if (req.method === 'POST' && url.pathname === '/api/attn/profiling-opt-out') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.friend_id) return send(400, { error: 'friend_id required' });
+    if (denyCrossTenant(tenantOfFriend(store, d.friend_id))) return send(403, { error: 'tenant scope violation' });
+    store.profiling_opt_out.add(d.friend_id);
+    store.friend_tags.delete(d.friend_id); // 既に付与済みのタグを撤回
+    store.audit_log.push({ action: 'profiling-opt-out', friend_id: d.friend_id, at: Date.now() });
+    return send(200, { ok: true, friend_id: d.friend_id, profiling: 'stopped' });
   }
 
   // GET /api/attn/subprocessors — 委託先レジストリ＋越境判定（APPI28条 越境移転／25条 委託先監督）

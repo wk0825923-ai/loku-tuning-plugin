@@ -91,6 +91,24 @@ async function suite() {
     eq((await post('/api/attn/subprocessors', { id: 'supabase' })).status, 400, 'region欠落→400');
   });
 
+  // 1d) プロファイリングの透明性と拒否権：付与根拠の開示＋停止（既存タグ撤回＋再付与しない）
+  await withServer(async ({ post, get }) => {
+    // 透明化：どのタグを何を根拠に付けるか開示
+    const info = await (await get('/api/attn/profiling-info?page_slug=seitai-lp-a')).json();
+    ok(info.profiles.length > 0 && info.profiles.every(p => p.tag && p.basis), 'タグと付与根拠を開示');
+    // タグが付いた状態を作る
+    await post('/api/attn/collect', { anon_id: 'PR1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'PR1', friend_id: 'f_PR', consented: true });
+    ok((await (await get('/api/attn/friend-tags?friend_id=f_PR')).json()).tags.length > 0, '停止前はタグあり');
+    // 拒否：既存タグ撤回
+    ok((await (await post('/api/attn/profiling-opt-out', { friend_id: 'f_PR' })).json()).ok, 'プロファイリング拒否OK');
+    eq((await (await get('/api/attn/friend-tags?friend_id=f_PR')).json()).tags.length, 0, '拒否で既存タグ撤回');
+    // 拒否後は後追いcollectでも再付与されない
+    await post('/api/attn/collect', { anon_id: 'PR1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    eq((await (await get('/api/attn/friend-tags?friend_id=f_PR')).json()).tags.length, 0, '拒否後は再付与されない');
+    eq((await post('/api/attn/profiling-opt-out', {})).status, 400, 'friend_id欠落→400');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
