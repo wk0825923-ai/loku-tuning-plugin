@@ -19,7 +19,10 @@ async function withServer(fn) {
   const post = (p, body) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   const raw = (p, text) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: text });
   const get = (p) => fetch(base + p);
-  try { await fn({ post, get, raw }); } finally { await new Promise(r => server.close(r)); }
+  // ヘッダ付き（RLSのx-tenant-id検証用）
+  const postH = (p, body, headers) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+  const getH = (p, headers) => fetch(base + p, { headers });
+  try { await fn({ post, get, raw, postH, getH }); } finally { await new Promise(r => server.close(r)); }
 }
 
 const HOT_BOXES = [
@@ -278,6 +281,29 @@ async function suite() {
     try { await fetchSearchConsole({ siteUrl: 's', fetcher: () => [], scopes: 'https://www.googleapis.com/auth/webmasters' }); } catch { threw = true; }
     ok(threw, 'fetch時に書き込みscopeを拒否');
   }
+
+  // 12f) RLSテナント分離（アプリ層ミラー）：x-tenant-idで自テナントのみ・他テナントは403
+  await withServer(async ({ post, get, getH, postH }) => {
+    // t_1のLP-Aに来た人をf_T1に結合、t_2のLP-Bに来た人をf_T2に結合
+    await post('/api/attn/collect', { anon_id: 'T1a', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'T1a', friend_id: 'f_T1', consented: true });
+    await post('/api/attn/collect', { anon_id: 'T2a', page_slug: 'seitai-lp-b', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'T2a', friend_id: 'f_T2', consented: true });
+    // 管理ビュー（ヘッダなし）は従来どおり見える（非破壊）
+    eq((await get('/api/attn/journey?friend_id=f_T1')).status, 200, 'ヘッダなしは従来どおり200');
+    // 自テナントは可
+    eq((await getH('/api/attn/journey?friend_id=f_T1', { 'x-tenant-id': 't_1' })).status, 200, '自テナントのjourneyは200');
+    eq((await getH('/api/attn/friend-tags?friend_id=f_T1', { 'x-tenant-id': 't_1' })).status, 200, '自テナントのtagsは200');
+    // 他テナントは403（RLS相当）
+    eq((await getH('/api/attn/journey?friend_id=f_T1', { 'x-tenant-id': 't_2' })).status, 403, '他テナントのjourneyは403');
+    eq((await getH('/api/attn/friend-tags?friend_id=f_T1', { 'x-tenant-id': 't_2' })).status, 403, '他テナントのtagsは403');
+    // export（持ち出し）も他テナントは403
+    eq((await postH('/api/attn/export', { friend_id: 'f_T1', actor: 'staff_x' }, { 'x-tenant-id': 't_2' })).status, 403, '他テナントのexportは403');
+    eq((await postH('/api/attn/export', { friend_id: 'f_T1', actor: 'staff_x' }, { 'x-tenant-id': 't_1' })).status, 200, '自テナントのexportは200');
+    // disclosure（ページ単位）も他テナントは403
+    eq((await getH('/api/attn/disclosure?page_slug=seitai-lp-a', { 'x-tenant-id': 't_2' })).status, 403, '他テナントページのdisclosureは403');
+    eq((await getH('/api/attn/disclosure?page_slug=seitai-lp-a', { 'x-tenant-id': 't_1' })).status, 200, '自テナントページのdisclosureは200');
+  });
 
   // 13) サチコ連携：APIで引っ張った行を取り込み、来る前をjourneyに搭載
   await withServer(async ({ post, get }) => {

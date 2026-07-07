@@ -22,8 +22,14 @@ function seedStore() {
     { box_key: 'cta',         type: 'text',  expected: 4.8 },
   ];
   return {
-    pages: [{ id: 'pg_lpA', tenant_id: 't_1', kind: 'lp', slug: 'seitai-lp-a', route_tag: '整体LP-A 流入' }],
-    boxes: boxesDef.map((b, i) => ({ id: `bx_${b.box_key}`, page_id: 'pg_lpA', ord: i, ...b })),
+    pages: [
+      { id: 'pg_lpA', tenant_id: 't_1', kind: 'lp', slug: 'seitai-lp-a', route_tag: '整体LP-A 流入' },
+      { id: 'pg_lpB', tenant_id: 't_2', kind: 'lp', slug: 'seitai-lp-b', route_tag: '整体LP-B 流入' }, // 別テナント（RLS分離の検証用）
+    ],
+    boxes: [
+      ...boxesDef.map((b, i) => ({ id: `bx_${b.box_key}`, page_id: 'pg_lpA', ord: i, ...b })),
+      ...boxesDef.map((b, i) => ({ id: `bxB_${b.box_key}`, page_id: 'pg_lpB', ord: i, ...b })),
+    ],
     tag_rules: [
       { id: 'r_route',  page_id: 'pg_lpA', kind: 'route',     box_key: null,          threshold: null, tag: '整体LP-A 流入' },
       { id: 'r_price',  page_id: 'pg_lpA', kind: 'heat',      box_key: 'pricing',     threshold: 60,   tag: '料金検討中' },
@@ -111,6 +117,24 @@ export function encryptCsv(plaintext, passphrase) {
 }
 
 const pageBySlug = (s, slug) => s.pages.find(p => p.slug === slug);
+
+// RLS(tenant_id = auth.jwt()->>'tenant_id')のアプリ層ミラー。
+// friendが属するテナント＝その友だちに結合されたセッションのテナント。
+export function tenantOfFriend(store, friendId) {
+  for (const [anon, id] of store.identity) {
+    if (id.friend_id !== friendId) continue;
+    const sess = store.sessions.get(anon);
+    if (sess?.tenant_id) return sess.tenant_id;
+  }
+  return null;
+}
+// caller のテナント（本番はJWTから・ここでは x-tenant-id ヘッダ）で対象へのアクセス可否を判定。
+// caller未指定なら本番はゲートウェイがJWTを必ず注入する前提（デモの管理ビューは全体可）。
+export function tenantAccessAllowed(callerTenant, ownerTenant) {
+  if (!callerTenant) return true;      // 明示なし＝スコープ判定を課さない（本番はJWT必須）
+  if (!ownerTenant) return true;       // 対象にテナントが無い（未結合など）は素通し
+  return callerTenant === ownerTenant; // 自テナントのみ
+}
 const rulesForPage = (s, page_id) => s.tag_rules.filter(r => r.page_id === page_id);
 
 // タグ発火評価：あるセッションの現在の box_stats からルールを評価して発火タグ集合を返す
@@ -151,6 +175,9 @@ function applyTagsToFriend(store, friend_id, tags) {
 function handle(store, req, res, body) {
   const url = new URL(req.url, 'http://x');
   const send = (code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
+  // RLS相当：呼び出し元テナント（本番はJWT・デモは x-tenant-id ヘッダ）。未指定なら管理ビュー扱い。
+  const callerTenant = req.headers?.['x-tenant-id'] || null;
+  const denyCrossTenant = (ownerTenant) => !tenantAccessAllowed(callerTenant, ownerTenant);
 
   // POST /api/attn/collect — SDKからのバッチ（到達＋ボックス視線）
   if (req.method === 'POST' && url.pathname === '/api/attn/collect') {
@@ -225,6 +252,7 @@ function handle(store, req, res, body) {
   if (req.method === 'GET' && url.pathname === '/api/attn/journey') {
     const fid = url.searchParams.get('friend_id');
     if (!fid) return send(400, { error: 'friend_id required' });
+    if (denyCrossTenant(tenantOfFriend(store, fid))) return send(403, { error: 'tenant scope violation' }); // RLS相当
     const rows = [];
     for (const [anon, id] of store.identity) {
       if (id.friend_id !== fid || !id.consented) continue;         // 同意ゲート
@@ -251,6 +279,7 @@ function handle(store, req, res, body) {
   if (req.method === 'GET' && url.pathname === '/api/attn/friend-tags') {
     const fid = url.searchParams.get('friend_id');
     if (!fid) return send(400, { error: 'friend_id required' });
+    if (denyCrossTenant(tenantOfFriend(store, fid))) return send(403, { error: 'tenant scope violation' }); // RLS相当
     return send(200, { friend_id: fid, tags: [...(store.friend_tags.get(fid) || [])] });
   }
 
@@ -371,6 +400,7 @@ function handle(store, req, res, body) {
     let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
     if (!d.friend_id) return send(400, { error: 'friend_id required' });
     if (!d.actor) return send(400, { error: 'actor required（持ち出しログのため誰が実行したか必須）' });
+    if (denyCrossTenant(tenantOfFriend(store, d.friend_id))) return send(403, { error: 'tenant scope violation' }); // 他テナントの持ち出し禁止
     const { csv, rows } = buildFriendCsv(store, d.friend_id);
     const encrypted = d.passphrase != null && d.passphrase !== '';
     // 持ち出しログ（安全管理措置・従業者の監督）
@@ -395,6 +425,7 @@ function handle(store, req, res, body) {
     const slug = url.searchParams.get('page_slug');
     const page = slug ? pageBySlug(store, slug) : null;
     if (slug && !page) return send(404, { error: 'unknown page' });
+    if (page && denyCrossTenant(page.tenant_id)) return send(403, { error: 'tenant scope violation' }); // RLS相当
     // 店舗が設定したポリシーURLがあれば載せる（無ければ空欄のまま）
     const ppUrl = (page && store.privacy_policy_urls?.get(page.tenant_id)) || null;
     return send(200, buildDisclosure({ privacyPolicyUrl: ppUrl }));

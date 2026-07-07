@@ -94,7 +94,7 @@
       <thead><tr><th>層</th><th>対象</th><th>状態</th></tr></thead>
       <tbody>
         <tr><td><b style="color:var(--grn)">機械で解消済</b><br><span style="color:var(--mut);font-size:11px">コード＋テスト</span></td><td>NG表現ブロック(正規化で全角/空白/ひらがな/英語/カタカナ回避も遮断)／症状×効能の共起ブロック／症状の非結合(再帰strip)／同意ゲート／削除(forget)／配信停止(opt-out)／健康語の推知フラグ／保持期間purge／外部送信通知／CSV安全管理(持ち出しログ+暗号化)／Google readonly強制／監査ログ</td><td><span class="tag both">テストで担保</span></td></tr>
-        <tr><td><b style="color:var(--blue)">設計で低減</b></td><td>RLSテナント分離／アクセス制御</td><td><span class="tag plat">スキーマ/設計に反映</span></td></tr>
+        <tr><td><b style="color:var(--blue)">設計で低減</b></td><td>RLSテナント分離／アクセス制御（DBはschema.sqlのRLS・アプリ層もx-tenant-idで403＝<b style="color:var(--grn)">実装+テスト済</b>）</td><td><span class="tag both">DB+アプリ層で担保</span></td></tr>
         <tr><td><b style="color:var(--gold)">運用・専門家</b><br><span style="color:var(--mut);font-size:11px">機械では解消不可</span></td><td>DPA委託契約／従業者教育／特商法の個別表記／弁護士・個情委の最終確認</td><td><span class="tag store">運用で担保</span></td></tr>
       </tbody>
     </table>
@@ -245,7 +245,7 @@
       <li><b>友だち追加時の明示同意</b>／非同意は匿名集計のみ<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge consentゲート</span></li>
       <li><b>開示・削除・オプトアウト</b>（friend単位で削除）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> forget API</span></li>
       <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意・buildDisclosure()/GET disclosureで「何を/どこへ/何のため」をLP埋め込み(第三者提供なし・要配慮除外を明示・ポリシーURLは店舗設定)</span></li>
-      <li><b>安全管理措置</b>：テナント分離（RLS）・アクセス制御<span class="st plan">設計</span>／<b>保持期間purge</b><span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> purgeExpired()/POST purge・最終アクセスから既定730日で計測データを消去(cron想定)・回帰テスト済</span></li>
+      <li><b>安全管理措置</b>：テナント分離（RLS）・アクセス制御<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> DB=schema.sqlのRLSポリシー(tenant_id=auth.jwt)／アプリ層もtenantOfFriend+x-tenant-idで自テナント外のjourney/tags/export/disclosureを403(回帰テスト済)</span>／<b>保持期間purge</b><span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> purgeExpired()/POST purge・最終アクセスから既定730日で計測データを消去(cron想定)・回帰テスト済</span></li>
       <li><b>委託契約（DPA）</b>：店舗＝取扱事業者、Loku＝委託先を書面化<span class="st ops">運用</span></li>
       <li><b>配信頻度の上限＋配信停止（オプトアウト）導線</b>（LINE規約・特商法）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 頻度上限＋停止を明示</span></li>
       <li><b>スタッフの権限最小化・退職時アクセス削除</b>（従業者の監督）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 見るだけ/送信の別</span></li>
