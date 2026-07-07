@@ -55,6 +55,22 @@ async function suite() {
     ok(t.tags.includes('整体LP-A 流入') && t.tags.includes('料金検討中') && t.tags.includes('効果重視'), 'friend_tags 適用済み');
   });
 
+  // 1b) APPI31条（個人関連情報の第三者提供）：提供元Lokuの同意 確認・記録
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'CR1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    // 由来つき同意 → 記録が"完全"
+    const m = await (await post('/api/attn/merge', { anon_id: 'CR1', friend_id: 'f_CR', consented: true,
+      consent_record: { obtained_by: '店舗LIFF同意画面', method: 'liff_optin' } })).json();
+    ok(m.consent_record_complete, '由来つき同意は記録完全');
+    const cr = await (await get('/api/attn/consent-record?friend_id=f_CR')).json();
+    ok(cr.all_complete && cr.records[0].record.method === 'liff_optin', '確認記録を引ける(誰が/方法/日時)');
+    // 由来なし同意 → 結合はするが記録は"不完全"としてフラグ（記録義務の未充足を可視化）
+    await post('/api/attn/collect', { anon_id: 'CR2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    const m2 = await (await post('/api/attn/merge', { anon_id: 'CR2', friend_id: 'f_CR2', consented: true })).json();
+    ok(!m2.consent_record_complete && m2.applied, '由来なしは適用されるが記録は不完全フラグ');
+    eq((await (await get('/api/attn/consent-record?friend_id=f_CR2')).json()).all_complete, false, '不完全な記録はall_complete=false');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });

@@ -218,6 +218,20 @@
         <div class="fix"><div class="ft">対策</div><ul><li>暗号化／アクセス制御・持ち出しログ・用途明示</li></ul></div>
       </div>
     </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev md">中</span><div><div class="t">⑩ 個人関連情報の第三者提供（提供元の確認・記録義務）</div><div class="law">個人情報保護法 第31条（個人関連情報）</div></div></div>
+      <div class="bd">
+        Loku側では匿名の視線データ＝<b>「個人関連情報」</b>（それ単体では個人データでない）。これを店舗がLINE実名と<b>結合＝提供先で個人データになる</b>と想定される場合、<b>提供元（Loku）は本人同意が取得済みかを確認し、記録する義務</b>がある（APPI31条）。同意フラグを受けるだけでは記録義務を満たさない。
+        <div class="who">誰が処分される？ → 確認・記録を怠った<b>提供元（Loku）</b>。個人情報保護委員会の指導・命令の対象。</div>
+        <div class="fix"><div class="ft">対策</div><ul>
+          <li>結合(merge)時に<b>同意の由来（誰が・どの方法で・いつ取得したか）を記録</b>（consent_record）</li>
+          <li>記録が揃わない同意は<b>"不完全"としてフラグ</b>化し可視化（consent-record API で証跡を引ける）</li>
+          <li>本人同意は<b>提供先（店舗）が取得</b>し、提供元（Loku）はその事実を確認・保存</li>
+        </ul></div>
+        <div class="src">出典: <a href="https://www.ppc.go.jp/personalinfo/legal/guidelines_kanren/">個人情報保護委員会 個人関連情報ガイドライン（31条）</a></div>
+      </div>
+    </div>
   </section>
 
   <section>
@@ -228,6 +242,7 @@
       <tbody>
         <tr><td>広告表現（柔整/あはき/薬機/景表）</td><td><span class="tag store">店舗＝広告主</span></td><td>自動公開しない・NGチェッカー・人承認・利用規約で表現責任を明確化</td></tr>
         <tr><td>要配慮個人情報・同意</td><td><span class="tag both">店舗＋Loku</span></td><td>同意取得UI・症状は非結合・安全管理措置・DPA（委託契約）整備</td></tr>
+        <tr><td>個人関連情報の提供（31条）</td><td><span class="tag both">店舗＝取得／Loku＝確認記録</span></td><td>merge時にconsent_recordで同意の由来を記録・不完全はフラグ化</td></tr>
         <tr><td>外部送信の通知/公表</td><td><span class="tag both">店舗＋Loku</span></td><td>通知テンプレ自動設置・ポリシー雛形提供</td></tr>
         <tr><td>プラットフォーム規約</td><td><span class="tag plat">Loku</span></td><td>配信頻度制御・停止導線</td></tr>
       </tbody>
@@ -243,6 +258,7 @@
       <li><b>NGワードチェッカー</b>（柔整・あはき・薬機・景表）＋業種フラグで出し分け<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> compliance.mjs / check-copy API・正規化(NFKC＋空白除去＋大小文字)で全角/文字間スペース/ひらがな開きの回避も遮断・症状名×効能想起の共起は接骨院/鍼灸でブロック(適応症標榜)</span></li>
       <li><b>結合は行動データのみ・症状は非結合</b>（要配慮該当を回避）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> stripSensitive()・大文字キー/ネスト/配列内も再帰剥離</span></li>
       <li><b>友だち追加時の明示同意</b>／非同意は匿名集計のみ<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge consentゲート</span></li>
+      <li><b>個人関連情報の提供＝同意の確認・記録</b>（APPI31条）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge時にconsent_record(誰が/方法/日時)を記録・不完全はフラグ・consent-record APIで証跡・回帰テスト済</span></li>
       <li><b>開示・削除・オプトアウト</b>（friend単位で削除）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> forget API</span></li>
       <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意・buildDisclosure()/GET disclosureで「何を/どこへ/何のため」をLP埋め込み(第三者提供なし・要配慮除外を明示・ポリシーURLは店舗設定)</span></li>
       <li><b>安全管理措置</b>：テナント分離（RLS）・アクセス制御<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> DB=schema.sqlのRLSポリシー(tenant_id=auth.jwt)／アプリ層もtenantOfFriend+x-tenant-idで自テナント外のjourney/tags/export/disclosureを403(回帰テスト済)</span>／<b>保持期間purge</b><span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> purgeExpired()/POST purge・最終アクセスから既定730日で計測データを消去(cron想定)・回帰テスト済</span></li>

@@ -233,9 +233,19 @@ function handle(store, req, res, body) {
     if (!d.anon_id || !d.friend_id) return send(400, { error: 'anon_id, friend_id required' });
     const consented = d.consented === true;
 
+    // APPI31条(個人関連情報の第三者提供)：提供元Lokuの「本人同意の確認・記録義務」。
+    // 同意の由来(誰が・どの方法で・いつ)を記録する。obtained_by/method が揃って初めて記録が"完全"。
+    const cr = d.consent_record || {};
+    const consent_record = consented ? {
+      obtained_by: cr.obtained_by || null, // 例: 店舗のLIFF同意画面 / スタッフ対面
+      method: cr.method || null,           // 例: 'liff_optin' / 'paper' / 'verbal'
+      at: Number.isFinite(cr.at) ? cr.at : Date.now(),
+    } : null;
+    const consent_record_complete = !!(consented && consent_record.obtained_by && consent_record.method);
+
     // idempotent：同じ結合は上書きのみ、重複行を作らない
-    store.identity.set(d.anon_id, { friend_id: d.friend_id, consented });
-    store.audit_log.push({ action: 'merge', friend_id: d.friend_id, at: Date.now() });
+    store.identity.set(d.anon_id, { friend_id: d.friend_id, consented, consent_record, consent_record_complete });
+    store.audit_log.push({ action: 'merge', friend_id: d.friend_id, consented, consent_record_complete, at: Date.now() });
 
     // tag_fires に friend_id を後埋め
     for (const f of store.tag_fires) if (f.session_anon === d.anon_id) f.friend_id = d.friend_id;
@@ -245,7 +255,20 @@ function handle(store, req, res, body) {
       const tags = store.tag_fires.filter(f => f.session_anon === d.anon_id).map(f => f.tag);
       applyTagsToFriend(store, d.friend_id, tags);
     }
-    return send(200, { ok: true, friend_id: d.friend_id, consented, applied: consented });
+    return send(200, { ok: true, friend_id: d.friend_id, consented, applied: consented, consent_record_complete });
+  }
+
+  // GET /api/attn/consent-record?friend_id= — APPI31条の確認・記録（提供元Lokuの証跡）
+  if (req.method === 'GET' && url.pathname === '/api/attn/consent-record') {
+    const fid = url.searchParams.get('friend_id');
+    if (!fid) return send(400, { error: 'friend_id required' });
+    if (denyCrossTenant(tenantOfFriend(store, fid))) return send(403, { error: 'tenant scope violation' }); // RLS相当
+    const records = [];
+    for (const [, id] of store.identity) {
+      if (id.friend_id !== fid) continue;
+      records.push({ consented: id.consented, complete: !!id.consent_record_complete, record: id.consent_record || null });
+    }
+    return send(200, { friend_id: fid, records, all_complete: records.length > 0 && records.every(r => !r.consented || r.complete) });
   }
 
   // GET /api/attn/journey?friend_id= — 結合後の来訪ジャーニー（同意済みのみ／friend_journeyビュー相当）
