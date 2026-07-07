@@ -1,0 +1,326 @@
+// Loku Attention — 引き渡しデモ用バックエンド（依存ゼロ・node:http）
+// 本番Lokuには一切触れない。ロジック（collect / merge / journey / tag発火）を
+// schema.sql と 1:1 対応させ、社長が Next.js + Supabase へ写経すれば動く形にする。
+//
+// createServer() は「その都度まっさらなストア」を持つサーバを返す（テスト隔離のため）。
+
+import http from 'node:http';
+import { checkCopy, stripSensitive, detectHealthTerms } from './compliance.mjs';
+import { ingestSearchConsole, searchSummary } from './search-console.mjs';
+
+// ---- サンプルページ定義（本番は loku_attn_pages / _boxes 相当） ----
+function seedStore() {
+  const boxesDef = [
+    { box_key: 'hero',        type: 'text',  expected: 7.2 },
+    { box_key: 'problem',     type: 'text',  expected: 21.7 },
+    { box_key: 'beforeafter', type: 'image', expected: 3.0 },
+    { box_key: 'staff',       type: 'text',  expected: 18.1 },
+    { box_key: 'pricing',     type: 'price', expected: 4.0 },
+    { box_key: 'voice',       type: 'text',  expected: 16.9 },
+    { box_key: 'faq',         type: 'text',  expected: 14.5 },
+    { box_key: 'cta',         type: 'text',  expected: 4.8 },
+  ];
+  return {
+    pages: [{ id: 'pg_lpA', tenant_id: 't_1', kind: 'lp', slug: 'seitai-lp-a', route_tag: '整体LP-A 流入' }],
+    boxes: boxesDef.map((b, i) => ({ id: `bx_${b.box_key}`, page_id: 'pg_lpA', ord: i, ...b })),
+    tag_rules: [
+      { id: 'r_route',  page_id: 'pg_lpA', kind: 'route',     box_key: null,          threshold: null, tag: '整体LP-A 流入' },
+      { id: 'r_price',  page_id: 'pg_lpA', kind: 'heat',      box_key: 'pricing',     threshold: 60,   tag: '料金検討中' },
+      { id: 'r_ba',     page_id: 'pg_lpA', kind: 'heat',      box_key: 'beforeafter', threshold: 60,   tag: '効果重視' },
+      { id: 'r_voice',  page_id: 'pg_lpA', kind: 'heat',      box_key: 'voice',       threshold: 60,   tag: '口コミ重視' },
+      { id: 'r_hot',    page_id: 'pg_lpA', kind: 'aggregate', box_key: null,          threshold: 55,   tag: 'ホットリード' },
+    ],
+    sessions: new Map(),      // anon_id -> session
+    box_stats: new Map(),     // `${anon_id}::${box_key}` -> stat
+    identity: new Map(),      // anon_id -> { friend_id, consented }
+    tag_fires: [],            // { session_anon, rule_id, tag, friend_id }
+    friend_tags: new Map(),   // friend_id -> Set(tag)  ← 本番Lokuの friend_tags 相当
+    search_console: [],       // Search Console API から引っ張った行（来る前）
+    product_events: [],       // 自分の画面(オンボ/管理)の利用イベント（自己改善サイクル）
+    bookings: new Set(),      // 予約が入った friend_id（実測CVRの母数）
+    opt_out: new Set(),       // 配信停止した friend_id（送らない）
+    audit_log: [],            // 機微操作の証跡（安全管理措置・従業者の監督）
+  };
+}
+
+const pageBySlug = (s, slug) => s.pages.find(p => p.slug === slug);
+const rulesForPage = (s, page_id) => s.tag_rules.filter(r => r.page_id === page_id);
+
+// タグ発火評価：あるセッションの現在の box_stats からルールを評価して発火タグ集合を返す
+function evalTags(store, anon_id, page) {
+  const rules = rulesForPage(store, page.id);
+  const stat = (k) => store.box_stats.get(`${anon_id}::${k}`);
+  const fired = [];
+  for (const r of rules) {
+    if (r.kind === 'route') { fired.push({ rule_id: r.id, tag: r.tag }); }
+    else if (r.kind === 'heat') {
+      const st = stat(r.box_key);
+      if (st && st.engagement >= r.threshold) fired.push({ rule_id: r.id, tag: r.tag });
+    } else if (r.kind === 'aggregate') {
+      const boxes = store.boxes.filter(b => b.page_id === page.id);
+      const vals = boxes.map(b => stat(b.box_key)?.engagement ?? 0);
+      const avg = vals.reduce((a, c) => a + c, 0) / (vals.length || 1);
+      if (avg >= r.threshold) fired.push({ rule_id: r.id, tag: r.tag });
+    }
+  }
+  return fired;
+}
+
+// tag_fires を「セッション単位で重複させず」更新（idempotent）
+function recordFires(store, anon_id, fired) {
+  for (const f of fired) {
+    const exists = store.tag_fires.find(x => x.session_anon === anon_id && x.tag === f.tag);
+    if (!exists) store.tag_fires.push({ session_anon: anon_id, rule_id: f.rule_id, tag: f.tag, friend_id: null });
+  }
+}
+
+function applyTagsToFriend(store, friend_id, tags) {
+  if (!store.friend_tags.has(friend_id)) store.friend_tags.set(friend_id, new Set());
+  const set = store.friend_tags.get(friend_id);
+  for (const t of tags) set.add(t);
+}
+
+// ---- HTTP ハンドラ ----
+function handle(store, req, res, body) {
+  const url = new URL(req.url, 'http://x');
+  const send = (code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
+
+  // POST /api/attn/collect — SDKからのバッチ（到達＋ボックス視線）
+  if (req.method === 'POST' && url.pathname === '/api/attn/collect') {
+    let raw; try { raw = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    // 要配慮個人情報ガード：症状/診断など健康フィールドは結合させない（剥がす）
+    const { clean: d, stripped } = stripSensitive(raw);
+    if (!d.anon_id || !d.page_slug) return send(400, { error: 'anon_id, page_slug required' });
+    const page = pageBySlug(store, d.page_slug);
+    if (!page) return send(404, { error: 'unknown page' });
+
+    // upsert session（同一 anon×page は1行）
+    const sess = store.sessions.get(d.anon_id) || {
+      anon_id: d.anon_id, tenant_id: page.tenant_id, page_id: page.id,
+      entry_query: null, entry_pos: null, device: null, active_sec: 0, started_at: Date.now(),
+    };
+    if (d.entry) {
+      sess.entry_query = d.entry.query ?? sess.entry_query;
+      sess.entry_pos = d.entry.pos ?? sess.entry_pos;
+      sess.device = d.entry.device ?? sess.device;
+      // 検索クエリの健康語＝要配慮個人情報の"推知"に配慮するフラグ
+      sess.entry_health = detectHealthTerms(String(d.entry.query || '')).length > 0;
+    }
+    if (typeof d.active_sec === 'number') sess.active_sec = d.active_sec;
+    sess.last_seen_at = Date.now();
+    store.sessions.set(d.anon_id, sess);
+
+    // upsert box_stats（型を防御：不正値でも落とさず安全化）
+    const boxList = Array.isArray(d.boxes) ? d.boxes : [];
+    for (const b of boxList) {
+      if (!b || typeof b.box_key !== 'string') continue;
+      const eng = Number(b.engagement), av = Number(b.active_view), rv = Number(b.revisits);
+      const key = `${d.anon_id}::${b.box_key}`;
+      store.box_stats.set(key, {
+        anon_id: d.anon_id, box_key: b.box_key,
+        active_view: Number.isFinite(av) ? av : 0,
+        engagement: Number.isFinite(eng) ? Math.min(100, Math.max(0, eng)) : 0,
+        revisits: Number.isFinite(rv) ? rv : 0,
+      });
+    }
+
+    const fired = evalTags(store, d.anon_id, page);
+    recordFires(store, d.anon_id, fired);
+    // 既に結合済みなら即 friend_tags へ反映（後追いcollectでもタグが増える）
+    const id = store.identity.get(d.anon_id);
+    if (id && id.consented) applyTagsToFriend(store, id.friend_id, fired.map(f => f.tag));
+
+    return send(200, { ok: true, fired: fired.map(f => f.tag), stripped });
+  }
+
+  // POST /api/attn/merge — LINE友だち追加のLIFFコールバックで anon→friend 結合
+  if (req.method === 'POST' && url.pathname === '/api/attn/merge') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.anon_id || !d.friend_id) return send(400, { error: 'anon_id, friend_id required' });
+    const consented = d.consented === true;
+
+    // idempotent：同じ結合は上書きのみ、重複行を作らない
+    store.identity.set(d.anon_id, { friend_id: d.friend_id, consented });
+    store.audit_log.push({ action: 'merge', friend_id: d.friend_id, at: Date.now() });
+
+    // tag_fires に friend_id を後埋め
+    for (const f of store.tag_fires) if (f.session_anon === d.anon_id) f.friend_id = d.friend_id;
+
+    // 同意があればタグを friend_tags に適用（同意なしは適用しない）
+    if (consented) {
+      const tags = store.tag_fires.filter(f => f.session_anon === d.anon_id).map(f => f.tag);
+      applyTagsToFriend(store, d.friend_id, tags);
+    }
+    return send(200, { ok: true, friend_id: d.friend_id, consented, applied: consented });
+  }
+
+  // GET /api/attn/journey?friend_id= — 結合後の来訪ジャーニー（同意済みのみ／friend_journeyビュー相当）
+  if (req.method === 'GET' && url.pathname === '/api/attn/journey') {
+    const fid = url.searchParams.get('friend_id');
+    if (!fid) return send(400, { error: 'friend_id required' });
+    const rows = [];
+    for (const [anon, id] of store.identity) {
+      if (id.friend_id !== fid || !id.consented) continue;         // 同意ゲート
+      const sess = store.sessions.get(anon);
+      if (!sess) continue;
+      const page = store.pages.find(p => p.id === sess.page_id);
+      const box_engagement = {};
+      for (const b of store.boxes.filter(x => x.page_id === sess.page_id)) {
+        const st = store.box_stats.get(`${anon}::${b.box_key}`);
+        box_engagement[b.box_key] = st ? Math.round(st.engagement) : 0;
+      }
+      rows.push({
+        friend_id: fid, page_slug: page.slug, page_kind: page.kind,
+        entry_query: sess.entry_query, entry_pos: sess.entry_pos, device: sess.device,
+        entry_health: !!sess.entry_health, // 健康関連検索（要配慮推知に配慮）
+        active_sec: sess.active_sec, box_engagement,
+        search: searchSummary(store, sess.page_id), // 来る前（サチコAPI取込・無ければnull）
+      });
+    }
+    return send(200, { friend_id: fid, journeys: rows });
+  }
+
+  // GET /api/attn/friend-tags?friend_id= — 付与済みタグ（Loku friend_tags 相当）
+  if (req.method === 'GET' && url.pathname === '/api/attn/friend-tags') {
+    const fid = url.searchParams.get('friend_id');
+    if (!fid) return send(400, { error: 'friend_id required' });
+    return send(200, { friend_id: fid, tags: [...(store.friend_tags.get(fid) || [])] });
+  }
+
+  // POST /api/attn/search-console/ingest — サチコAPIで引っ張った行を取り込む（来る前を搭載）
+  if (req.method === 'POST' && url.pathname === '/api/attn/search-console/ingest') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.page_slug || !Array.isArray(d.rows)) return send(400, { error: 'page_slug, rows required' });
+    const page = pageBySlug(store, d.page_slug);
+    if (!page) return send(404, { error: 'unknown page' });
+    const n = ingestSearchConsole(store, { tenant_id: page.tenant_id, page_id: page.id, date: d.date || 'today', rows: d.rows });
+    return send(200, { ok: true, ingested: n });
+  }
+
+  // GET /api/attn/search-summary?page_slug= — ページの検索サマリ（来る前）
+  if (req.method === 'GET' && url.pathname === '/api/attn/search-summary') {
+    const page = pageBySlug(store, url.searchParams.get('page_slug'));
+    if (!page) return send(404, { error: 'unknown page' });
+    return send(200, { page_slug: page.slug, search: searchSummary(store, page.id) });
+  }
+
+  // POST /api/attn/booking — 予約が入った友だちを記録（実測CVRの母数）
+  if (req.method === 'POST' && url.pathname === '/api/attn/booking') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.friend_id) return send(400, { error: 'friend_id required' });
+    store.bookings.add(d.friend_id);
+    return send(200, { ok: true });
+  }
+
+  // POST /api/attn/opt-out — 配信停止（お客様がいつでも止められる：LINE規約・特商法）
+  if (req.method === 'POST' && url.pathname === '/api/attn/opt-out') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.friend_id) return send(400, { error: 'friend_id required' });
+    store.opt_out.add(d.friend_id);
+    store.audit_log.push({ action: 'opt-out', friend_id: d.friend_id, at: Date.now() });
+    return send(200, { ok: true });
+  }
+
+  // GET /api/attn/audit-log?friend_id= — 機微操作の証跡（安全管理措置・従業者の監督）
+  if (req.method === 'GET' && url.pathname === '/api/attn/audit-log') {
+    const fid = url.searchParams.get('friend_id');
+    const entries = store.audit_log.filter(e => !fid || e.friend_id === fid || String(e.friend_id).includes(fid));
+    return send(200, { friend_id: fid || null, entries });
+  }
+
+  // GET /api/attn/can-send?friend_id= — 配信可否（停止した人には送らない）
+  if (req.method === 'GET' && url.pathname === '/api/attn/can-send') {
+    const fid = url.searchParams.get('friend_id');
+    if (!fid) return send(400, { error: 'friend_id required' });
+    return send(200, { friend_id: fid, can_send: !store.opt_out.has(fid) });
+  }
+
+  // GET /api/attn/conversion-by-tag?tag= — タグ有/無の"実測"予約率（比較表の数字の裏付け）
+  if (req.method === 'GET' && url.pathname === '/api/attn/conversion-by-tag') {
+    const tag = url.searchParams.get('tag');
+    if (!tag) return send(400, { error: 'tag required' });
+    const friends = [...store.friend_tags.keys()];
+    const has = f => store.friend_tags.get(f).has(tag);
+    const booked = f => store.bookings.has(f);
+    const rate = arr => arr.length ? Math.round(arr.filter(booked).length / arr.length * 100) : 0;
+    const wit = friends.filter(has), wo = friends.filter(f => !has(f));
+    return send(200, { tag,
+      with: { n: wit.length, booked: wit.filter(booked).length, rate: rate(wit) },
+      without: { n: wo.length, booked: wo.filter(booked).length, rate: rate(wo) } });
+  }
+
+  // POST /api/attn/product-event — 自分の画面(オンボ/管理)の利用イベント（ドッグフーディング）
+  if (req.method === 'POST' && url.pathname === '/api/attn/product-event') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    const pstep = Number(d.step);
+    if (!d.surface || !Number.isFinite(pstep)) return send(400, { error: 'surface, finite step required' });
+    store.product_events.push({ surface: d.surface, step: pstep, event: d.event || 'reach', at: Date.now() });
+    return send(200, { ok: true });
+  }
+
+  // GET /api/attn/product-funnel?surface= — 自分の画面のステップ別残存率（自己改善の"気づき"）
+  if (req.method === 'GET' && url.pathname === '/api/attn/product-funnel') {
+    const surface = url.searchParams.get('surface');
+    if (!surface) return send(400, { error: 'surface required' });
+    const rows = store.product_events.filter(e => e.surface === surface && e.event === 'reach');
+    const byStep = {};
+    for (const r of rows) byStep[r.step] = (byStep[r.step] || 0) + 1;
+    const steps = Object.keys(byStep).map(Number).sort((a, b) => a - b);
+    const base = steps.length ? byStep[steps[0]] : 0;
+    const funnel = steps.map(s => ({ step: s, reach: byStep[s], rate: base ? Math.round(byStep[s] / base * 100) : 0 }));
+    return send(200, { surface, funnel });
+  }
+
+  // POST /api/attn/check-copy — 改善コピーの出稿前チェック（薬機/景表/柔整・あはき）
+  if (req.method === 'POST' && url.pathname === '/api/attn/check-copy') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (typeof d.text !== 'string') return send(400, { error: 'text required' });
+    return send(200, checkCopy(d.text, d.industry));
+  }
+
+  // POST /api/attn/forget — オプトアウト/削除権：匿名 or 友だち単位で計測データを消す
+  if (req.method === 'POST' && url.pathname === '/api/attn/forget') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.anon_id && !d.friend_id) return send(400, { error: 'anon_id or friend_id required' });
+    // 対象 anon_id 群を決定
+    let anons = [];
+    if (d.anon_id) anons = [d.anon_id];
+    else { for (const [anon, id] of store.identity) if (id.friend_id === d.friend_id) anons.push(anon); }
+    let removed = 0;
+    for (const anon of anons) {
+      store.sessions.delete(anon);
+      for (const key of [...store.box_stats.keys()]) if (key.startsWith(anon + '::')) { store.box_stats.delete(key); removed++; }
+      store.identity.delete(anon);
+      store.tag_fires = store.tag_fires.filter(f => f.session_anon !== anon);
+    }
+    if (d.friend_id) store.friend_tags.delete(d.friend_id); // 付与済みタグも撤回
+    store.audit_log.push({ action: 'forget', friend_id: d.friend_id || anons.join(','), at: Date.now() });
+    return send(200, { ok: true, forgotten: anons, boxStatsRemoved: removed });
+  }
+
+  // デモ専用：graceful shutdown（allowShutdown時のみ有効。本番には載せない）
+  if (url.pathname === '/__shutdown' && store._allowShutdown) {
+    res.setHeader('connection', 'close');
+    send(200, { ok: true });
+    setTimeout(() => {
+      try { store._server.closeAllConnections?.(); } catch {}
+      store._server.close(() => process.exit(0)); // 接続を閉じてから正常終了
+    }, 50);
+    return;
+  }
+
+  return send(404, { error: 'not found' });
+}
+
+export function createServer(opts = {}) {
+  const store = seedStore();
+  store._allowShutdown = opts.allowShutdown === true;
+  const server = http.createServer((req, res) => {
+    let body = '';
+    req.on('data', c => { body += c; });
+    req.on('end', () => { try { handle(store, req, res, body); } catch (e) { res.writeHead(500); res.end(JSON.stringify({ error: String(e) })); } });
+  });
+  server._store = store;
+  store._server = server;
+  return server;
+}

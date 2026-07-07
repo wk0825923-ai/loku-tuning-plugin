@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>かんたん比較 — GA4・サチコ・このサービス</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 50% -10%, #16324b33, transparent 60%),var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto;padding:0 20px}
+  .num{font-family:var(--num)}
+  header{padding:48px 0 14px;text-align:center}
+  .badge{display:inline-block;font-size:11px;letter-spacing:.16em;color:var(--grn);border:1px solid #22c58b44;border-radius:999px;padding:6px 15px;margin-bottom:16px}
+  h1{font-size:clamp(24px,4.6vw,36px);font-weight:800}
+  .lead{color:var(--sub);margin-top:12px;font-size:15px}
+
+  section{padding:26px 0;border-top:1px solid var(--line)}
+  .kicker{font-size:12px;letter-spacing:.12em;color:var(--grn);font-weight:700;margin-bottom:12px;text-align:center}
+
+  /* ファネル図 */
+  .funnel{display:grid;grid-template-columns:92px repeat(5,1fr);gap:6px;align-items:center}
+  .fh{font-size:11.5px;color:var(--mut);text-align:center;font-weight:700;padding:6px 2px}
+  .fh small{display:block;color:var(--mut);font-weight:400;font-size:10px}
+  .lane-l{font-size:12px;font-weight:800;color:var(--sub);text-align:right;padding-right:6px}
+  .lane-l.mine{color:var(--grn)}
+  .cell{height:34px;border-radius:8px;background:#141c27;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mut);border:1px solid #1c2635}
+  .cell.cover{background:linear-gradient(180deg,#12341f,#0e2418);border-color:#22c58b55;color:var(--grn);font-weight:700}
+  .cell.part{background:#2a230e55;border-color:#e7b84f44;color:var(--gold)}
+  .cell.mine{background:linear-gradient(180deg,#12341f,#0e2418);border-color:#22c58b88;color:var(--grn);font-weight:800}
+  .flabel{font-size:11px;color:var(--mut);text-align:center;margin-top:8px}
+
+  /* 噛み砕き5観点 */
+  .qtable{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-top:6px}
+  .qrow{display:grid;grid-template-columns:1.5fr 1fr 1fr 1.2fr;align-items:center}
+  .qrow.head{background:#0e131b}
+  .qrow>div{padding:14px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+  .qrow.head>div{font-size:12px;color:var(--mut);font-weight:700;text-align:center}
+  .qrow .q{font-weight:700;color:var(--ink)}
+  .qrow .c{text-align:center}
+  .qrow .mine{background:#12341f22}
+  .mk{font-size:20px;font-weight:800}.mk.y{color:var(--grn)}.mk.t{color:var(--gold)}.mk.n{color:var(--mut)}
+  .mk small{display:block;font-size:10.5px;font-weight:600;color:var(--mut);margin-top:2px}
+  .qrow.head .mine{color:var(--grn)}
+
+  .points{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px}
+  @media(max-width:680px){.points{grid-template-columns:1fr}.qrow{grid-template-columns:1.3fr .7fr .7fr 1fr}.funnel{grid-template-columns:70px repeat(5,1fr)}}
+  .pt{background:linear-gradient(160deg,#12341f,#0d2418);border:1px solid #22c58b44;border-radius:14px;padding:18px}
+  .pt .e{font-size:26px}.pt .t{font-weight:800;margin-top:6px}.pt p{color:var(--sub);font-size:13px;margin-top:6px}
+
+  details{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden;margin-top:20px}
+  summary{cursor:pointer;padding:15px 18px;font-weight:700;color:var(--sub);list-style:none;font-size:14px}
+  summary::-webkit-details-marker{display:none}summary::before{content:"▸ ";color:var(--grn)}details[open] summary::before{content:"▾ "}
+  .dd{padding:0 18px 16px}
+  .dd table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .dd td,.dd th{padding:8px 10px;border-bottom:1px solid var(--line);text-align:center}
+  .dd th{color:var(--mut);font-size:11px}.dd td:first-child,.dd th:first-child{text-align:left;color:var(--ink)}
+  .dd a{color:var(--blue)}
+
+  .oneline{margin-top:22px;background:var(--panel);border:1px solid #22c58b44;border-radius:14px;padding:18px;text-align:center;font-size:15px;font-weight:700}
+  .oneline span{color:var(--grn)}
+  .foot{padding:24px 0 60px;text-align:center;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">かんたん比較</div>
+    <h1>GA4・サチコ・このサービス、<br>何がちがう？</h1>
+    <p class="lead">むずかしい機能名ではなく、「お店にとって何がうれしいか」で並べました。</p>
+  </header>
+
+  <section>
+    <div class="kicker">お客様の流れ、どこまで見えている？</div>
+    <div class="funnel">
+      <div></div>
+      <div class="fh">見つかる<small>検索</small></div>
+      <div class="fh">来る<small>ページに</small></div>
+      <div class="fh">選ばれる<small>ページを見る</small></div>
+      <div class="fh">つながる<small>LINE登録</small></div>
+      <div class="fh">予約する<small>来店</small></div>
+
+      <div class="lane-l">GA4</div>
+      <div class="cell">×</div><div class="cell part">一部</div><div class="cell part">ざっくり</div><div class="cell">×</div><div class="cell">×</div>
+
+      <div class="lane-l">サチコ</div>
+      <div class="cell cover">見える</div><div class="cell">×</div><div class="cell">×</div><div class="cell">×</div><div class="cell">×</div>
+
+      <div class="lane-l mine">このサービス</div>
+      <div class="cell mine">見える</div><div class="cell mine">見える</div><div class="cell mine">こまかく</div><div class="cell mine">実名で</div><div class="cell mine">つながる</div>
+    </div>
+    <div class="flabel">GA4は「来た後」だけ・サチコは「来る前」だけ。しかも両方とも匿名で、LINE登録すると途切れる。<br><b style="color:var(--grn)">このサービスは、ぜんぶを1本で・名前とひもづけて見られる。</b></div>
+  </section>
+
+  <section>
+    <div class="kicker">お店が気になること、で比べる</div>
+    <div class="qtable">
+      <div class="qrow head"><div>きになること</div><div>GA4</div><div>サチコ</div><div class="mine">このサービス</div></div>
+      <div class="qrow"><div class="q">どんな言葉で検索して来た？</div><div class="c"><span class="mk n">×</span></div><div class="c"><span class="mk y">◎</span></div><div class="c mine"><span class="mk y">◎<small>取り込んで搭載</small></span></div></div>
+      <div class="qrow"><div class="q">ページのどこを見た？</div><div class="c"><span class="mk t">△<small>ざっくり</small></span></div><div class="c"><span class="mk n">×</span></div><div class="c mine"><span class="mk y">◎<small>こまかく</small></span></div></div>
+      <div class="qrow"><div class="q">誰が見たか、名前で分かる？</div><div class="c"><span class="mk n">×</span></div><div class="c"><span class="mk n">×</span></div><div class="c mine"><span class="mk y">◎<small>LINEとひもづく</small></span></div></div>
+      <div class="qrow"><div class="q">登録した後もつながってる？</div><div class="c"><span class="mk n">×</span></div><div class="c"><span class="mk n">×</span></div><div class="c mine"><span class="mk y">◎<small>予約まで</small></span></div></div>
+      <div class="qrow"><div class="q">見て終わり？ 動かせる？</div><div class="c"><span class="mk n">見るだけ</span></div><div class="c"><span class="mk n">見るだけ</span></div><div class="c mine"><span class="mk y">◎<small>配信まで</small></span></div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">つまり、うれしいのはこの3つ</div>
+    <div class="points">
+      <div class="pt"><div class="e">🙋</div><div class="t">名前で分かる</div><p>GA4もサチコも「誰か分からない人数」だけ。こちらは<b style="color:var(--ink)">◯◯さんが料金で迷った</b>まで分かる。</p></div>
+      <div class="pt"><div class="e">🔗</div><div class="t">途切れない</div><p>検索 → ページ → LINE → 予約が<b style="color:var(--ink)">1本の線</b>に。ふつうはLINEに移った瞬間に切れる。</p></div>
+      <div class="pt"><div class="e">⚙️</div><div class="t">動かせる</div><p>見て終わりでなく、<b style="color:var(--ink)">その人に合う案内を自動で</b>。迷った人にだけリマインド。</p></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">数字で見ると（改善のたびに更新）</div>
+    <div class="qtable">
+      <div class="qrow head"><div>数字で見ると</div><div>GA4</div><div>サチコ</div><div class="mine">このサービス</div></div>
+      <div class="qrow"><div class="q">お客様の流れ、何段見える？</div><div class="c">2/5段</div><div class="c">1/5段</div><div class="c mine"><b style="color:var(--grn)">5/5段</b></div></div>
+      <div class="qrow"><div class="q">どのくらい細かく見える？</div><div class="c">ページ単位</div><div class="c">検索語単位</div><div class="c mine"><b style="color:var(--grn)">ページ内8か所</b></div></div>
+      <div class="qrow"><div class="q">名前で分かる割合</div><div class="c">0%</div><div class="c">0%</div><div class="c mine"><b style="color:var(--grn)">同意者100%</b></div></div>
+      <div class="qrow"><div class="q">LINE登録した後の継続</div><div class="c">0%</div><div class="c">0%</div><div class="c mine"><b style="color:var(--grn)">予約まで</b></div></div>
+      <div class="qrow"><div class="q">データが残る期間</div><div class="c">2〜14ヶ月</div><div class="c">16ヶ月</div><div class="c mine">自社（長期）</div></div>
+      <div class="qrow"><div class="q">導入で店主がする操作</div><div class="c">タグ設置</div><div class="c">所有権確認</div><div class="c mine"><b style="color:var(--grn)">ボタン数回(5分)</b></div></div>
+      <div class="qrow"><div class="q">店主が自分で細かく調整できる？</div><div class="c">△ 専門知識</div><div class="c">×</div><div class="c mine"><b style="color:var(--grn)">◎ スライダーで</b></div></div>
+      <div class="qrow"><div class="q">自分のデータを持ち出せる？</div><div class="c">△ 要BigQuery</div><div class="c">△ 要API</div><div class="c mine"><b style="color:var(--grn)">◎ ボタンで</b></div></div>
+      <div class="qrow"><div class="q">実測：タグが付いた人の予約率</div><div class="c">—</div><div class="c">—</div><div class="c mine"><b style="color:var(--grn)">34%</b><small style="color:var(--mut);display:block">付かない人は11%</small></div></div>
+      <div class="qrow"><div class="q">ツール自体が使われ方を学んで改善する？</div><div class="c">×</div><div class="c">×</div><div class="c mine"><b style="color:var(--grn)">◎ 自己改善サイクル</b></div></div>
+      <div class="qrow"><div class="q">お客様が拒否・削除しやすい？</div><div class="c">－</div><div class="c">－</div><div class="c mine"><b style="color:var(--grn)">◎ ボタンで即</b></div></div>
+      <div class="qrow"><div class="q">今のツール（GA4等）と併用できる？</div><div class="c">－</div><div class="c">－</div><div class="c mine"><b style="color:var(--grn)">◎ そのまま併用OK</b></div></div>
+      <div class="qrow"><div class="q">やめたいときスッとやめられる？</div><div class="c">－</div><div class="c">－</div><div class="c mine"><b style="color:var(--grn)">◎ 違約金なし・持出可</b></div></div>
+      <div class="qrow"><div class="q">開き忘れても大丈夫？</div><div class="c">×<small style="color:var(--mut);display:block">自分で見に行く</small></div><div class="c">×</div><div class="c mine"><b style="color:var(--grn)">◎ LINEで届く</b></div></div>
+      <div class="qrow"><div class="q">スタッフに任せられる？</div><div class="c">△ 権限設定が複雑</div><div class="c">△</div><div class="c mine"><b style="color:var(--grn)">◎ 招待リンク</b></div></div>
+    </div>
+    <p class="flabel">※ 改善するたびにこの数値を更新します。予約率は「予測」でなく <b style="color:var(--grn)">実測</b>（<code style="font-family:var(--num)">conversion-by-tag</code> API でタグ有/無の予約率を集計）。</p>
+  </section>
+
+  <details>
+    <summary>もう少し詳しく（機能名で見たい方へ）</summary>
+    <div class="dd">
+      <table>
+        <thead><tr><th>機能</th><th>GA4</th><th>サチコ</th><th>このサービス</th></tr></thead>
+        <tbody>
+          <tr><td>検索クエリ・掲載順位</td><td>×</td><td>◎</td><td>◎ 無料API取込</td></tr>
+          <tr><td>ページ内の行動</td><td>○ ページ単位</td><td>×</td><td>◎ ボックス単位</td></tr>
+          <tr><td>個人特定（匿名/実名）</td><td>匿名</td><td>匿名</td><td>◎ 実名</td></tr>
+          <tr><td>LINE遷移後の継続</td><td>×</td><td>×</td><td>◎</td></tr>
+          <tr><td>データ保持</td><td>2〜14ヶ月</td><td>16ヶ月</td><td>◎ 自社DB</td></tr>
+          <tr><td>リアルタイム性</td><td>○</td><td>△ 1〜2日遅延</td><td>◎ 即時</td></tr>
+          <tr><td>改善の実行</td><td>× 見るだけ</td><td>× 見るだけ</td><td>○ 提案＋人承認</td></tr>
+          <tr><td>配信への接続</td><td>△</td><td>×</td><td>◎ Loku配信が発火</td></tr>
+          <tr><td>費用</td><td>無料</td><td>無料</td><td>◎ Lokuの機能</td></tr>
+          <tr><td>店主の使いやすさ</td><td>△ 専門知識</td><td>△ 専門知識</td><td>◎ タブ1枚</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:10px;color:var(--mut);font-size:12px">さらに細かい22観点の版 → <a href="ga4-comparison.html">ga4-comparison.html</a></p>
+    </div>
+  </details>
+
+  <div class="oneline">GA4＝来た後だけ。サチコ＝来る前だけ。どっちも匿名で途切れる。<br><span>このサービス＝ぜんぶを、名前つきで、動かせる。</span></div>
+
+  <div class="foot">かんたん比較 ／ 内部資料・noindex ／ 2026-07-07 ／ <a href="test-report.html" style="color:var(--grn)">戻る</a></div>
+</div>
+</body>
+</html>

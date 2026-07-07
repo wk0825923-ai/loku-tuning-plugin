@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Attention — LP計測プラグイン（Loku本体組込み・動くプロトタイプ）</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#161d28; --line:#232c3a;
+    --ink:#eef2f7; --sub:#9fb0c3; --mut:#6f8298;
+    --grn:#22c58b; --grn2:#0e8f63; --gold:#e7b84f; --blue:#4c8dff; --red:#ff6b6b;
+    --num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 700px at 70% -10%, #16324b33, transparent 60%),var(--bg);
+    color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;
+    line-height:1.7;-webkit-font-smoothing:antialiased;
+  }
+  .num{font-family:var(--num);font-feature-settings:"tnum";letter-spacing:-.02em}
+
+  .app{display:grid;grid-template-columns:1fr 372px;max-width:1200px;margin:0 auto;align-items:start}
+  @media(max-width:900px){.app{grid-template-columns:1fr}}
+
+  .topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;
+    padding:14px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;
+    background:#0b0f14ee;backdrop-filter:blur(8px)}
+  .brand{font-weight:800}.brand .dot{color:var(--grn)}
+  .brand small{display:block;color:var(--mut);font-size:11px;font-weight:500}
+  .pluginbadge{font-size:11px;letter-spacing:.14em;color:var(--grn);border:1px solid #22c58b44;border-radius:999px;padding:5px 12px}
+
+  .lp{padding:24px}
+  .lpsec{position:relative;background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:1px solid var(--line);border-radius:16px;padding:26px 24px;margin-bottom:16px;overflow:hidden;transition:border-color .3s}
+  .lpsec.hot{border-color:#22c58b66}
+  .lpsec .chip{position:absolute;top:10px;right:10px;font-family:var(--num);font-size:11px;font-weight:700;
+    padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--mut);background:#0b0f14aa;transition:.25s}
+  .lpsec .kick{font-size:11px;letter-spacing:.18em;color:var(--grn);font-weight:700;margin-bottom:8px}
+  .lpsec h2{font-size:clamp(20px,3.2vw,28px);font-weight:800;line-height:1.25}
+  .lpsec p{color:var(--sub);font-size:14.5px;margin-top:10px}
+  .lpsec .imgph{height:180px;border-radius:12px;margin-top:14px;
+    background:repeating-linear-gradient(135deg,#1b2432,#1b2432 10px,#202a3a 10px,#202a3a 20px);
+    display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px;border:1px solid var(--line)}
+  .price{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+  .price .pc{flex:1;min-width:120px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
+  .price .pc .v{font-family:var(--num);font-size:22px;font-weight:800;color:var(--grn)}
+  .price .pc .l{color:var(--mut);font-size:12px;margin-top:4px}
+  .cta{display:inline-block;margin-top:16px;background:linear-gradient(180deg,var(--grn),var(--grn2));
+    color:#04180f;font-weight:800;padding:12px 22px;border-radius:12px;text-decoration:none;font-size:15px}
+  .hint{color:var(--mut);font-size:12px;margin:2px 24px 18px;text-align:center}
+
+  .panel{position:sticky;top:60px;padding:18px 16px;border-left:1px solid var(--line);height:calc(100vh - 60px);overflow-y:auto}
+  @media(max-width:900px){.panel{position:static;height:auto;border-left:none;border-top:1px solid var(--line)}}
+  .panel h3{font-size:12px;letter-spacing:.1em;color:var(--grn);font-weight:700;text-transform:uppercase;margin:2px 0 4px}
+  .panel .meta{color:var(--mut);font-size:11.5px;margin-bottom:12px}
+
+  /* 事前タグ設計 */
+  .tagdesign{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}
+  .tagdesign .cap{font-size:10.5px;letter-spacing:.06em;color:var(--mut);margin-bottom:8px}
+  .tdrow{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;color:var(--mut);border-bottom:1px dashed #202a3a}
+  .tdrow:last-child{border:none}
+  .tdrow .tk{width:14px;text-align:center;color:#3a4658}
+  .tdrow.on{color:var(--ink)}
+  .tdrow.on .tk{color:var(--grn)}
+  .tdrow.route.on .tk{color:var(--blue)}
+  .tdrow .tg{flex:1;font-weight:600}
+  .tdrow .when{font-size:10.5px;color:var(--mut);font-weight:400}
+  .tdrow.on .when{color:var(--grn)}
+
+  .sig{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .sig .s{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .sig .s .v{font-family:var(--num);font-weight:800;font-size:15px}
+  .sig .s .l{color:var(--mut);font-size:10px;margin-top:2px}
+  .dotst{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+
+  .live .row{margin-bottom:10px}
+  .live .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-bottom:3px}
+  .live .lab .rd{font-family:var(--num);font-size:10px;color:var(--mut)}
+  .live .lab .s{font-family:var(--num);font-weight:700}
+  .bar{position:relative;height:9px;border-radius:5px;background:#1b2432;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;border-radius:5px;transition:width .2s linear}
+  .bar .thr{position:absolute;top:-2px;bottom:-2px;width:2px;background:#ffffff33;left:60%} /* 温度感しきい60 */
+
+  .mergebtn{width:100%;margin-top:12px;background:#06C755;color:#fff;font-weight:800;border:none;
+    padding:13px;border-radius:12px;font-size:15px;cursor:pointer}
+  .mergebtn:active{transform:translateY(1px)}
+  .mergenote{color:var(--mut);font-size:11px;text-align:center;margin-top:8px;line-height:1.5}
+
+  .profile{display:none}.profile.on{display:block;animation:fade .4s}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .who{display:flex;align-items:center;gap:11px;margin-bottom:12px}
+  .ava{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#06C755,#0a8a44);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:18px}
+  .who .nm{font-weight:800}.who .sub{color:var(--mut);font-size:11.5px}
+  .summ{background:var(--panel);border:1px solid #22c58b44;border-radius:12px;padding:14px;font-size:13.5px;color:var(--sub);line-height:1.65}
+  .summ b{color:var(--ink)}
+  .tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .tag{font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid #22c58b55;color:var(--grn);background:#12341f66}
+  .tag.route{color:var(--blue);border-color:#4c8dff55;background:#0e1c3a66}
+  .rank{margin-top:14px}
+  .rank .ri{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .rank .ri:last-child{border:none}
+  .rank .ri .n{font-family:var(--num);color:var(--mut);width:16px}
+  .rank .ri .nm{flex:1;color:var(--ink)}.rank .ri .v{font-family:var(--num);font-weight:700}
+  .resetbtn{width:100%;margin-top:14px;background:transparent;border:1px solid var(--line);color:var(--sub);padding:10px;border-radius:10px;font-size:12.5px;cursor:pointer}
+
+  .basis{max-width:1200px;margin:0 auto;padding:8px 24px 60px}
+  details{border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden;margin-top:12px}
+  summary{cursor:pointer;padding:16px 20px;font-weight:700;color:var(--sub);list-style:none;font-size:14px}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▸ ";color:var(--grn)}
+  details[open] summary::before{content:"▾ "}
+  .basis .bd{padding:0 20px 18px}
+  .basis table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  .basis td,.basis th{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  .basis th{color:var(--mut);font-weight:600;font-size:11.5px}
+  .basis td b{color:var(--ink)}
+  .basis code{font-family:var(--num);font-size:12px;color:var(--grn);background:#12341f55;padding:2px 6px;border-radius:6px}
+  .yes{color:var(--grn);font-weight:700}.part{color:var(--gold);font-weight:700}.api{color:var(--blue);font-weight:700}.no{color:var(--mut)}
+  .heatlegend{display:flex;gap:14px;align-items:center;color:var(--mut);font-size:12px;margin-top:10px;flex-wrap:wrap}
+  .inbound{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 24px 18px;padding:12px 16px;
+    background:linear-gradient(180deg,#0e1c3a55,#12182166);border:1px solid #4c8dff33;border-radius:12px;font-size:13px;color:var(--sub)}
+  .inbound .src{font-size:11px;color:var(--blue);border:1px solid #4c8dff44;border-radius:999px;padding:2px 9px}
+  .inbound b{color:var(--ink)} .inbound .m{color:var(--mut);font-size:11.5px}
+  .journey{display:flex;gap:8px;margin:4px 0 12px}
+  .journey .jstep{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:11.5px;color:var(--sub);line-height:1.45}
+  .journey .jstep.hot{background:#12341f66;border-color:#22c58b55}
+  .journey .jt{font-size:9.5px;letter-spacing:.08em;color:var(--mut);margin-bottom:4px}
+  .journey .jstep.hot .jt{color:var(--grn)} .journey b{color:var(--ink)}
+  .consentbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;
+    background:#0b0f14f2;border-top:1px solid var(--line);padding:10px 18px;font-size:12px;color:var(--sub);backdrop-filter:blur(6px)}
+  .consentbar label{color:var(--ink);font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer}
+  .consentbar a{color:var(--grn)}
+</style>
+</head>
+<body>
+<div class="consentbar" id="consentbar">
+  <span>🔒 見やすさ改善のため、ページの閲覧を計測します。データは<b style="color:#cfe">お店とあなたのため</b>に使い、<b style="color:#cfe">いつでも停止・削除</b>できます。</span>
+  <label><input type="checkbox" id="consentChk" checked> 計測・結合に同意</label>
+  <a href="javascript:void(0)">プライバシー</a>
+</div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand">Loku <span class="dot">Attention</span><small>LP計測プラグイン（Loku本体に組込み・AIアシスタントではない）</small></div>
+    <div class="pluginbadge">EMBEDDED IN LOKU APP</div>
+  </div>
+
+  <!-- 左: サンプルLP -->
+  <div class="lp" id="lp">
+    <div class="inbound" id="inbound">
+      <span class="src">Google検索</span><b id="qText">—</b>
+      <span class="m" id="inMeta">—</span>
+      <span class="m">（Search Console 無料APIより取得・デモはモック）</span>
+    </div>
+    <p class="hint">↓ 普通に読むようにスクロール。右パネルは「読んだ秒数 ÷ 目安時間」の<b style="color:#9fb0c3">絶対スコア</b>なので、見れば増え・見なければ据え置き（減りません）。</p>
+
+    <section class="lpsec" data-box="hero" data-label="ヒーロー" data-type="text" data-chars="60"><div class="chip">–</div>
+      <div class="kick">RECOVERY SALON</div><h2>その肩こり、もう「揉むだけ」で戻していませんか。</h2>
+      <p>骨格から整える、完全予約制のパーソナル整体。初回はカウンセリング40分込み。</p></section>
+
+    <section class="lpsec" data-box="problem" data-label="悩み提起" data-type="text" data-chars="180"><div class="chip">–</div>
+      <div class="kick">こんな方へ</div><h2>マッサージに通っても、3日で元通り。</h2>
+      <p>その場しのぎの慰安ではなく、姿勢のクセそのものを変えないと肩こり・腰の重さは戻ってきます。当院は毎回の施術で身体の状態を記録し、戻りにくい状態を一緒に作っていきます。デスクワーク・産後・スポーツ後、それぞれに合わせた設計をします。</p></section>
+
+    <section class="lpsec" data-box="beforeafter" data-label="Before/After" data-type="image" data-chars="30"><div class="chip">–</div>
+      <div class="kick">実際の変化</div><h2>姿勢のBefore / After</h2>
+      <div class="imgph">［ 施術前後の姿勢写真 ］</div><p>※効果には個人差があります。</p></section>
+
+    <section class="lpsec" data-box="staff" data-label="スタッフ紹介" data-type="text" data-chars="150"><div class="chip">–</div>
+      <div class="kick">担当</div><h2>院長プロフィール</h2>
+      <p>柔道整復師。整形外科クリニックで5年の臨床の後、地域密着の整体院を開業。延べ2万人以上の身体を診てきました。趣味はトレイルランと味噌づくり。あなたの生活習慣に踏み込んだ提案を大切にしています。</p></section>
+
+    <section class="lpsec" data-box="pricing" data-label="料金表" data-type="price" data-chars="40"><div class="chip">–</div>
+      <div class="kick">料金</div><h2>明朗な料金体系</h2>
+      <div class="price"><div class="pc"><div class="v">¥5,500</div><div class="l">初回（40分込）</div></div>
+      <div class="pc"><div class="v">¥6,600</div><div class="l">通常施術</div></div>
+      <div class="pc"><div class="v">¥17,600</div><div class="l">回数券×3</div></div></div></section>
+
+    <section class="lpsec" data-box="voice" data-label="お客様の声" data-type="text" data-chars="140"><div class="chip">–</div>
+      <div class="kick">お客様の声</div><h2>通った方の実感</h2>
+      <p>「毎朝の腰の重さが1ヶ月でほぼ気にならなくなりました」（40代・女性）。「デスクワークの肩こりで頭痛薬が手放せなかったのが、頻度が激減」（30代・男性）。姿勢の記録を見せてもらえるので続けるモチベになります。</p></section>
+
+    <section class="lpsec" data-box="faq" data-label="よくある質問" data-type="text" data-chars="120"><div class="chip">–</div>
+      <div class="kick">FAQ</div><h2>よくあるご質問</h2>
+      <p>Q. 何回くらい通えばいい？ A. 状態によりますが、まず初回で現状と目安をお伝えします。Q. 着替えは必要？ A. 動きやすい服のご用意があります。Q. 支払いは？ A. 現金・各種キャッシュレス対応。</p></section>
+
+    <section class="lpsec" data-box="cta" data-label="予約CTA" data-type="text" data-chars="40"><div class="chip">–</div>
+      <div class="kick">ご予約</div><h2>まずはLINEで空き状況を確認</h2>
+      <p>友だち追加で、初回カウンセリングの予約と簡単な問診ができます。</p>
+      <a class="cta" id="lineCta" href="javascript:void(0)">＋ LINEで友だち追加して予約</a></section>
+  </div>
+
+  <!-- 右: パネル -->
+  <div class="panel">
+    <div class="livewrap" id="liveWrap">
+      <h3>事前タグ設計（Lokuのお客様タグ）</h3>
+      <div class="tagdesign" id="tagDesign">
+        <div class="cap">LPに紐づけて事前に用意 → 条件を満たすと自動付与</div>
+        <div class="tdrow route on" id="td_route"><span class="tk">●</span><span class="tg">整体LP-A 流入</span><span class="when">到達で即付与</span></div>
+        <div class="tdrow" id="td_hotlead"><span class="tk">○</span><span class="tg">ホットリード</span><span class="when">全体をよく読んだ</span></div>
+        <div class="tdrow" id="td_pricing"><span class="tk">○</span><span class="tg">料金検討中</span><span class="when">料金表を熟読 ≥60</span></div>
+        <div class="tdrow" id="td_beforeafter"><span class="tk">○</span><span class="tg">効果重視</span><span class="when">Before/After熟読 ≥60</span></div>
+        <div class="tdrow" id="td_voice"><span class="tk">○</span><span class="tg">口コミ重視</span><span class="when">お客様の声を熟読 ≥60</span></div>
+      </div>
+
+      <h3>Live Attention</h3>
+      <div class="meta">匿名セッション <span class="num" id="sid">sess_—</span></div>
+      <div class="sig">
+        <div class="s"><div class="v num" id="sigActive">0.0s</div><div class="l"><span class="dotst" id="dotActive" style="background:var(--mut)"></span>アクティブ計測時間</div></div>
+        <div class="s"><div class="v num" id="sigVel">0<span style="font-size:10px">px/s</span></div><div class="l">スクロール速度</div></div>
+      </div>
+      <div class="live" id="liveBars"></div>
+
+      <button class="mergebtn" id="mergeBtn">＋ LINE追加をシミュレート</button>
+      <div class="mergenote">追加した瞬間、この匿名の視線ログ＋発火タグが<br>Lokuの友だちIDに結合されます</div>
+    </div>
+
+    <div class="profile" id="profile">
+      <h3>Friend Profile</h3>
+      <div class="who"><div class="ava">田</div>
+        <div><div class="nm">田中 さん <span class="num" style="color:var(--mut);font-size:11px">#f_8821</span></div>
+        <div class="sub">匿名 <span class="num" id="mergedSid">sess_—</span> から結合</div></div></div>
+      <div class="journey">
+        <div class="jstep"><div class="jt">来る前・検索</div><span id="jBefore">—</span></div>
+        <div class="jstep"><div class="jt">来た後・LP視線</div><span id="jAfter">—</span></div>
+        <div class="jstep hot"><div class="jt">その後・Loku</div>LINE追加 → <b>予約見込み</b></div>
+      </div>
+      <div class="summ" id="summary">—</div>
+      <div class="tags" id="tagList"></div>
+      <div class="rank" id="rankList"></div>
+      <button class="resetbtn" id="resetBtn">↻ もう一度デモ（新しい訪問者）</button>
+    </div>
+  </div>
+</div>
+
+<div class="basis">
+  <details open>
+    <summary>GA4 / サーチコンソール 機能棚卸し — このプラグインで積む / 積まない</summary>
+    <div class="bd">
+      <p style="color:var(--sub);font-size:13.5px">「両方の機能を積んでるか？」への正直な現在地。<span class="yes">積む</span>=独自粒度で内蔵 / <span class="api">無料API連携</span>=Google側の無料APIを引く（課金なし・クォータのみ） / <span class="part">一部</span> / <span class="no">対象外</span>。<b>いまの動くプロトタイプは主にGA4側（濃い版）を実装済み。サーチコンソール側は検索データがGoogle所有のため、Search Console API連携で積む設計</b>。</p>
+      <table>
+        <thead><tr><th>ツール</th><th>機能</th><th>このプラグインでの扱い</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="6"><b>GA4</b></td><td>ページビュー / セッション</td><td><span class="yes">積む</span> 自社配信で欠損なく計測</td></tr>
+          <tr><td>スクロール / エンゲージメント時間</td><td><span class="yes">積む＋強化</span> ボックス単位の読了率（GA4はページ単位）</td></tr>
+          <tr><td>イベント（クリック等）</td><td><span class="yes">積む</span> CTAタップ・要素クリック</td></tr>
+          <tr><td>流入元 / UTM / 参照元</td><td><span class="yes">積む</span> referrer・UTMパラメータ</td></tr>
+          <tr><td>コンバージョン経路</td><td><span class="yes">積む＋独自</span> LP→LINE追加→予約までLoku側で接続</td></tr>
+          <tr><td>ユーザー属性（年齢等の推定）</td><td><span class="part">一部</span> Lokuの友だち情報で実データ化（推定でなく実名）</td></tr>
+          <tr><td rowspan="5"><b>Search<br>Console</b></td><td>検索クエリ（何で検索して来たか）</td><td><span class="api">無料API連携</span> Search Console API（Google所有データ）</td></tr>
+          <tr><td>表示回数 / クリック / CTR</td><td><span class="api">無料API連携</span> 同上を店ごとに取得・表示</td></tr>
+          <tr><td>平均掲載順位</td><td><span class="api">無料API連携</span> 同上</td></tr>
+          <tr><td>インデックス状況 / カバレッジ</td><td><span class="api">無料API連携</span> URL検査API</td></tr>
+          <tr><td>構造化データ / リッチリザルト</td><td><span class="yes">積む</span> LP自社配信でschema自動付与（発見性の内蔵）</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--mut);font-size:12.5px;margin-top:12px"><b>結論:</b> 「来た後」の行動はGA4より濃く<b>内蔵済み</b>。「来る前」の検索面（サチコ）は<b>Search Console API連携で積む</b>（自前計測では取れないGoogle所有データのため）。両者を1画面に統合し、さらにGA4もサチコも切れる「LINE追加以降」をLokuが接続する、が全体像。</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>スコアの増減ロジック（なぜ増える／減らないのか）</summary>
+    <div class="bd">
+      <table>
+        <thead><tr><th>要素</th><th>根拠</th><th>実装（今回シンプル化）</th></tr></thead>
+        <tbody>
+          <tr><td><b>スコア本体</b></td><td>滞在≠注意 → 読了率で正規化</td><td><code>engagement = 読んだ秒 ÷ 目安時間 ×100</code>（0-100・単調増加＝減らない）</td></tr>
+          <tr><td><b>目安時間</b></td><td>日本語黙読≈500字/分</td><td>text=<code>文字数/8.3</code>秒 / 画像・料金は固定ベース</td></tr>
+          <tr><td><b>加算ゲート①可視</b></td><td>IAB/MRC 50%可視基準</td><td><code>coverage≥0.5</code>のボックスだけ加算</td></tr>
+          <tr><td><b>加算ゲート②読みゾーン</b></td><td>中央固視バイアス＋F字（中央やや上）</td><td>可視中心が画面<code>12%〜90%</code>内のとき加算</td></tr>
+          <tr><td><b>加算ゲート③停止</b></td><td>速い＝未読、停止＝注意</td><td>スクロール速度<code>&lt;650px/s</code>のとき加算</td></tr>
+          <tr><td><b>加算ゲート④アクティブ</b></td><td>離席・放置タブ除外</td><td><code>visibilitychange/focus</code>＋25秒無操作で停止</td></tr>
+          <tr><td><b>温度感タグ発火</b></td><td>閾値超えでセグメント化</td><td>ボックス <code>engagement≥60</code> で事前設定タグを付与</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--sub);font-size:13px;margin-top:10px">ゲートは全て「加算するか / しないか」の判定に使い、<b>加算量そのものは素直に「読んだ秒 × 可視率」</b>。だから「見れば増える・見なければ止まる・他を見ても減らない」。バーの白い縦線＝温度感しきい(60)。</p>
+      <div class="heatlegend"><span><span class="dotst" style="background:var(--grn)"></span>熟読(≥60)</span><span><span class="dotst" style="background:var(--gold)"></span>途中(30-60)</span><span><span class="dotst" style="background:#38424f"></span>素通り</span></div>
+      <p style="color:var(--mut);font-size:12px;margin-top:12px">プライバシー：個人紐付けは同意（ポリシー/オプトイン）前提。本デモはローカル完結・送信なし。</p>
+    </div>
+  </details>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var READ_CPS=8.3, IMG_BASE=3.0, PRICE_BASE=4.0;
+  var COVER_GATE=0.5, ZONE_LO=0.12, ZONE_HI=0.90, VEL_STOP=650, IDLE_MS=25000, HEAT_TH=60, TICK=200;
+
+  var boxes=[].slice.call(document.querySelectorAll('[data-box]')).map(function(el){
+    return {el:el,id:el.dataset.box,label:el.dataset.label,type:el.dataset.type,chars:+el.dataset.chars||0,
+      activeView:0,engagement:0,revisits:0,inView:false,chip:el.querySelector('.chip')};
+  });
+  var byId={}; boxes.forEach(function(b){byId[b.id]=b;});
+
+  // 事前タグ設計（ボックス閾値ルール）
+  var HEAT_RULES=[
+    {box:'pricing',tag:'料金検討中',row:'td_pricing'},
+    {box:'beforeafter',tag:'効果重視',row:'td_beforeafter'},
+    {box:'voice',tag:'口コミ重視',row:'td_voice'}
+  ];
+  var ROUTE_TAG='整体LP-A 流入';
+
+  var sessionId='sess_'+Math.random().toString(36).slice(2,8);
+  document.getElementById('sid').textContent=sessionId;
+
+  // サチコ層（来る前）: 本番はSearch Console 無料API、デモはモック
+  var QUERIES=[
+    {q:'肩こり 整体 世田谷',pos:3,ctr:6.2,dev:'スマホ'},
+    {q:'整体 産後 骨盤 近く',pos:5,ctr:4.1,dev:'スマホ'},
+    {q:'デスクワーク 肩こり 改善',pos:2,ctr:7.8,dev:'PC'},
+    {q:'首こり 頭痛 整体 口コミ',pos:8,ctr:2.3,dev:'スマホ'}
+  ];
+  var visit=QUERIES[Math.floor(Math.random()*QUERIES.length)];
+  function renderInbound(){
+    document.getElementById('qText').textContent='「'+visit.q+'」';
+    document.getElementById('inMeta').innerHTML='掲載 <b>'+visit.pos+'</b>位 · CTR推定 <b>'+visit.ctr+'%</b> · '+visit.dev;
+  }
+  renderInbound();
+
+  var lastY=window.scrollY, vel=0, velSmooth=0, lastActivity=Date.now(), hasFocus=document.hasFocus();
+  var totalActive=0, hoverBox=null, merged=false, lastTick=Date.now();
+
+  function markActivity(){lastActivity=Date.now();}
+  ['scroll','mousemove','touchstart','touchmove','keydown','wheel','pointerdown'].forEach(function(ev){window.addEventListener(ev,markActivity,{passive:true});});
+  window.addEventListener('focus',function(){hasFocus=true;});
+  window.addEventListener('blur',function(){hasFocus=false;});
+  window.addEventListener('scroll',function(){var y=window.scrollY;vel=Math.abs(y-lastY)/(TICK/1000);lastY=y;},{passive:true});
+
+  function expectedRead(b){ if(b.type==='text')return Math.max(1.2,b.chars/READ_CPS); if(b.type==='price')return PRICE_BASE; return IMG_BASE; }
+  function heat(e){ if(e>=HEAT_TH)return '#22c58b'; if(e>=30)return '#e7b84f'; if(e>3)return '#5a6b80'; return '#38424f'; }
+
+  var liveBars=document.getElementById('liveBars');
+  boxes.forEach(function(b){
+    var row=document.createElement('div');row.className='row';
+    row.innerHTML='<div class="lab"><span>'+b.label+'</span><span><span class="rd" id="rd_'+b.id+'">0/0s</span> <span class="s" id="s_'+b.id+'">0</span></span></div>'+
+      '<div class="bar"><span class="thr"></span><i id="bar_'+b.id+'"></i></div>';
+    liveBars.appendChild(row);
+  });
+
+  function tick(){
+    var now=Date.now(), dt=(now-lastTick)/1000; lastTick=now;
+    velSmooth=velSmooth*0.6+vel*0.4; vel*=0.5;
+    var vh=window.innerHeight;
+    var pageVisible=(document.visibilityState==='visible')&&hasFocus;
+    var notIdle=(now-lastActivity)<IDLE_MS;
+    var activeGate=pageVisible&&notIdle;
+    if(activeGate) totalActive+=dt;
+    var slow=velSmooth<VEL_STOP;
+
+    boxes.forEach(function(b){
+      var r=b.el.getBoundingClientRect();
+      var interTop=Math.max(r.top,0), interBot=Math.min(r.bottom,vh);
+      var interH=Math.max(0,interBot-interTop);
+      var coverage=interH/(Math.min(r.height,vh)||1);
+      var nowIn=coverage>=COVER_GATE;
+      if(nowIn&&!b.inView) b.revisits++;
+      b.inView=nowIn;
+      if(nowIn&&activeGate&&slow){
+        var centerY=((interTop+interBot)/2)/vh;
+        if(centerY>=ZONE_LO&&centerY<=ZONE_HI){ b.activeView+=dt*coverage; }
+      }
+      b.engagement=Math.min(100,b.activeView/expectedRead(b)*100);
+    });
+    render();
+    setTimeout(tick,TICK);
+  }
+
+  function firedTags(){
+    var t=[];
+    HEAT_RULES.forEach(function(rl){ if(byId[rl.box].engagement>=HEAT_TH) t.push(rl.tag); });
+    var avg=boxes.reduce(function(s,b){return s+b.engagement;},0)/boxes.length;
+    if(avg>=55) t.push('ホットリード');
+    return {tags:t, avg:avg};
+  }
+
+  function render(){
+    document.getElementById('sigActive').textContent=totalActive.toFixed(1)+'s';
+    document.getElementById('sigVel').innerHTML=Math.round(velSmooth)+'<span style="font-size:10px">px/s</span>';
+    var active=(document.visibilityState==='visible')&&hasFocus&&(Date.now()-lastActivity<IDLE_MS);
+    document.getElementById('dotActive').style.background=active?'var(--grn)':'var(--mut)';
+
+    boxes.forEach(function(b){
+      var e=b.engagement, c=heat(e);
+      var bar=document.getElementById('bar_'+b.id); bar.style.width=e+'%'; bar.style.background=c;
+      document.getElementById('s_'+b.id).textContent=Math.round(e);
+      document.getElementById('rd_'+b.id).textContent=b.activeView.toFixed(0)+'/'+Math.round(expectedRead(b))+'s';
+      if(b.chip){ b.chip.textContent=e<3?'–':Math.round(e);
+        b.chip.style.background=e<3?'#0b0f14aa':c; b.chip.style.color=(e>=30)?'#04180f':'var(--mut)'; b.chip.style.borderColor='transparent'; }
+      b.el.classList.toggle('hot', e>=HEAT_TH);
+    });
+
+    // タグ点灯
+    var f=firedTags();
+    HEAT_RULES.forEach(function(rl){ document.getElementById(rl.row).classList.toggle('on', byId[rl.box].engagement>=HEAT_TH); });
+    var hl=document.getElementById('td_hotlead'); hl.classList.toggle('on', f.avg>=55);
+    HEAT_RULES.forEach(function(rl){ var tk=document.getElementById(rl.row).querySelector('.tk'); tk.textContent=(byId[rl.box].engagement>=HEAT_TH)?'●':'○'; });
+    hl.querySelector('.tk').textContent=(f.avg>=55)?'●':'○';
+  }
+
+  function buildProfile(){
+    var ranked=boxes.slice().sort(function(a,b){return b.engagement-a.engagement;});
+    var top=ranked[0], second=ranked[1], least=ranked[ranked.length-1];
+    var f=firedTags();
+    var tags=[{t:ROUTE_TAG,route:true}].concat(f.tags.map(function(x){return {t:x};}));
+    if(f.tags.length===0) tags.push({t: f.avg>=30?'検討中':'様子見'});
+
+    var s='田中さんは <b>'+top.label+'</b>（読了 '+Math.round(top.engagement)+'）を最も熱心に読み、次いで <b>'+second.label+'</b>。';
+    if(byId['pricing'].engagement>=HEAT_TH) s+=' <b>料金表で明確に滞在</b>＝価格が意思決定の焦点。';
+    if(least.engagement<20) s+=' 一方 '+least.label+' はほぼ素通り。';
+    s+='<br><br>→ 初回メッセージは <b>'+recommend(f.tags)+'</b> が刺さる。';
+    return {ranked:ranked,tags:tags,summary:s};
+  }
+  function recommend(t){
+    if(t.indexOf('料金検討中')>=0) return '「初回¥5,500・回数券のコスパ」を先出しする案内';
+    if(t.indexOf('効果重視')>=0) return 'Before/Afterの実例と姿勢記録の見せ方';
+    if(t.indexOf('口コミ重視')>=0) return '同じ悩みの利用者の声＋来院動機';
+    return '空き状況と初回カウンセリングの流れの案内';
+  }
+
+  function doMerge(){
+    if(merged)return; merged=true;
+    var consent=document.getElementById('consentChk')?document.getElementById('consentChk').checked:true;
+    if(!consent){
+      document.getElementById('mergedSid').textContent=sessionId;
+      var jb=document.getElementById('jBefore');if(jb)jb.textContent='—';
+      var ja=document.getElementById('jAfter');if(ja)ja.textContent='（同意なし）';
+      document.getElementById('summary').innerHTML='<b>計測結合に同意がありません。</b><br>匿名の集計にのみ使用し、実名プロフィール・タグは作りません（プライバシー保護）。';
+      document.getElementById('tagList').innerHTML='';document.getElementById('rankList').innerHTML='';
+      document.getElementById('liveWrap').style.display='none';document.getElementById('profile').classList.add('on');
+      return;
+    }
+    var p=buildProfile();
+    document.getElementById('mergedSid').textContent=sessionId;
+    document.getElementById('jBefore').innerHTML='「'+visit.q+'」<br>掲載'+visit.pos+'位・'+visit.dev;
+    document.getElementById('jAfter').innerHTML='<b>'+p.ranked[0].label+'</b>を熟読('+Math.round(p.ranked[0].engagement)+')';
+    document.getElementById('summary').innerHTML=p.summary;
+    var tagEl=document.getElementById('tagList'); tagEl.innerHTML='';
+    p.tags.forEach(function(tg){var e=document.createElement('span');e.className='tag'+(tg.route?' route':'');e.textContent=tg.t;tagEl.appendChild(e);});
+    var rk=document.getElementById('rankList'); rk.innerHTML='';
+    p.ranked.slice(0,4).forEach(function(b,i){var row=document.createElement('div');row.className='ri';
+      row.innerHTML='<span class="n">'+(i+1)+'</span><span class="nm">'+b.label+'</span><span class="v" style="color:'+heat(b.engagement)+'">'+Math.round(b.engagement)+'</span>';rk.appendChild(row);});
+    document.getElementById('liveWrap').style.display='none';
+    document.getElementById('profile').classList.add('on');
+  }
+  document.getElementById('mergeBtn').addEventListener('click',doMerge);
+  document.getElementById('lineCta').addEventListener('click',function(){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});setTimeout(doMerge,400);});
+  document.getElementById('resetBtn').addEventListener('click',function(){
+    boxes.forEach(function(b){b.activeView=0;b.engagement=0;b.revisits=0;b.inView=false;});
+    totalActive=0;merged=false;sessionId='sess_'+Math.random().toString(36).slice(2,8);
+    document.getElementById('sid').textContent=sessionId;
+    visit=QUERIES[Math.floor(Math.random()*QUERIES.length)]; renderInbound();
+    document.getElementById('profile').classList.remove('on');
+    document.getElementById('liveWrap').style.display='block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+
+  tick();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Attention × Loku本体 機能統合マップ</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#121821; --panel2:#161d28; --line:#232c3a;
+    --ink:#eef2f7; --sub:#9fb0c3; --mut:#6f8298;
+    --grn:#22c58b; --gold:#e7b84f; --blue:#4c8dff; --pur:#b78cff; --red:#ff6b6b;
+    --num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 70% -10%, #16324b33, transparent 60%),var(--bg);
+    color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 22px}
+  .num{font-family:var(--num);font-feature-settings:"tnum"}
+
+  header{padding:60px 0 30px;text-align:center}
+  .badge{display:inline-block;font-size:11px;letter-spacing:.18em;color:var(--grn);border:1px solid #22c58b44;border-radius:999px;padding:6px 15px;margin-bottom:20px}
+  h1{font-size:clamp(26px,5vw,42px);font-weight:800;line-height:1.15}
+  h1 .g{color:var(--grn)}
+  .lead{color:var(--sub);margin-top:18px;font-size:16px;max-width:760px;margin-left:auto;margin-right:auto}
+
+  /* コア洞察 */
+  .insight{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:30px 0 10px}
+  @media(max-width:760px){.insight{grid-template-columns:1fr}}
+  .ic{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .ic .t{font-size:13px;font-weight:800;color:var(--gold);margin-bottom:6px}
+  .ic p{color:var(--sub);font-size:13.5px}
+  .ic p b{color:var(--ink)}
+
+  /* 中央のレイヤ帯 */
+  .layer{background:linear-gradient(135deg,#12341f,#0d2a1a);border:1px solid #22c58b55;border-radius:16px;padding:20px 22px;margin:26px 0 8px;text-align:center}
+  .layer .h{font-weight:800;font-size:18px;color:var(--grn)}
+  .layer p{color:var(--sub);font-size:13.5px;margin-top:6px}
+  .layer .flow{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:14px}
+  .layer .f{background:#0b0f1466;border:1px solid #22c58b44;border-radius:10px;padding:8px 14px;font-size:12.5px;color:var(--ink)}
+  .layer .ar{align-self:center;color:var(--grn)}
+
+  section{padding:30px 0;border-top:1px solid var(--line)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:6px 0 22px;font-size:12.5px;color:var(--sub)}
+  .legend .k{display:flex;align-items:center;gap:7px}
+  .dot{width:11px;height:11px;border-radius:3px;transform:rotate(45deg);display:inline-block}
+  .d-blue{background:var(--blue)} .d-grn{background:var(--grn)} .d-pur{background:var(--pur)} .d-mut{background:#3a4658}
+
+  .cats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:760px){.cats{grid-template-columns:1fr}}
+  .cat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px}
+  .cat h3{font-size:13px;letter-spacing:.04em;color:var(--ink);margin-bottom:11px;display:flex;align-items:center;gap:8px}
+  .cat h3 .em{font-size:15px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font-size:12px;padding:5px 10px;border-radius:8px;border:1px solid var(--line);color:var(--mut);background:#0e141d}
+  .chip.blue{color:#bcd4ff;border-color:#4c8dff55;background:#0e1c3a55}
+  .chip.grn{color:#a7f0d0;border-color:#22c58b55;background:#12341f55}
+  .chip.pur{color:#dcc9ff;border-color:#b78cff55;background:#241a3a55}
+  .chip .st{font-size:9px;color:var(--gold);margin-left:3px}
+
+  .note{color:var(--mut);font-size:12.5px;margin-top:18px;text-align:center}
+  footer{padding:30px 0 60px;text-align:center;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">EMBEDDED IN LOKU — 機能統合マップ</div>
+    <h1>Attentionは新機能じゃない。<br>Lokuの<span class="g">既存機能をぜんぶ実名の視線でつなぐ層</span>。</h1>
+    <p class="lead">Lokuには既に「トラッキング／流入経路／分析」がある。Attentionはそれらの<b style="color:var(--ink)">解像度を上げ</b>、匿名→実名の結合で配信・EC・Mallまで一本の因果でつなぐ。</p>
+  </header>
+
+  <div class="insight">
+    <div class="ic"><div class="t">既存の計測系に"増築"する（重複させない）</div>
+      <p>Lokuの <b>トラッキング／流入経路／分析</b> は今は主に集計。Attentionは<b>ボックス単位の視線＋実名紐付け</b>を足して、同じ画面の解像度を上げる。新タブは作らない。</p></div>
+    <div class="ic"><div class="t">LIFF識別が"結合レール"（発明不要）</div>
+      <p>ダッシュボードの警告「リッチメニューからの友だち識別が無効（LIFF未登録）」＝まさに匿名→実名問題。Lokuの<b>既存LIFF識別基盤に乗る</b>だけで結合できる。</p></div>
+  </div>
+
+  <div class="layer">
+    <div class="h">Attention Layer ＝ 匿名の視線を、実名の友だちに結合する背骨</div>
+    <p>Lokuが配る全ページに計測SDKを効かせ、LINE追加の瞬間に友だちへ結合。以降のLoku機能がその情報で動く。</p>
+    <div class="flow">
+      <span class="f">来る前：検索（サチコ無料API）</span><span class="ar">→</span>
+      <span class="f">来た後：ページ視線（自前SDK）</span><span class="ar">→</span>
+      <span class="f">結合：LIFFで友だちに</span><span class="ar">→</span>
+      <span class="f">その後：配信・予約・EC・Mall</span>
+    </div>
+  </div>
+
+  <section>
+    <div class="legend">
+      <span class="k"><span class="dot d-blue"></span>既存の計測を<b>強化</b>（解像度UP）</span>
+      <span class="k"><span class="dot d-grn"></span>タグ発火の<b>供給先</b>（自動化が回る）</span>
+      <span class="k"><span class="dot d-pur"></span>計測対象を<b>拡張</b>（EC/Mall/コミュニティ）</span>
+      <span class="k"><span class="dot d-mut"></span>直接は絡まない</span>
+      <span class="k">★＝特に効く</span>
+    </div>
+
+    <div class="cats">
+      <div class="cat"><h3><span class="em">🧩</span>Suite</h3><div class="chips">
+        <span class="chip blue">ダッシュボード</span>
+        <span class="chip grn">チャット</span>
+        <span class="chip blue">友だち管理<span class="st">★</span></span>
+        <span class="chip blue">タグ管理<span class="st">★</span></span>
+      </div></div>
+
+      <div class="cat"><h3><span class="em">✉️</span>メッセージ</h3><div class="chips">
+        <span class="chip grn">一斉配信<span class="st">★</span></span>
+        <span class="chip grn">シナリオ配信<span class="st">★</span></span>
+        <span class="chip grn">自動応答</span>
+        <span class="chip grn">リマインダー</span>
+        <span class="chip grn">テンプレート</span>
+      </div></div>
+
+      <div class="cat"><h3><span class="em">🗂️</span>コンテンツ</h3><div class="chips">
+        <span class="chip blue">リッチメニュー<span class="st">★</span></span>
+        <span class="chip pur">フォーム</span>
+        <span class="chip grn">予約管理</span>
+        <span class="chip pur">指名スタッフ</span>
+        <span class="chip grn">クーポン</span>
+        <span class="chip blue">流入経路<span class="st">★</span></span>
+        <span class="chip blue">トラッキング<span class="st">★★</span></span>
+        <span class="chip blue">分析<span class="st">★</span></span>
+        <span class="chip">AIツール</span>
+      </div></div>
+
+      <div class="cat"><h3><span class="em">🎖️</span>会員・ロイヤルティ</h3><div class="chips">
+        <span class="chip blue">会員一覧</span>
+        <span class="chip pur">会員証</span>
+        <span class="chip pur">スタンプカード</span>
+        <span class="chip pur">紹介プログラム</span>
+      </div></div>
+
+      <div class="cat"><h3><span class="em">👥</span>コミュニティ</h3><div class="chips">
+        <span class="chip">コミュニティ設定</span>
+        <span class="chip blue">アプリメンバー管理</span>
+        <span class="chip pur">掲示板管理</span>
+        <span class="chip pur">コース管理<span class="st">★</span></span>
+        <span class="chip pur">バッジ/バナー管理</span>
+        <span class="chip">通報管理</span>
+        <span class="chip blue">コミュニティ分析</span>
+      </div></div>
+
+      <div class="cat"><h3><span class="em">🛍️</span>ショップ（Loku EC）</h3><div class="chips">
+        <span class="chip blue">ダッシュボード</span>
+        <span class="chip pur">商品ページ<span class="st">★★</span></span>
+        <span class="chip grn">注文</span>
+        <span class="chip pur">レビュー</span>
+      </div></div>
+
+      <div class="cat"><h3><span class="em">🏬</span>Mall（Lokumall）</h3><div class="chips">
+        <span class="chip blue">ダッシュボード</span>
+        <span class="chip pur">出品ページ<span class="st">★</span></span>
+        <span class="chip grn">注文</span>
+        <span class="chip pur">クラファン<span class="st">★★</span></span>
+        <span class="chip">精算</span>
+        <span class="chip blue">モール分析</span>
+        <span class="chip">外部連携</span>
+      </div></div>
+
+      <div class="cat"><h3><span class="em">🤝</span>その他</h3><div class="chips">
+        <span class="chip">代理店</span>
+        <span class="chip">設定</span>
+        <span class="chip">ヘルプ / サポート</span>
+      </div></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="legend" style="margin-bottom:14px"><b style="color:var(--ink)">ずぶずぶ具体例（★★の所）</b></div>
+    <div class="cats">
+      <div class="cat"><h3><span class="em">🛒</span>EC商品ページ → カゴ落ち自動化</h3>
+        <p style="color:var(--sub);font-size:13px">box＝商品画像／説明／<b style="color:var(--ink)">価格</b>／レビュー／カート。「価格で3回戻った」「レビュー熟読で未購入」→ <b style="color:var(--grn)">カゴ落ちタグ</b> → リマインダー＋クーポンが自動発火。</p></div>
+      <div class="cat"><h3><span class="em">🎯</span>クラファン → 迷いリマインド</h3>
+        <p style="color:var(--sub);font-size:13px">box＝リターン一覧／ストーリー／進捗。「このリターンで長く迷った」を検知 → 締切前に該当リターンを名指しでリマインド。<b style="color:var(--ink)">迷いの可視化</b>が支援額に直結。</p></div>
+      <div class="cat"><h3><span class="em">📈</span>トラッキング/分析 → 実データ化</h3>
+        <p style="color:var(--sub);font-size:13px">今は集計だけの分析系に、<b style="color:var(--ink)">実名×ボックス視線</b>を裏打ち。「誰が・どの検索で来て・どこを見て・買ったか」が一本で追える。</p></div>
+      <div class="cat"><h3><span class="em">🎓</span>コミュニティのコース → 学習Attention</h3>
+        <p style="color:var(--sub);font-size:13px">教材ページのどのブロックで離脱したかを計測。<b style="color:var(--ink)">つまずき箇所</b>にフォロー配信、完走率を上げる。物販以外にも効く汎用性。</p></div>
+    </div>
+    <p class="note">実装上は <code style="font-family:var(--num);color:var(--grn)">page.kind</code> を増やすだけ（lp / ec_product / mall_listing / crowdfunding / community_course / form …）。スキーマは <b>schema.sql</b>、設計は <b>ARCHITECTURE.md</b> 参照。</p>
+  </section>
+
+  <footer>Loku Attention × Loku本体 機能統合マップ ／ 内部資料・noindex ／ 2026-07-07<br>移植はフルスタック（社長）に委譲。本資料は「どんなものか」を1枚で理解するためのもの。</footer>
+</div>
+</body>
+</html>

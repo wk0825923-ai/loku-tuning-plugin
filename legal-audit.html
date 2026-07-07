@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>法務監査 — Loku Attention 導入リスク（業務停止・個人情報）</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 70% -10%, #16324b33, transparent 60%),var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px}
+  .num{font-family:var(--num)}
+  header{padding:50px 0 20px}
+  .badge{display:inline-block;font-size:11px;letter-spacing:.16em;color:var(--gold);border:1px solid #e7b84f44;border-radius:999px;padding:6px 15px;margin-bottom:16px}
+  h1{font-size:clamp(24px,4.4vw,36px);font-weight:800}
+  .lead{color:var(--sub);margin-top:12px;font-size:15px}
+  .disc{margin-top:14px;font-size:12px;color:var(--mut);background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:12px 14px}
+
+  .tldr{margin:26px 0 8px;background:linear-gradient(160deg,#1a1410,#12181a);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+  .tldr h2{font-size:16px;margin-bottom:10px}
+  .verdict{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px;margin-bottom:8px}
+  .dot{width:12px;height:12px;border-radius:50%}.dot.g{background:var(--grn)}.dot.y{background:var(--gold)}.dot.r{background:var(--red)}
+  .tldr p{color:var(--sub);font-size:13.5px}
+  .tldr b{color:var(--ink)}
+
+  section{padding:26px 0;border-top:1px solid var(--line)}
+  .kicker{font-size:12px;letter-spacing:.14em;color:var(--gold);font-weight:700;margin-bottom:12px}
+  h2.sec{font-size:20px;font-weight:800}
+
+  .risk{border:1px solid var(--line);border-radius:14px;padding:0;overflow:hidden;margin-top:14px}
+  .risk .rh{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--panel)}
+  .sev{font-family:var(--num);font-size:11px;font-weight:800;padding:4px 10px;border-radius:6px;white-space:nowrap}
+  .sev.hi{color:#fff;background:#8a2b2b}.sev.md{color:#04180f;background:var(--gold)}.sev.lo{color:#04180f;background:var(--grn)}
+  .risk .rh .t{font-weight:800;font-size:15px}
+  .risk .rh .law{color:var(--mut);font-size:11.5px;margin-top:2px}
+  .risk .bd{padding:16px 18px;font-size:13.5px;color:var(--sub)}
+  .risk .bd b{color:var(--ink)}
+  .risk .bd .who{font-size:12px;color:var(--mut);margin:8px 0}
+  .risk .bd .fix{margin-top:12px;background:#12341f33;border:1px solid #22c58b33;border-radius:10px;padding:12px 14px}
+  .risk .bd .fix .ft{font-size:11px;color:var(--grn);font-weight:700;letter-spacing:.06em;margin-bottom:6px}
+  .risk ul{list-style:none;margin:0}
+  .risk ul li{padding-left:20px;position:relative;margin-bottom:6px;font-size:13px}
+  .risk ul li::before{content:"→";position:absolute;left:0;color:var(--grn)}
+
+  .chklist{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-top:8px}
+  .chklist li{list-style:none;padding-left:26px;position:relative;margin-bottom:10px;font-size:13.5px;color:var(--sub)}
+  .chklist li::before{content:"☐";position:absolute;left:0;color:var(--grn);font-size:15px}
+  .chklist li b{color:var(--ink)}
+  .st{font-family:var(--num);font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;margin-left:6px;vertical-align:1px}
+  .st.done{color:#04180f;background:var(--grn)} .st.plan{color:#fff;background:#2c5fd0} .st.ops{color:#04180f;background:var(--gold)}
+  @media(max-width:640px){
+    table{font-size:12px} th,td{padding:8px 7px}
+    .risk .rh{flex-wrap:wrap} .risk .bd,.tldr p{font-size:13px}
+    .risk .rh .t{font-size:14px}
+  }
+
+  table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px}
+  th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--mut);font-size:11.5px;font-weight:600}
+  td b{color:var(--ink)}
+  .tag{font-family:var(--num);font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px}
+  .tag.store{color:#04180f;background:var(--gold)}.tag.plat{color:#fff;background:#2c5fd0}.tag.both{color:#04180f;background:var(--grn)}
+  .src{color:var(--mut);font-size:11.5px;margin-top:10px}.src a{color:var(--blue)}
+  footer{padding:28px 0 60px;color:var(--mut);font-size:12px;text-align:center}
+  footer a{color:var(--grn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">法務監査 / LEGAL AUDIT</div>
+    <h1>Loku Attention 導入の法務リスク監査</h1>
+    <p class="lead">「業務停止に抵触しないか」「個人情報の取扱い」を中心に、日本法で確認した論点と対策。</p>
+    <div class="disc">⚠ 本資料は社内検討用の<b>整理</b>であり、法的助言ではありません。実運用前に、個人情報・広告規制・電気通信事業法に詳しい弁護士／個人情報保護委員会窓口での確認を推奨します。出典は各項末尾。</div>
+  </header>
+
+  <div class="tldr">
+    <h2>結論（TL;DR）</h2>
+    <div class="verdict"><span class="dot y"></span>設計次第で「グリーン」。ただし2点を外すと業務停止・行政処分の芽がある。</div>
+    <p>
+      ① <b>業務停止の直接リスクは「施術所の広告規制」</b>（接骨院=柔整法／鍼灸=あはき法）。広告できる事項が法定列挙で、違反は<b>30万円以下の罰金＋一定期間の業務停止・免許取消</b>。だから<b>コピーの自動生成・自動公開はしない</b>（＝当初からの方針が正しい）。<br>
+      ② <b>個人情報の直接リスクは「要配慮個人情報」</b>。整体/接骨院の症状（肩こり・腰痛）と個人を結びつけると要配慮個人情報になり、<b>取得に事前同意が必須・オプトアウト第三者提供は不可</b>。→ 症状そのものは結合せず<b>行動データのみ・明示同意で結合</b>する設計にする。
+    </p>
+  </div>
+
+  <section>
+    <div class="kicker">STATUS / 解消ステータス</div>
+    <h2 class="sec">どこまで"解消"したか（3層で管理）</h2>
+    <p style="color:var(--sub);font-size:13.5px;margin-top:6px">「法的に100%セーフ」は弁護士でも言い切らない性質のもの。<b style="color:var(--ink)">機械で防げる部分はコード＋テストで解消</b>し、残りは設計・運用・専門家で管理する。＝"解消できない"のではなく、機械で解消できる分は解消済み。</p>
+    <table>
+      <thead><tr><th>層</th><th>対象</th><th>状態</th></tr></thead>
+      <tbody>
+        <tr><td><b style="color:var(--grn)">機械で解消済</b><br><span style="color:var(--mut);font-size:11px">コード＋テスト</span></td><td>NG表現ブロック／症状の非結合／同意ゲート／削除(forget)／配信停止(opt-out)／健康語の推知フラグ／監査ログ</td><td><span class="tag both">テストで担保</span></td></tr>
+        <tr><td><b style="color:var(--blue)">設計で低減</b></td><td>RLSテナント分離／readonlyスコープ／CSVの安全管理／保持期間の purge</td><td><span class="tag plat">スキーマ/設計に反映</span></td></tr>
+        <tr><td><b style="color:var(--gold)">運用・専門家</b><br><span style="color:var(--mut);font-size:11px">機械では解消不可</span></td><td>DPA委託契約／従業者教育／特商法の個別表記／弁護士・個情委の最終確認</td><td><span class="tag store">運用で担保</span></td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--mut);font-size:12px;margin-top:10px">最下段だけは性質上ソフトウェアで解消不可（人が担う領域）。それ以外は解消し続ける。</p>
+  </section>
+
+  <section>
+    <div class="kicker">RISK MAP</div>
+    <h2 class="sec">リスク一覧（重大度順）</h2>
+
+    <div class="risk">
+      <div class="rh"><span class="sev hi">重大</span><div><div class="t">① 施術所の広告規制 ＝ 業務停止の直接原因</div><div class="law">柔道整復師法24・30条／あはき法／あはき・柔整広告ガイドライン（令和7年2月18日改定）</div></div></div>
+      <div class="bd">
+        接骨院・整骨院（柔整）／鍼灸・あん摩（あはき）は<b>広告可能事項が法律で列挙</b>され、それ以外は原則NG。「治る」「効果」「No.1」「体験談」等は違反方向。違反は<b>30万円以下の罰金</b>、さらに<b>一定期間の業務停止・免許取消</b>が命じられ得る。
+        <div class="who">誰が処分される？ → <b>施術所（＝Lokuの店舗ユーザー）</b>。ただしLP文言を当方が自動生成・公開して違反を作れば、加担・信用毀損リスク。</div>
+        <div class="fix"><div class="ft">対策</div>
+          <ul>
+            <li><b>コピーの自動生成・自動公開はしない</b>（構造・導線の提案まで／文言は必ず人が承認）</li>
+            <li><b>NGワードチェッカー</b>を必須化（柔整・あはき／薬機法／景表法の禁止表現を出稿前にブロック）</li>
+            <li><b>業種フラグで出し分け</b>：無資格の「整体・リラク」と有資格の「接骨院・鍼灸」で規制が異なる。テナント種別で許容表現を切替</li>
+            <li>広告可能事項テンプレを用意し、逸脱は下書き止まり＋警告</li>
+          </ul>
+        </div>
+        <div class="src">出典: <a href="https://www.mhlw.go.jp/content/10800000/001412682.pdf">厚労省 あはき・柔整広告ガイドライン概要（令和7年）</a>／<a href="https://laws.e-gov.go.jp/law/345AC1000000019/">柔道整復師法</a></div>
+      </div>
+    </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev hi">重大</span><div><div class="t">② 要配慮個人情報（健康・症状）の結合</div><div class="law">個人情報保護法（APPI）／個人情報保護委員会ガイドライン</div></div></div>
+      <div class="bd">
+        接骨院等は個人情報保護法の対象。<b>傷病・症状などの健康情報＋個人＝要配慮個人情報</b>。取得は<b>本人の事前同意が原則必須</b>、<b>オプトアウトによる第三者提供は不可</b>。匿名の視線ログをLINE友だち（実名）に結合した瞬間、それは個人情報になる。
+        <div class="who">誰が処分される？ → <b>店舗（個人情報取扱事業者）と、処理を担うLoku</b>。個人情報保護委員会の指導・勧告・命令（命令違反に罰則）。</div>
+        <div class="fix"><div class="ft">対策</div>
+          <ul>
+            <li><b>症状そのものは結合しない</b>：結合するのは「どのボックスを何秒見たか」の行動のみ。要配慮情報（診断・症状申告）は結合対象外にする（＝要配慮該当を避ける設計）</li>
+            <li><b>明示同意で結合</b>：友だち追加時に「閲覧データを結合して案内に使う」旨のオプトインを取得（同意なしは匿名集計のみ・結合しない＝実装済みの同意ゲート）</li>
+            <li><b>利用目的の特定・通知／安全管理措置</b>：プライバシーポリシー明記、テナント分離（RLS）、アクセス制御</li>
+            <li><b>開示・削除・オプトアウト</b>への対応導線（friend単位で結合解除）</li>
+            <li>検索クエリの<b>健康語（肩こり等）は要配慮の"推知"に配慮</b>（推知フラグを立て、結合同意・表示を強める）</li>
+          </ul>
+        </div>
+        <div class="src">出典: <a href="https://www.ppc.go.jp/all_faq_index/faq4-q011/">個人情報保護委員会 要配慮個人情報FAQ</a></div>
+      </div>
+    </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev md">中</span><div><div class="t">③ 外部送信規律（日本版Cookie規制）</div><div class="law">改正電気通信事業法（2023年6月16日施行）</div></div></div>
+      <div class="bd">
+        Cookie・閲覧履歴・IP・端末情報を<b>外部送信</b>する際、送信情報の内容・送信先・利用目的の<b>通知または公表</b>が必要。サービス（サイト/アプリ）単位で対象、自社集客サイトも対象になり得る。
+        <div class="who">Attentionは<b>自社1st-party配信で送信先＝Loku自社</b>のため第三者送信は限定的だが、通知・公表義務は残る。</div>
+        <div class="fix"><div class="ft">対策</div>
+          <ul>
+            <li>各店LPに<b>外部送信の通知</b>（何を・どこへ・何のため）とプライバシーポリシーへの導線を標準テンプレで自動設置</li>
+            <li>第三者タグ（広告等）を足す場合は送信先を明示・最小化</li>
+          </ul>
+        </div>
+        <div class="src">出典: <a href="https://www.soumu.go.jp/main_sosiki/joho_tsusin/d_syohi/gaibusoushin_kiritsu.html">総務省 外部送信規律</a></div>
+      </div>
+    </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev md">中</span><div><div class="t">④ 景表法・薬機法（表現の誇大・効能）</div><div class="law">景品表示法／医薬品医療機器等法</div></div></div>
+      <div class="bd">
+        「必ず痩せる」「〇〇が治る」等の優良誤認・効能効果の標榜。改善提案でコピーを触るほどリスクが増える。
+        <div class="fix"><div class="ft">対策</div><ul><li>①のNGワードチェッカーに景表・薬機の辞書も統合／実証データのない効果表現をブロック</li></ul></div>
+      </div>
+    </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev lo">低</span><div><div class="t">⑤ プラットフォーム規約（LINE）</div><div class="law">LINE公式アカウント／Messaging API 利用規約</div></div></div>
+      <div class="bd">
+        友だち情報の利用範囲・配信頻度・オプトアウトは規約順守。過度なリマインドはブロック増・規約抵触。
+        <div class="fix"><div class="ft">対策</div><ul><li>配信頻度の上限・停止導線を既定化。カゴ落ちリマインドも回数制限</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">RE-AUDIT / 追加機能の再監査</div>
+    <h2 class="sec">初回監査以降に増えた機能の新論点</h2>
+    <p style="color:var(--sub);font-size:13.5px;margin-top:6px">通知・スタッフ招待・Google連携・データ持ち出しを追加したため、再監査した（いずれも裏取り済み・重大度は中〜低）。</p>
+
+    <div class="risk">
+      <div class="rh"><span class="sev md">中</span><div><div class="t">⑥ LINE配信（通知・カゴ落ちリマインド）</div><div class="law">LINE公式アカウント 利用規約／ガイドライン・特定商取引法</div></div></div>
+      <div class="bd">
+        過度・ユーザーの反応を無視した配信は<b>アカウント利用停止（BAN）</b>リスク。商品を訴求する配信は特商法の表示義務がかかる場合がある。
+        <div class="fix"><div class="ft">対策</div><ul>
+          <li>配信頻度の上限（実装済）＋<b>お客様がいつでも配信停止</b>できる導線</li>
+          <li>ブロック／既読など反応を見て抑制（送りっぱなしにしない）</li>
+          <li>商品訴求時は特商法表記を添える</li>
+        </ul></div>
+        <div class="src">出典: <a href="https://terms2.line.me/official_account_guideline_jp">LINE公式アカウントガイドライン</a></div>
+      </div>
+    </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev md">中</span><div><div class="t">⑦ スタッフ招待（従業者が顧客データにアクセス）</div><div class="law">個人情報保護法 安全管理措置（人的・組織的）</div></div></div>
+      <div class="bd">
+        スタッフが実名×行動データを閲覧＝<b>従業者の監督</b>義務（役割・アクセス権限の設定、就業規則、違反時の懲戒）。
+        <div class="fix"><div class="ft">対策</div><ul>
+          <li>権限の最小化（「見るだけ／送信もOK」の別＝実装済）</li>
+          <li>アクセスログ・秘密保持／就業規則・<b>退職時のアクセス削除</b></li>
+        </ul></div>
+        <div class="src">出典: <a href="https://www.ppc.go.jp/">個人情報保護委員会 通則ガイドライン（安全管理措置）</a></div>
+      </div>
+    </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev lo">低</span><div><div class="t">⑧ Google連携（サチコ取込）</div><div class="law">Google APIs 利用規約</div></div></div>
+      <div class="bd">
+        利用規約への同意・プロパティの読取権限・スコープ最小化・クォータ回避禁止・目的外利用の禁止。
+        <div class="fix"><div class="ft">対策</div><ul><li><b>readonly スコープ</b>に限定・取得データは当該店の分析のみに使用</li></ul></div>
+        <div class="src">出典: <a href="https://developers.google.com/webmaster-tools/v1/terms">Search Console API 利用規約</a></div>
+      </div>
+    </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev lo">低</span><div><div class="t">⑨ データ持ち出し（CSVエクスポート）</div><div class="law">個人情報保護法 安全管理措置</div></div></div>
+      <div class="bd">
+        開示・持ち出しは権利対応として妥当だが、<b>書き出したCSVの漏洩</b>リスク。
+        <div class="fix"><div class="ft">対策</div><ul><li>暗号化／アクセス制御・持ち出しログ・用途明示</li></ul></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">RESPONSIBILITY</div>
+    <h2 class="sec">誰が責任を負うか（役割の切り分け）</h2>
+    <table>
+      <thead><tr><th>論点</th><th>一次責任</th><th>Lokuの手当て</th></tr></thead>
+      <tbody>
+        <tr><td>広告表現（柔整/あはき/薬機/景表）</td><td><span class="tag store">店舗＝広告主</span></td><td>自動公開しない・NGチェッカー・人承認・利用規約で表現責任を明確化</td></tr>
+        <tr><td>要配慮個人情報・同意</td><td><span class="tag both">店舗＋Loku</span></td><td>同意取得UI・症状は非結合・安全管理措置・DPA（委託契約）整備</td></tr>
+        <tr><td>外部送信の通知/公表</td><td><span class="tag both">店舗＋Loku</span></td><td>通知テンプレ自動設置・ポリシー雛形提供</td></tr>
+        <tr><td>プラットフォーム規約</td><td><span class="tag plat">Loku</span></td><td>配信頻度制御・停止導線</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <div class="kicker">GO-LIVE CHECKLIST</div>
+    <h2 class="sec">業務停止に抵触しないための導入前チェック</h2>
+    <p style="color:var(--mut);font-size:12px;margin-bottom:10px"><span class="st done">実装済</span>=コード実装＋テスト済 ／ <span class="st plan">設計</span>=スキーマ/設計に反映 ／ <span class="st ops">運用</span>=導入時の運用・書面</p>
+    <ul class="chklist">
+      <li><b>文言の自動公開を無効</b>（構造/導線提案まで・コピーは人承認）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 同意ゲート＋公開ブロック</span></li>
+      <li><b>NGワードチェッカー</b>（柔整・あはき・薬機・景表）＋業種フラグで出し分け<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> compliance.mjs / check-copy API・正規化(NFKC＋空白除去＋大小文字)で全角/文字間スペース/ひらがな開きの回避も遮断</span></li>
+      <li><b>結合は行動データのみ・症状は非結合</b>（要配慮該当を回避）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> stripSensitive()</span></li>
+      <li><b>友だち追加時の明示同意</b>／非同意は匿名集計のみ<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge consentゲート</span></li>
+      <li><b>開示・削除・オプトアウト</b>（friend単位で削除）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> forget API</span></li>
+      <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意</span></li>
+      <li><b>安全管理措置</b>：テナント分離（RLS）・アクセス制御・保持期間<span class="st plan">設計</span><span style="color:var(--mut);font-size:11.5px"> schema.sql RLS例・purge方針</span></li>
+      <li><b>委託契約（DPA）</b>：店舗＝取扱事業者、Loku＝委託先を書面化<span class="st ops">運用</span></li>
+      <li><b>配信頻度の上限＋配信停止（オプトアウト）導線</b>（LINE規約・特商法）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 頻度上限＋停止を明示</span></li>
+      <li><b>スタッフの権限最小化・退職時アクセス削除</b>（従業者の監督）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 見るだけ/送信の別</span></li>
+      <li><b>Google連携は readonly スコープに限定</b>（Google APIs規約）<span class="st plan">設計</span></li>
+      <li><b>持ち出しCSVの安全管理</b>（暗号化・アクセス制御・ログ）<span class="st plan">設計</span></li>
+      <li><b>最終レビュー</b>：弁護士＋（必要に応じ）個人情報保護委員会への事前確認<span class="st ops">運用</span></li>
+    </ul>
+  </section>
+
+  <footer>法務監査 — Loku Attention ／ 内部検討用・法的助言ではない ／ 2026-07-07 ／ <a href="test-report.html">テスト結果へ戻る</a><br>出典: 厚労省 あはき・柔整広告GL・柔整法／個人情報保護委員会 要配慮個人情報FAQ／総務省 外部送信規律</footer>
+</div>
+</body>
+</html>

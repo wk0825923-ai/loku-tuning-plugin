@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Attention — EC商品ページ版（kind=ec_product・カゴ落ち検知）</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 70% -10%, #16324b33, transparent 60%),var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .num{font-family:var(--num);font-feature-settings:"tnum";letter-spacing:-.02em}
+  .app{display:grid;grid-template-columns:1fr 372px;max-width:1200px;margin:0 auto;align-items:start}
+  @media(max-width:900px){.app{grid-template-columns:1fr}}
+  .topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40;background:#0b0f14ee;backdrop-filter:blur(8px)}
+  .brand{font-weight:800}.brand .dot{color:var(--pur)}.brand small{display:block;color:var(--mut);font-size:11px;font-weight:500}
+  .pluginbadge{font-size:11px;letter-spacing:.14em;color:var(--pur);border:1px solid #b78cff44;border-radius:999px;padding:5px 12px}
+  .lp{padding:24px}
+  .lpsec{position:relative;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:16px;overflow:hidden;transition:border-color .3s}
+  .lpsec.hot{border-color:#b78cff66}
+  .lpsec .chip{position:absolute;top:10px;right:10px;font-family:var(--num);font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--mut);background:#0b0f14aa;transition:.25s}
+  .lpsec .kick{font-size:11px;letter-spacing:.16em;color:var(--pur);font-weight:700;margin-bottom:8px}
+  .lpsec h2{font-size:clamp(19px,3vw,26px);font-weight:800;line-height:1.25}
+  .lpsec p{color:var(--sub);font-size:14.5px;margin-top:10px}
+  .gallery{display:flex;gap:8px;margin-top:6px}.gallery .g{flex:1;height:150px;border-radius:10px;border:1px solid var(--line);background:repeating-linear-gradient(135deg,#1b2432,#1b2432 10px,#202a3a 10px,#202a3a 20px);display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:12px}
+  .pricebox{display:flex;align-items:baseline;gap:12px;margin-top:8px}.pricebox .v{font-family:var(--num);font-size:30px;font-weight:800;color:var(--pur)}.pricebox .old{color:var(--mut);text-decoration:line-through;font-size:15px}.pricebox .off{font-size:12px;color:var(--red);border:1px solid #ff6b6b55;border-radius:6px;padding:2px 7px}
+  .spec{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.spec .r{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;color:var(--sub)}.spec .r b{color:var(--ink)}
+  .rev{border-left:2px solid var(--pur);padding-left:12px;margin-top:10px;color:var(--sub);font-size:13.5px}.rev .st{color:var(--gold)}
+  .cart{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .cart a{display:inline-block;font-weight:800;padding:13px 24px;border-radius:12px;text-decoration:none;font-size:15px}
+  .cart .buy{background:linear-gradient(180deg,#b78cff,#7c4fd6);color:#140a24}
+  .cart .line{background:#06C755;color:#fff}
+  .hint{color:var(--mut);font-size:12px;margin:2px 24px 18px;text-align:center}
+  .inbound{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 24px 18px;padding:12px 16px;background:linear-gradient(180deg,#0e1c3a55,#12182166);border:1px solid #4c8dff33;border-radius:12px;font-size:13px;color:var(--sub)}
+  .inbound .src{font-size:11px;color:var(--blue);border:1px solid #4c8dff44;border-radius:999px;padding:2px 9px}.inbound b{color:var(--ink)}.inbound .m{color:var(--mut);font-size:11.5px}
+  .panel{position:sticky;top:60px;padding:18px 16px;border-left:1px solid var(--line);height:calc(100vh - 60px);overflow-y:auto}
+  @media(max-width:900px){.panel{position:static;height:auto;border-left:none;border-top:1px solid var(--line)}}
+  .panel h3{font-size:12px;letter-spacing:.1em;color:var(--pur);font-weight:700;text-transform:uppercase;margin:2px 0 4px}
+  .panel .meta{color:var(--mut);font-size:11.5px;margin-bottom:12px}
+  .tagdesign{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:14px}
+  .tagdesign .cap{font-size:10.5px;letter-spacing:.06em;color:var(--mut);margin-bottom:8px}
+  .tdrow{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;color:var(--mut);border-bottom:1px dashed #202a3a}.tdrow:last-child{border:none}
+  .tdrow .tk{width:14px;text-align:center;color:#3a4658}.tdrow.on{color:var(--ink)}.tdrow.on .tk{color:var(--pur)}.tdrow.route.on .tk{color:var(--blue)}.tdrow.drop.on .tk{color:var(--gold)}
+  .tdrow .tg{flex:1;font-weight:600}.tdrow .when{font-size:10.5px;color:var(--mut);font-weight:400}.tdrow.on .when{color:var(--pur)}
+  .sig{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .sig .s{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px}.sig .s .v{font-family:var(--num);font-weight:800;font-size:15px}.sig .s .l{color:var(--mut);font-size:10px;margin-top:2px}
+  .dotst{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
+  .live .row{margin-bottom:10px}.live .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-bottom:3px}.live .lab .rd{font-family:var(--num);font-size:10px;color:var(--mut)}.live .lab .s{font-family:var(--num);font-weight:700}
+  .bar{position:relative;height:9px;border-radius:5px;background:#1b2432;overflow:hidden}.bar>i{display:block;height:100%;width:0;border-radius:5px;transition:width .2s linear}.bar .thr{position:absolute;top:-2px;bottom:-2px;width:2px;background:#ffffff33;left:60%}
+  .mergebtn{width:100%;margin-top:12px;background:#06C755;color:#fff;font-weight:800;border:none;padding:13px;border-radius:12px;font-size:15px;cursor:pointer}.mergebtn:active{transform:translateY(1px)}
+  .mergenote{color:var(--mut);font-size:11px;text-align:center;margin-top:8px;line-height:1.5}
+  .profile{display:none}.profile.on{display:block;animation:fade .4s}@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+  .who{display:flex;align-items:center;gap:11px;margin-bottom:12px}.ava{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#06C755,#0a8a44);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:18px}
+  .who .nm{font-weight:800}.who .sub{color:var(--mut);font-size:11.5px}
+  .journey{display:flex;gap:8px;margin:4px 0 12px}.journey .jstep{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:11.5px;color:var(--sub);line-height:1.45}.journey .jstep.hot{background:#241a3a66;border-color:#b78cff55}.journey .jt{font-size:9.5px;letter-spacing:.08em;color:var(--mut);margin-bottom:4px}.journey .jstep.hot .jt{color:var(--pur)}.journey b{color:var(--ink)}
+  .summ{background:var(--panel);border:1px solid #b78cff44;border-radius:12px;padding:14px;font-size:13.5px;color:var(--sub);line-height:1.65}.summ b{color:var(--ink)}
+  .tags{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.tag{font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid #b78cff55;color:var(--pur);background:#241a3a66}.tag.route{color:var(--blue);border-color:#4c8dff55;background:#0e1c3a66}.tag.drop{color:var(--gold);border-color:#e7b84f55;background:#2a230e66}
+  .rank{margin-top:14px}.rank .ri{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}.rank .ri:last-child{border:none}.rank .ri .n{font-family:var(--num);color:var(--mut);width:16px}.rank .ri .nm{flex:1;color:var(--ink)}.rank .ri .v{font-family:var(--num);font-weight:700}
+  .resetbtn{width:100%;margin-top:14px;background:transparent;border:1px solid var(--line);color:var(--sub);padding:10px;border-radius:10px;font-size:12.5px;cursor:pointer}
+  .foot{max-width:1200px;margin:0 auto;padding:10px 24px 50px;color:var(--mut);font-size:12px;text-align:center}
+  .foot a{color:var(--pur)}
+  .consentbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;
+    background:#0b0f14f2;border-top:1px solid var(--line);padding:10px 18px;font-size:12px;color:var(--sub);backdrop-filter:blur(6px)}
+  .consentbar label{color:var(--ink);font-size:12px;display:flex;gap:6px;align-items:center;cursor:pointer}
+  .consentbar a{color:var(--pur)}
+</style>
+</head>
+<body>
+<div class="consentbar" id="consentbar">
+  <span>🔒 見やすさ改善のため、ページの閲覧を計測します。データは<b style="color:#cfe">お店とあなたのため</b>に使い、<b style="color:#cfe">いつでも停止・削除</b>できます。</span>
+  <label><input type="checkbox" id="consentChk" checked> 計測・結合に同意</label>
+  <a href="javascript:void(0)">プライバシー</a>
+</div>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">Loku <span class="dot">Attention</span><small>EC商品ページ版 — kind=ec_product / カゴ落ち検知</small></div>
+    <div class="pluginbadge">LOKU EC / MALL</div>
+  </div>
+
+  <div class="lp" id="lp">
+    <div class="inbound" id="inbound"><span class="src">Google検索</span><b id="qText">—</b><span class="m" id="inMeta">—</span><span class="m">（Search Console 無料API・デモはモック）</span></div>
+    <p class="hint">↓ 商品ページを見るようにスクロール。<b style="color:#9fb0c3">価格やレビューで止まってカートを見たのに買わずに離脱</b>すると「カゴ落ち予備軍」タグが点きます。</p>
+
+    <section class="lpsec" data-box="gallery" data-label="商品画像" data-type="image" data-chars="20"><div class="chip">–</div>
+      <div class="kick">ORGANIC</div><h2>有機玄米 5kg（農薬・化学肥料不使用）</h2>
+      <div class="gallery"><div class="g">［ 商品写真1 ］</div><div class="g">［ 田んぼ ］</div><div class="g">［ 炊きあがり ］</div></div></section>
+
+    <section class="lpsec" data-box="price" data-label="価格" data-type="price" data-chars="30"><div class="chip">–</div>
+      <div class="kick">価格</div>
+      <div class="pricebox"><span class="v">¥4,280</span><span class="old">¥4,980</span><span class="off">14%OFF 定期便</span></div>
+      <p>送料無料・あすつく対応。定期便はいつでも解約可。</p></section>
+
+    <section class="lpsec" data-box="desc" data-label="商品説明" data-type="text" data-chars="170"><div class="chip">–</div>
+      <div class="kick">こだわり</div><h2>冷めても甘い、はさ掛け天日干し</h2>
+      <p>標高500mの棚田で育てた有機玄米。機械乾燥せず天日でじっくり干すことで、粒の芯まで旨味が残ります。玄米食が初めての方でも食べやすいよう、精米度合い（分づき）を選べます。真空パックで鮮度を保持し、注文を受けてから精米して発送します。</p></section>
+
+    <section class="lpsec" data-box="spec" data-label="スペック" data-type="text" data-chars="90"><div class="chip">–</div>
+      <div class="kick">仕様</div><h2>商品仕様</h2>
+      <div class="spec"><div class="r"><b>内容量</b> 5kg</div><div class="r"><b>産地</b> 長野県産</div><div class="r"><b>品種</b> コシヒカリ</div><div class="r"><b>栽培</b> 有機JAS認証</div></div></section>
+
+    <section class="lpsec" data-box="review" data-label="レビュー" data-type="text" data-chars="150"><div class="chip">–</div>
+      <div class="kick">レビュー ★4.7（128件）</div><h2>購入者の声</h2>
+      <div class="rev"><span class="st">★★★★★</span> 「冷めてもモチモチで、お弁当が楽しみになりました」（30代）</div>
+      <div class="rev"><span class="st">★★★★☆</span> 「5分づきにしてもらえて助かる。子どもも食べます」（40代）</div>
+      <div class="rev"><span class="st">★★★★★</span> 「定期便にしました。無くなる頃に届くのが便利」（50代）</div></section>
+
+    <section class="lpsec" data-box="cart" data-label="カート/購入" data-type="text" data-chars="30"><div class="chip">–</div>
+      <div class="kick">購入</div><h2>数量を選んでカートへ</h2>
+      <p>まとめ買い・定期便で更にお得。LINEで在庫やクーポンのお知らせを受け取れます。</p>
+      <div class="cart"><a class="buy" id="buyBtn" href="javascript:void(0)">🛒 カートに入れる</a><a class="line" id="lineCta" href="javascript:void(0)">＋ LINEで登録して購入</a></div></section>
+  </div>
+
+  <div class="panel">
+    <div class="livewrap" id="liveWrap">
+      <h3>事前タグ設計（Loku EC/Mall）</h3>
+      <div class="tagdesign" id="tagDesign">
+        <div class="cap">商品ページに紐づけて事前に用意 → 条件で自動付与</div>
+        <div class="tdrow route on" id="td_route"><span class="tk">●</span><span class="tg">有機玄米5kg 閲覧</span><span class="when">到達で即付与</span></div>
+        <div class="tdrow" id="td_hotlead"><span class="tk">○</span><span class="tg">購入意欲 高</span><span class="when">全体をよく読んだ</span></div>
+        <div class="tdrow" id="td_price"><span class="tk">○</span><span class="tg">価格検討</span><span class="when">価格を熟読 ≥60</span></div>
+        <div class="tdrow" id="td_review"><span class="tk">○</span><span class="tg">レビュー重視</span><span class="when">レビュー熟読 ≥60</span></div>
+        <div class="tdrow drop" id="td_cart"><span class="tk">○</span><span class="tg">カゴ落ち予備軍</span><span class="when">カート凝視も未購入 ≥50</span></div>
+      </div>
+      <h3>Live Attention</h3>
+      <div class="meta">匿名セッション <span class="num" id="sid">sess_—</span> ／ 購入: <span class="num" id="bought">未</span></div>
+      <div class="sig">
+        <div class="s"><div class="v num" id="sigActive">0.0s</div><div class="l"><span class="dotst" id="dotActive" style="background:var(--mut)"></span>アクティブ計測</div></div>
+        <div class="s"><div class="v num" id="sigVel">0<span style="font-size:10px">px/s</span></div><div class="l">スクロール速度</div></div>
+      </div>
+      <div class="live" id="liveBars"></div>
+      <button class="mergebtn" id="mergeBtn">＋ LINE登録をシミュレート（購入せず離脱）</button>
+      <div class="mergenote">カートを見たのに未購入で登録 → カゴ落ちタグ → リマインダー/クーポン自動発火</div>
+    </div>
+    <div class="profile" id="profile">
+      <h3>Friend Profile</h3>
+      <div class="who"><div class="ava">佐</div><div><div class="nm">佐藤 さん <span class="num" style="color:var(--mut);font-size:11px">#f_5521</span></div><div class="sub">匿名 <span class="num" id="mergedSid">sess_—</span> から結合</div></div></div>
+      <div class="journey">
+        <div class="jstep"><div class="jt">来る前・検索</div><span id="jBefore">—</span></div>
+        <div class="jstep"><div class="jt">来た後・商品視線</div><span id="jAfter">—</span></div>
+        <div class="jstep hot"><div class="jt">その後・Loku</div><span id="jAfterAct">—</span></div>
+      </div>
+      <div class="summ" id="summary">—</div>
+      <div class="tags" id="tagList"></div>
+      <div class="rank" id="rankList"></div>
+      <button class="resetbtn" id="resetBtn">↻ もう一度デモ（新しい訪問者）</button>
+    </div>
+  </div>
+</div>
+<div class="foot">同じ計測エンジンで <b>page.kind=ec_product</b> を計測。LP版=<a href="index.html">index.html</a> ／ 設計=ARCHITECTURE.md B-2 ／ カゴ落ち→リマインダー連携は schema.sql の tag_rules で表現。</div>
+
+<script>
+(function(){
+  "use strict";
+  var READ_CPS=8.3,IMG_BASE=3.0,PRICE_BASE=4.0;
+  var COVER_GATE=0.5,ZONE_LO=0.12,ZONE_HI=0.90,VEL_STOP=650,IDLE_MS=25000,HEAT_TH=60,CART_TH=50,TICK=200;
+  var boxes=[].slice.call(document.querySelectorAll('[data-box]')).map(function(el){
+    return {el:el,id:el.dataset.box,label:el.dataset.label,type:el.dataset.type,chars:+el.dataset.chars||0,activeView:0,engagement:0,revisits:0,inView:false,chip:el.querySelector('.chip')};});
+  var byId={};boxes.forEach(function(b){byId[b.id]=b;});
+  var HEAT_RULES=[{box:'price',tag:'価格検討',row:'td_price'},{box:'review',tag:'レビュー重視',row:'td_review'}];
+  var ROUTE_TAG='有機玄米5kg 閲覧';
+  var bought=false;
+  var sessionId='sess_'+Math.random().toString(36).slice(2,8);document.getElementById('sid').textContent=sessionId;
+  var QUERIES=[{q:'有機玄米 5kg 無農薬',pos:2,ctr:5.4,dev:'スマホ'},{q:'玄米 定期便 おすすめ',pos:4,ctr:3.9,dev:'PC'},{q:'コシヒカリ 有機JAS 通販',pos:1,ctr:8.1,dev:'スマホ'},{q:'玄米 冷めても おいしい',pos:6,ctr:2.6,dev:'スマホ'}];
+  var visit=QUERIES[Math.floor(Math.random()*QUERIES.length)];
+  function renderInbound(){document.getElementById('qText').textContent='「'+visit.q+'」';document.getElementById('inMeta').innerHTML='掲載 <b>'+visit.pos+'</b>位 · CTR推定 <b>'+visit.ctr+'%</b> · '+visit.dev;}
+  renderInbound();
+  var lastY=window.scrollY,vel=0,velSmooth=0,lastActivity=Date.now(),hasFocus=document.hasFocus(),totalActive=0,hoverBox=null,merged=false,lastTick=Date.now();
+  function markActivity(){lastActivity=Date.now();}
+  ['scroll','mousemove','touchstart','touchmove','keydown','wheel','pointerdown'].forEach(function(ev){window.addEventListener(ev,markActivity,{passive:true});});
+  window.addEventListener('focus',function(){hasFocus=true;});window.addEventListener('blur',function(){hasFocus=false;});
+  window.addEventListener('scroll',function(){var y=window.scrollY;vel=Math.abs(y-lastY)/(TICK/1000);lastY=y;},{passive:true});
+  function expectedRead(b){if(b.type==='text')return Math.max(1.2,b.chars/READ_CPS);if(b.type==='price')return PRICE_BASE;return IMG_BASE;}
+  function heat(e){if(e>=HEAT_TH)return '#b78cff';if(e>=30)return '#e7b84f';if(e>3)return '#5a6b80';return '#38424f';}
+  var liveBars=document.getElementById('liveBars');
+  boxes.forEach(function(b){var row=document.createElement('div');row.className='row';
+    row.innerHTML='<div class="lab"><span>'+b.label+'</span><span><span class="rd" id="rd_'+b.id+'">0/0s</span> <span class="s" id="s_'+b.id+'">0</span></span></div><div class="bar"><span class="thr"></span><i id="bar_'+b.id+'"></i></div>';
+    liveBars.appendChild(row);});
+  function tick(){
+    var now=Date.now(),dt=(now-lastTick)/1000;lastTick=now;velSmooth=velSmooth*0.6+vel*0.4;vel*=0.5;
+    var vh=window.innerHeight,pageVisible=(document.visibilityState==='visible')&&hasFocus,notIdle=(now-lastActivity)<IDLE_MS,activeGate=pageVisible&&notIdle;
+    if(activeGate)totalActive+=dt;var slow=velSmooth<VEL_STOP;
+    boxes.forEach(function(b){var r=b.el.getBoundingClientRect();var interTop=Math.max(r.top,0),interBot=Math.min(r.bottom,vh);var interH=Math.max(0,interBot-interTop);var coverage=interH/(Math.min(r.height,vh)||1);var nowIn=coverage>=COVER_GATE;
+      if(nowIn&&!b.inView)b.revisits++;b.inView=nowIn;
+      if(nowIn&&activeGate&&slow){var centerY=((interTop+interBot)/2)/vh;if(centerY>=ZONE_LO&&centerY<=ZONE_HI)b.activeView+=dt*coverage;}
+      b.engagement=Math.min(100,b.activeView/expectedRead(b)*100);});
+    render();setTimeout(tick,TICK);}
+  function firedTags(){var t=[];HEAT_RULES.forEach(function(rl){if(byId[rl.box].engagement>=HEAT_TH)t.push(rl.tag);});
+    var avg=boxes.reduce(function(s,b){return s+b.engagement;},0)/boxes.length;if(avg>=55)t.push('購入意欲 高');
+    var cartDrop=byId['cart'].engagement>=CART_TH&&!bought;if(cartDrop)t.push('カゴ落ち予備軍');
+    return {tags:t,avg:avg,cartDrop:cartDrop};}
+  function render(){
+    document.getElementById('sigActive').textContent=totalActive.toFixed(1)+'s';
+    document.getElementById('sigVel').innerHTML=Math.round(velSmooth)+'<span style="font-size:10px">px/s</span>';
+    var active=(document.visibilityState==='visible')&&hasFocus&&(Date.now()-lastActivity<IDLE_MS);
+    document.getElementById('dotActive').style.background=active?'var(--pur)':'var(--mut)';
+    boxes.forEach(function(b){var e=b.engagement,c=heat(e);var bar=document.getElementById('bar_'+b.id);bar.style.width=e+'%';bar.style.background=c;
+      document.getElementById('s_'+b.id).textContent=Math.round(e);document.getElementById('rd_'+b.id).textContent=b.activeView.toFixed(0)+'/'+Math.round(expectedRead(b))+'s';
+      if(b.chip){b.chip.textContent=e<3?'–':Math.round(e);b.chip.style.background=e<3?'#0b0f14aa':c;b.chip.style.color=(e>=30)?'#140a24':'var(--mut)';b.chip.style.borderColor='transparent';}
+      b.el.classList.toggle('hot',e>=HEAT_TH);});
+    var f=firedTags();
+    HEAT_RULES.forEach(function(rl){var on=byId[rl.box].engagement>=HEAT_TH;document.getElementById(rl.row).classList.toggle('on',on);document.getElementById(rl.row).querySelector('.tk').textContent=on?'●':'○';});
+    var hl=document.getElementById('td_hotlead');hl.classList.toggle('on',f.avg>=55);hl.querySelector('.tk').textContent=(f.avg>=55)?'●':'○';
+    var cd=document.getElementById('td_cart');cd.classList.toggle('on',f.cartDrop);cd.querySelector('.tk').textContent=f.cartDrop?'●':'○';}
+  function buildProfile(){
+    var ranked=boxes.slice().sort(function(a,b){return b.engagement-a.engagement;});var top=ranked[0],second=ranked[1];var f=firedTags();
+    var tags=[{t:ROUTE_TAG,route:true}].concat(f.tags.map(function(x){return {t:x,drop:x==='カゴ落ち予備軍'};}));
+    if(f.tags.length===0)tags.push({t:f.avg>=30?'検討中':'様子見'});
+    var s='佐藤さんは <b>'+top.label+'</b>（'+Math.round(top.engagement)+'）を最も見て、次に <b>'+second.label+'</b>。';
+    if(byId['price'].engagement>=HEAT_TH)s+=' <b>価格で明確に滞在</b>。';
+    if(f.cartDrop)s+=' <b style="color:#e7b84f">カートを見たのに未購入</b>＝あと一押しで買う層。';
+    s+='<br><br>→ '+recommend(f)+'。';
+    return {ranked:ranked,tags:tags,summary:s,f:f};}
+  function recommend(f){
+    if(f.cartDrop)return '「送料無料・14%OFF定期便は今だけ」の<b>カゴ落ちリマインド＋クーポン</b>を自動送信';
+    if(f.tags.indexOf('レビュー重視')>=0)return '同じ悩みのレビュー抜粋＋★4.7の実績を訴求';
+    if(f.tags.indexOf('価格検討')>=0)return 'まとめ買い単価・定期便の月あたり金額を提示';
+    return '在庫と発送タイミングの案内';}
+  function doMerge(){if(merged)return;merged=true;
+    var consent=document.getElementById('consentChk')?document.getElementById('consentChk').checked:true;
+    if(!consent){
+      document.getElementById('mergedSid').textContent=sessionId;
+      document.getElementById('jBefore').innerHTML='—';
+      document.getElementById('jAfter').innerHTML='（同意なし）';
+      document.getElementById('jAfterAct').innerHTML='匿名集計のみ';
+      document.getElementById('summary').innerHTML='<b>計測結合に同意がありません。</b><br>匿名の集計にのみ使用し、実名プロフィール・タグは作りません（プライバシー保護）。';
+      document.getElementById('tagList').innerHTML='';document.getElementById('rankList').innerHTML='';
+      document.getElementById('liveWrap').style.display='none';document.getElementById('profile').classList.add('on');
+      return;
+    }
+    var p=buildProfile();
+    document.getElementById('mergedSid').textContent=sessionId;
+    document.getElementById('jBefore').innerHTML='「'+visit.q+'」<br>掲載'+visit.pos+'位・'+visit.dev;
+    document.getElementById('jAfter').innerHTML='<b>'+p.ranked[0].label+'</b>を熟読('+Math.round(p.ranked[0].engagement)+')';
+    document.getElementById('jAfterAct').innerHTML=p.f.cartDrop?'未購入で登録 → <b>カゴ落ちリマインド</b>':'LINE登録 → <b>購入導線</b>';
+    document.getElementById('summary').innerHTML=p.summary;
+    var tagEl=document.getElementById('tagList');tagEl.innerHTML='';
+    p.tags.forEach(function(tg){var e=document.createElement('span');e.className='tag'+(tg.route?' route':'')+(tg.drop?' drop':'');e.textContent=tg.t;tagEl.appendChild(e);});
+    var rk=document.getElementById('rankList');rk.innerHTML='';
+    p.ranked.slice(0,4).forEach(function(b,i){var row=document.createElement('div');row.className='ri';
+      row.innerHTML='<span class="n">'+(i+1)+'</span><span class="nm">'+b.label+'</span><span class="v" style="color:'+heat(b.engagement)+'">'+Math.round(b.engagement)+'</span>';rk.appendChild(row);});
+    document.getElementById('liveWrap').style.display='none';document.getElementById('profile').classList.add('on');}
+  document.getElementById('mergeBtn').addEventListener('click',doMerge);
+  document.getElementById('lineCta').addEventListener('click',function(){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});setTimeout(doMerge,400);});
+  document.getElementById('buyBtn').addEventListener('click',function(){bought=true;document.getElementById('bought').textContent='済';this.textContent='✓ カート追加済み';});
+  document.getElementById('resetBtn').addEventListener('click',function(){
+    boxes.forEach(function(b){b.activeView=0;b.engagement=0;b.revisits=0;b.inView=false;});
+    totalActive=0;merged=false;bought=false;document.getElementById('bought').textContent='未';document.getElementById('buyBtn').textContent='🛒 カートに入れる';
+    sessionId='sess_'+Math.random().toString(36).slice(2,8);document.getElementById('sid').textContent=sessionId;
+    visit=QUERIES[Math.floor(Math.random()*QUERIES.length)];renderInbound();
+    document.getElementById('profile').classList.remove('on');document.getElementById('liveWrap').style.display='block';window.scrollTo({top:0,behavior:'smooth'});});
+  tick();
+})();
+</script>
+</body>
+</html>

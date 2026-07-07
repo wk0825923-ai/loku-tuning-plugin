@@ -1,0 +1,16 @@
+{
+  "name": "handoff-demo",
+  "version": "1.0.0",
+  "description": "社長（フルスタック）が **Loku本体（`tyatjidou`/`my-app`・Next.js + Supabase）へ写経**すれば動くように、 `collect → merge(LIFF結合) → journey → タグ発火` のロジックを **依存ゼロ・本番非接触**で実装＆テスト済み。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

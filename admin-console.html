@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>管理者コンソール — 運営／代理店／店主設定</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .num{font-family:var(--num);font-feature-settings:"tnum";letter-spacing:-.02em}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0b0f14ee;backdrop-filter:blur(6px);z-index:10}
+  .brand{font-weight:800}.brand .d{color:var(--pur)}.brand small{display:block;color:var(--mut);font-size:11px;font-weight:500}
+  .roles{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px}
+  .roles button{background:transparent;border:none;color:var(--sub);font-size:12.5px;font-weight:700;padding:8px 14px;border-radius:9px;cursor:pointer}
+  .roles button.on{background:#241a3a;color:var(--ink)}
+  .pane{display:none;padding:24px 0 60px}.pane.on{display:block}
+  h2.sec{font-size:19px;font-weight:800;margin-bottom:4px}
+  .subttl{color:var(--mut);font-size:12.5px;margin-bottom:16px}
+
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  @media(max-width:760px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
+  .kpi .v{font-family:var(--num);font-size:26px;font-weight:800}
+  .kpi .v.g{color:var(--grn)}.kpi .v.gold{color:var(--gold)}.kpi .v.r{color:var(--red)}
+  .kpi .l{color:var(--mut);font-size:11.5px;margin-top:4px}
+
+  table{width:100%;border-collapse:collapse;margin-top:18px;font-size:13px}
+  th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--mut);font-size:11.5px;font-weight:600}
+  td b{color:var(--ink)}
+  .pill{font-family:var(--num);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px}
+  .pill.ok{color:#04180f;background:var(--grn)}.pill.run{color:#04180f;background:var(--grn)}.pill.wait{color:#04180f;background:var(--gold)}.pill.no{color:var(--sub);background:#2a3342}
+  .pill.ng{color:#fff;background:#8a2b2b}
+  tr:hover td{background:#ffffff05}
+
+  .alert{margin-top:20px;background:linear-gradient(160deg,#2a1414,#1a0e0e);border:1px solid #ff6b6b44;border-radius:14px;padding:16px 18px}
+  .alert h3{color:var(--red);font-size:14px}
+  .alert p{color:var(--sub);font-size:13px;margin-top:6px}.alert b{color:var(--ink)}
+
+  .bars .row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .bars .nm{width:170px;font-size:13px}
+  .bars .bar{flex:1;height:9px;border-radius:5px;background:#1b2432;overflow:hidden}.bars .bar>i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--pur),#7c4fd6)}
+  .bars .v{width:60px;text-align:right;font-family:var(--num);font-size:12px;color:var(--sub)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:14px}
+  .card h3{font-size:14px;margin-bottom:4px}.card p{color:var(--mut);font-size:12.5px}
+  .rule{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .rule:last-child{border:none}.rule .desc{color:var(--sub)}.rule .desc b{color:var(--ink)}
+  .tgl{width:42px;height:24px;border-radius:999px;background:#2a3342;position:relative;cursor:pointer;transition:.2s;flex:none}
+  .tgl.on{background:var(--grn)}.tgl::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s}.tgl.on::after{left:21px}
+  .slider{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .slider input{flex:1}
+  .prev{background:#0b0f14;border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--sub);margin-top:8px}
+  .note{color:var(--mut);font-size:11.5px;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="brand">Loku <span class="d">Attention</span><small>管理者コンソール</small></div>
+  <div class="roles">
+    <button class="on" data-role="ops">🏢 Loku運営</button>
+    <button data-role="agency">🤝 代理店</button>
+    <button data-role="store">⚙️ 店主の詳細設定</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <!-- 運営（全店横断） -->
+  <div class="pane on" data-pane="ops">
+    <h2 class="sec">運営ダッシュボード（全テナント横断）</h2>
+    <div class="subttl">全店の導入・計測稼働・コンプラ・連携をひと目で監視</div>
+    <div class="kpis">
+      <div class="kpi"><div class="v">5</div><div class="l">導入店舗</div></div>
+      <div class="kpi"><div class="v g">4</div><div class="l">計測 稼働中</div></div>
+      <div class="kpi"><div class="v num">1,240</div><div class="l">今月の結合数</div></div>
+      <div class="kpi"><div class="v r">3</div><div class="l">NG表現 検出</div></div>
+      <div class="kpi"><div class="v gold">4/5</div><div class="l">検索連携(サチコ)</div></div>
+    </div>
+    <table>
+      <thead><tr><th>店舗</th><th>業種</th><th>導入</th><th>計測</th><th>同意率</th><th>NG検出</th><th>検索連携</th></tr></thead>
+      <tbody>
+        <tr><td><b>整体サロン Recovery</b></td><td>整体</td><td><span class="pill ok">完了</span></td><td><span class="pill run">稼働</span></td><td class="num">92%</td><td><span class="pill ok">0</span></td><td><span class="pill ok">連携済</span></td></tr>
+        <tr><td><b>なかがわ接骨院</b></td><td>接骨院</td><td><span class="pill ok">完了</span></td><td><span class="pill run">稼働</span></td><td class="num">88%</td><td><span class="pill ng">2</span></td><td><span class="pill ok">連携済</span></td></tr>
+        <tr><td><b>鍼灸院 はり治</b></td><td>鍼灸</td><td><span class="pill wait">導入中</span></td><td><span class="pill wait">待機</span></td><td class="num">—</td><td><span class="pill ok">0</span></td><td><span class="pill no">未</span></td></tr>
+        <tr><td><b>玄米オーガニックEC</b></td><td>EC</td><td><span class="pill ok">完了</span></td><td><span class="pill run">稼働</span></td><td class="num">95%</td><td><span class="pill ok">0</span></td><td><span class="pill ok">連携済</span></td></tr>
+        <tr><td><b>ヨガスタジオ Lumi</b></td><td>整体</td><td><span class="pill ok">完了</span></td><td><span class="pill run">稼働</span></td><td class="num">90%</td><td><span class="pill ng">1</span></td><td><span class="pill ok">連携済</span></td></tr>
+      </tbody>
+    </table>
+    <div class="alert">
+      <h3>⚠ コンプラ監視：広告規制のNG表現を検出</h3>
+      <p><b>なかがわ接骨院</b>（接骨院＝柔整法）で「体験談」表現を2件検出 → 公開ブロック済み。接骨院は広告可能事項が法定のため、体験談は業務停止リスク。<b>店主に人承認を依頼中</b>。</p>
+      <button id="ngFix" style="margin-top:10px;background:#8a2b2b;color:#fff;border:none;border-radius:9px;padding:9px 16px;font-weight:800;font-size:12.5px;cursor:pointer">この店に対応する（安全な言い換えを提案）→</button>
+      <div id="ngDone" style="display:none;color:var(--grn);font-size:12.5px;margin-top:8px">✅ 「体験談」を外した安全な代替コピーを店主のLINEに送りました。承認待ちに移行。</div>
+    </div>
+    <p class="note">※ 運営は個票（個人の視線）は見ない。集計と稼働・コンプラのみ（プライバシー原則）。</p>
+  </div>
+
+  <!-- 代理店 -->
+  <div class="pane" data-pane="agency">
+    <h2 class="sec">代理店ダッシュボード（担当店舗）</h2>
+    <div class="subttl">あなたが担当する店舗の導入進捗・成果・レベニュー</div>
+    <div class="kpis" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi"><div class="v">3</div><div class="l">担当店舗</div></div>
+      <div class="kpi"><div class="v g num">¥86,400</div><div class="l">今月レベニュー(卸70%)</div></div>
+      <div class="kpi"><div class="v gold num">2</div><div class="l">導入支援が必要</div></div>
+    </div>
+    <div class="card">
+      <h3>導入進捗</h3>
+      <div class="bars" style="margin-top:12px">
+        <div class="row"><span class="nm">整体サロン Recovery</span><span class="bar"><i style="width:100%"></i></span><span class="v">完了</span></div>
+        <div class="row"><span class="nm">鍼灸院 はり治</span><span class="bar"><i style="width:60%"></i></span><span class="v">3/5</span></div>
+        <div class="row"><span class="nm">ヨガスタジオ Lumi</span><span class="bar"><i style="width:100%"></i></span><span class="v">完了</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>今月の成果（担当店合計）</h3>
+      <table style="margin-top:8px">
+        <thead><tr><th>店舗</th><th>結合数</th><th>ホットリード</th><th>予約見込み</th></tr></thead>
+        <tbody>
+          <tr><td><b>整体サロン Recovery</b></td><td class="num">312</td><td class="num">48</td><td class="num">21</td></tr>
+          <tr><td><b>ヨガスタジオ Lumi</b></td><td class="num">276</td><td class="num">39</td><td class="num">17</td></tr>
+          <tr><td><b>鍼灸院 はり治</b></td><td class="num">—</td><td class="num">—</td><td class="num">導入中</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 店主の詳細設定 -->
+  <div class="pane" data-pane="store">
+    <h2 class="sec">店主の詳細設定（1店舗の中）</h2>
+    <div class="subttl">かんたん導入で自動設定された内容を、あとから細かく調整できます（さわらなくてもOK）</div>
+
+    <div class="card">
+      <h3>自動タグのルール</h3>
+      <p>「どこをよく見たら、どのタグを付けるか」。オフにもできます。</p>
+      <div style="margin-top:8px">
+        <div class="rule"><span class="desc"><b>料金</b>をよく見た → 「料金検討中」</span><span class="tgl on" data-tgl></span></div>
+        <div class="rule"><span class="desc"><b>Before/After</b>をよく見た → 「効果重視」</span><span class="tgl on" data-tgl></span></div>
+        <div class="rule"><span class="desc"><b>お客様の声</b>をよく見た → 「口コミ重視」</span><span class="tgl on" data-tgl></span></div>
+        <div class="rule"><span class="desc">全体をよく読んだ → 「ホットリード」</span><span class="tgl on" data-tgl></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>配信のしすぎを防ぐ（頻度の上限）</h3>
+      <p>お客様にメッセージを送りすぎないよう、上限を決められます。</p>
+      <div class="slider"><span style="font-size:12px;color:var(--mut)">週</span><input type="range" min="1" max="7" value="2" id="freq"><span class="num" id="freqV" style="width:60px">2回/週</span></div>
+    </div>
+
+    <div class="card" style="border-color:#22c58b44">
+      <h3>お知らせ（毎日ひらかなくてOK）</h3>
+      <p>大事なときだけ、あなたのLINEにお知らせします。開き忘れても機会を逃しません。お客様への配信は<b style="color:var(--sub)">いつでも停止でき、送りすぎない上限</b>も守ります（LINE規約・特商法）。</p>
+      <div style="margin-top:8px">
+        <div class="rule"><span class="desc">「今アツいお客様」が出たら通知</span><span class="tgl on" data-tgl></span></div>
+        <div class="rule"><span class="desc">カゴ落ちが出たら通知</span><span class="tgl on" data-tgl></span></div>
+        <div class="rule"><span class="desc">週1回、成果まとめを通知</span><span class="tgl on" data-tgl></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>お客様へのお知らせ文（自動作成）</h3>
+      <p>法律に沿ったひな形です。基本さわらなくて大丈夫。</p>
+      <div class="prev">🔒 当店では、ページの閲覧内容（どこをご覧になったか）を計測し、LINEご登録時にご案内の改善に利用します。デリケートな健康情報は結び付けません。停止・削除はいつでも可能です。詳しくはプライバシーポリシーをご覧ください。</div>
+    </div>
+    <div class="card">
+      <h3>くわしい調整（上級者向け・さわらなくてOK）</h3>
+      <p>「どれくらい見たらタグを付けるか」の強さを自分で決められます。</p>
+      <div class="slider"><span style="font-size:12px;color:var(--mut)">料金を見た判定</span><input type="range" min="40" max="80" value="60" id="thr"><span class="num" id="thrV" style="width:120px">60（ふつう）</span></div>
+      <div style="margin-top:10px">
+        <div class="rule"><span class="desc">「お客様の声」も計測する</span><span class="tgl on" data-tgl></span></div>
+        <div class="rule"><span class="desc">「よくある質問」も計測する</span><span class="tgl" data-tgl></span></div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color:#4c8dff44">
+      <h3>🔒 データの取り扱い（あなたのお客様のデータ）</h3>
+      <div class="rule"><span class="desc">保存先</span><b style="color:var(--ink)">あなたのLoku内（第三者に渡しません）</b></div>
+      <div class="rule"><span class="desc">症状などデリケートな情報</span><b style="color:var(--grn)">保存していません</b></div>
+      <div class="rule"><span class="desc">持ち出し（CSVで書き出し）</span><button id="expBtn" style="background:transparent;border:1px solid var(--line);color:var(--blue);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer">書き出す</button></div>
+      <div class="rule"><span class="desc">全データの削除</span><button id="delBtn" style="background:transparent;border:1px solid #ff6b6b55;color:var(--red);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer">すべて削除</button></div>
+      <div class="rule"><span class="desc">解約</span><b style="color:var(--grn)">いつでも・違約金なし（データは持ち出せます）</b></div>
+      <div id="dataMsg" style="display:none;color:var(--grn);font-size:12px;margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h3>スタッフに任せる</h3>
+      <p>受付スタッフにもこの画面を見てもらえます。「見るだけ」か「送信もOK」を選べます。<b style="color:var(--sub)">アクセスは最小権限で、退職時は自動で外れます</b>（従業者の監督）。</p>
+      <div class="rule"><span class="desc">スタッフを招待</span><button id="invBtn" style="background:transparent;border:1px solid var(--line);color:var(--pur);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer">招待リンクを作る</button></div>
+      <div id="invMsg" style="display:none;color:var(--grn);font-size:12px;margin-top:8px">✅ 招待リンクを作りました。LINEやメールで渡すだけ（スタッフは"見るだけ"で参加）。</div>
+    </div>
+
+    <p class="note">※ 症状などデリケートな情報は結び付けない設計。この設定でも変わりません（安全側で固定）。</p>
+  </div>
+</div>
+
+<script>
+(function(){
+  document.querySelectorAll('.roles button').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('.roles button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');
+    document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('on');});
+    document.querySelector('.pane[data-pane="'+b.dataset.role+'"]').classList.add('on');
+    window.scrollTo(0,0);
+  });});
+  document.querySelectorAll('[data-tgl]').forEach(function(t){t.addEventListener('click',function(){t.classList.toggle('on');});});
+  var f=document.getElementById('freq');if(f)f.addEventListener('input',function(){document.getElementById('freqV').textContent=f.value+'回/週';});
+  var ng=document.getElementById('ngFix');if(ng)ng.addEventListener('click',function(){document.getElementById('ngDone').style.display='block';ng.style.display='none';});
+  var thr=document.getElementById('thr');if(thr)thr.addEventListener('input',function(){var v=+thr.value;document.getElementById('thrV').textContent=v+(v<52?'（ゆるめ）':v>68?'（きびしめ）':'（ふつう）');});
+  function dataMsg(t){var e=document.getElementById('dataMsg');e.textContent=t;e.style.display='block';}
+  var ex=document.getElementById('expBtn');if(ex)ex.addEventListener('click',function(){dataMsg('✅ CSVを書き出しました（あなたのデータはいつでも持ち出せます）。');});
+  var del=document.getElementById('delBtn');if(del)del.addEventListener('click',function(){dataMsg('✅ 全データを削除しました（忘れられる権利）。');});
+  var inv=document.getElementById('invBtn');if(inv)inv.addEventListener('click',function(){document.getElementById('invMsg').style.display='block';});
+})();
+</script>
+</body>
+</html>

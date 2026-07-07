@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>かんたん導入 — Loku Attention はじめてガイド</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--grn2:#0e8f63;--gold:#e7b84f;--blue:#4c8dff;--line2:#06C755;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 50% -10%, #16324b33, transparent 60%),var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.75;-webkit-font-smoothing:antialiased;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{width:100%;max-width:560px;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:20px;padding:28px 26px 24px;box-shadow:0 20px 60px #0008}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .brand{font-weight:800;font-size:14px}.brand .d{color:var(--grn)}
+  .meta{font-size:11.5px;color:var(--mut)}
+  .dots{display:flex;gap:7px;margin:16px 0 20px}
+  .dots .dot{flex:1;height:5px;border-radius:3px;background:#1b2432;transition:.3s}
+  .dots .dot.on{background:var(--grn)} .dots .dot.done{background:var(--grn2)}
+
+  .step{display:none;animation:fade .35s}
+  .step.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .ic{font-size:34px}
+  h1{font-size:22px;font-weight:800;margin-top:8px;line-height:1.3}
+  .say{color:var(--sub);font-size:14.5px;margin-top:10px}
+  .say b{color:var(--ink)}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+  @media(max-width:520px){.two{grid-template-columns:1fr}}
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px}
+  .box .t{font-size:11px;letter-spacing:.06em;font-weight:700;margin-bottom:6px}
+  .box.you .t{color:var(--grn)} .box.sys .t{color:var(--mut)}
+  .box p{font-size:12.5px;color:var(--sub)}
+  .box.sys p{color:var(--mut)}
+
+  .field{margin-top:16px}
+  .field label{font-size:12px;color:var(--sub)}
+  .field input{width:100%;margin-top:6px;background:#0b0f14;border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--ink);font-size:14px}
+  .choice{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+  .choice button{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink);font-size:13.5px;cursor:pointer;text-align:left;transition:.15s}
+  .choice button:hover{border-color:#22c58b66}
+  .choice button.sel{border-color:var(--grn);background:#12341f44}
+  .choice button .s{display:block;color:var(--mut);font-size:11.5px;margin-top:3px}
+  .bigbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:16px;border:none;border-radius:12px;padding:14px;font-weight:800;font-size:15px;cursor:pointer}
+  .bigbtn.google{background:#fff;color:#222}
+  .bigbtn.line{background:var(--line2);color:#fff}
+  .bigbtn.sub{background:transparent;border:1px solid var(--line);color:var(--sub);font-weight:600;font-size:13px;margin-top:10px}
+  .doneflag{color:var(--grn);font-size:13px;margin-top:12px;display:none}.doneflag.on{display:block}
+  .easy{margin-top:14px;font-size:12px;color:var(--gold);background:#2a230e44;border:1px solid #e7b84f33;border-radius:10px;padding:10px 12px}
+
+  .chkline{display:flex;gap:10px;align-items:flex-start;margin-top:14px;font-size:13.5px;color:var(--sub)}
+  .chkline input{margin-top:4px}
+
+  .nav{display:flex;justify-content:space-between;align-items:center;margin-top:22px;gap:10px}
+  .nav .back{background:transparent;border:none;color:var(--mut);font-size:13px;cursor:pointer}
+  .nav .next{background:linear-gradient(180deg,var(--grn),var(--grn2));color:#04180f;font-weight:800;border:none;border-radius:12px;padding:12px 26px;font-size:15px;cursor:pointer}
+  .nav .next:disabled{opacity:.4;cursor:not-allowed}
+
+  .fin{text-align:center;padding:10px 0}
+  .fin .big{font-size:48px}
+  .fin h1{font-size:24px}
+  .fin a{display:inline-block;margin-top:16px;background:linear-gradient(180deg,var(--grn),var(--grn2));color:#04180f;font-weight:800;text-decoration:none;padding:13px 24px;border-radius:12px}
+  .recap{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:18px}
+  .recap div{font-size:13px;color:var(--sub);padding:4px 0}.recap div b{color:var(--grn)}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="top">
+    <div class="brand">Loku <span class="d">Attention</span> かんたん導入</div>
+    <div class="meta">所要 約5分 · 途中でやめてもOK · いつでも戻れます</div>
+  </div>
+  <div class="dots" id="dots"></div>
+
+  <!-- 0 ようこそ -->
+  <div class="step on">
+    <div class="ic">👋</div>
+    <h1>お客様が「どこを見て・何に迷って」<br>LINE登録したかが分かります。</h1>
+    <p class="say">むずかしい言葉や操作は出てきません。<b>ボタンを押していくだけ</b>で準備できます。あとは自動でたまっていきます。</p>
+    <div class="two">
+      <div class="box you"><div class="t">あなたがすること</div><p>画面のボタンを押すだけ（3〜4回）</p></div>
+      <div class="box sys"><div class="t">Lokuが裏でやること</div><p>計測・つなぎ込み・むずかしい設定は全部おまかせ。今お使いのGA4などは<b style="color:var(--sub)">そのまま併用OK</b>。</p></div>
+    </div>
+    <div class="nav"><span></span><button class="next" data-next>はじめる →</button></div>
+  </div>
+
+  <!-- 1 LP -->
+  <div class="step">
+    <div class="ic">🌐</div>
+    <h1>お店のページをつなぎます</h1>
+    <p class="say">今のホームページ／予約ページの<b>URLを貼るだけ</b>。無い方は「作ってもらう」を選べます。</p>
+    <div class="field"><label>ページのURL（例：https://…）</label><input id="lpUrl" placeholder="https://your-salon.com" /></div>
+    <div class="choice">
+      <button data-pick="have" class="sel">✅ 今のページを使う<span class="s">URLを貼るだけ</span></button>
+      <button data-pick="make">🆕 作ってもらう<span class="s">ページが無い方</span></button>
+    </div>
+    <div class="two"><div class="box sys" style="grid-column:1/-1"><div class="t">裏でやること</div><p>ページに計測のしくみを自動で組み込みます（あなたの作業なし）。</p></div></div>
+    <div class="nav"><button class="back" data-back>← 戻る</button><button class="next" data-next>次へ →</button></div>
+  </div>
+
+  <!-- 2 LINE -->
+  <div class="step">
+    <div class="ic">💬</div>
+    <h1>LINE（Loku）とつなぎます</h1>
+    <p class="say">お客様がLINE登録した瞬間に、その人の見ていた内容がひもづきます。すでにLokuをお使いなら<b>ボタン1つ</b>。</p>
+    <button class="bigbtn line" id="lineBtn">＋ Lokuと連携する</button>
+    <div class="doneflag" id="lineDone">✅ つながりました</div>
+    <div class="two" style="margin-top:16px"><div class="box sys" style="grid-column:1/-1"><div class="t">裏でやること</div><p>「LINE登録した人」と「ページで見ていた内容」を安全につなぎます。</p></div></div>
+    <div class="nav"><button class="back" data-back>← 戻る</button><button class="next" data-next disabled id="lineNext">次へ →</button></div>
+  </div>
+
+  <!-- 3 サチコ -->
+  <div class="step">
+    <div class="ic">🔎</div>
+    <h1>「検索して来た言葉」もつなぎます</h1>
+    <p class="say">お客様が<b>どんな言葉でGoogle検索して</b>来たかも分かります。むずかしそうに見えますが、<b>「許可」ボタンを1回押すだけ</b>です。</p>
+    <button class="bigbtn google" id="gBtn">🟦 Googleでつなぐ（許可を押すだけ）</button>
+    <div class="doneflag" id="gDone">✅ つながりました</div>
+    <div class="easy">むずかしければ <b>こちらで代行</b> もできます（ページをLokuで作る場合は自動で完了）。</div>
+    <button class="bigbtn sub" id="gSkip">おまかせ（代行）でつなぐ</button>
+    <div class="nav"><button class="back" data-back>← 戻る</button><button class="next" data-next disabled id="gNext">次へ →</button></div>
+  </div>
+
+  <!-- 4 プライバシー -->
+  <div class="step">
+    <div class="ic">🔒</div>
+    <h1>お客様への案内も、自動でご用意</h1>
+    <p class="say">「閲覧データを使います」というお知らせと、同意のしくみ、プライバシー表示は<b>ひな形を自動で用意</b>。中身は<b>法律に沿った内容</b>です。</p>
+    <div class="two">
+      <div class="box you"><div class="t">安心ポイント</div><p>症状など"デリケートな情報"は結びつけない設計。お客様が「やめて」と言えば削除できます。</p></div>
+      <div class="box sys"><div class="t">裏でやること</div><p>同意バナー・プライバシー文・NG表現チェックを自動設置</p></div>
+    </div>
+    <label class="chkline"><input type="checkbox" id="privChk" checked><span>用意された文面でお知らせ・同意のしくみを設置する（おすすめ）</span></label>
+    <div class="nav"><button class="back" data-back>← 戻る</button><button class="next" data-next id="privNext">次へ →</button></div>
+  </div>
+
+  <!-- 5 完了 -->
+  <div class="step">
+    <div class="fin">
+      <div class="big">🎉</div>
+      <h1>準備ができました！</h1>
+      <p class="say">あとは<b>自動でたまっていきます</b>。お客様がLINE登録すると、友だちの画面に「来訪ジャーニー」が表示されます。</p>
+      <div class="recap" id="recap"></div>
+      <div class="two" style="margin-top:16px;text-align:left">
+        <div class="box you"><div class="t">次の一歩 ①</div><p>自分のスマホでLINE登録して、動きを体感してみる</p></div>
+        <div class="box you"><div class="t">次の一歩 ②</div><p>1週間後、友だちの画面で「予約になりそう」を確認</p></div>
+      </div>
+      <a href="loku-admin-view.html">友だちの画面を見てみる →</a>
+      <div style="margin-top:14px;font-size:12.5px;color:var(--mut)">困ったときは、いつでも <b style="color:var(--grn)">LINEサポート</b> に聞けます（無理におぼえる必要はありません）。</div>
+      <div style="margin-top:12px"><button class="bigbtn sub" data-restart style="display:inline-block;width:auto;padding:10px 18px">↻ もう一度ためす</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var steps=[].slice.call(document.querySelectorAll('.step'));
+  var dotsWrap=document.getElementById('dots');
+  steps.forEach(function(){var d=document.createElement('div');d.className='dot';dotsWrap.appendChild(d);});
+  var dots=[].slice.call(dotsWrap.children);
+  var i=0;
+  var state={lp:'今のページを使う', line:false, search:'', priv:true};
+
+  function show(n){
+    i=Math.max(0,Math.min(steps.length-1,n));
+    steps.forEach(function(s,x){s.classList.toggle('on',x===i);});
+    dots.forEach(function(d,x){d.classList.toggle('on',x===i);d.classList.toggle('done',x<i);});
+    if(i===steps.length-1) buildRecap();
+    window.scrollTo(0,0);
+  }
+  function buildRecap(){
+    document.getElementById('recap').innerHTML=
+      '<div>ページ：<b>'+state.lp+'</b></div>'+
+      '<div>LINE連携：<b>'+(state.line?'済み':'—')+'</b></div>'+
+      '<div>検索データ：<b>'+(state.search||'—')+'</b></div>'+
+      '<div>お客様への案内：<b>'+(state.priv?'自動設置':'あとで')+'</b></div>';
+  }
+
+  document.querySelectorAll('[data-next]').forEach(function(b){b.addEventListener('click',function(){show(i+1);});});
+  document.querySelectorAll('[data-back]').forEach(function(b){b.addEventListener('click',function(){show(i-1);});});
+  document.querySelectorAll('[data-restart]').forEach(function(b){b.addEventListener('click',function(){state={lp:'今のページを使う',line:false,search:'',priv:true};document.getElementById('lineDone').classList.remove('on');document.getElementById('gDone').classList.remove('on');document.getElementById('lineNext').disabled=true;document.getElementById('gNext').disabled=true;show(0);});});
+
+  // Step1 LP choice
+  document.querySelectorAll('[data-pick]').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('[data-pick]').forEach(function(x){x.classList.remove('sel');});b.classList.add('sel');
+    state.lp=b.dataset.pick==='have'?'今のページを使う':'作ってもらう';
+  });});
+
+  // Step2 LINE
+  document.getElementById('lineBtn').addEventListener('click',function(){
+    this.textContent='つないでいます…';
+    var self=this;setTimeout(function(){document.getElementById('lineDone').classList.add('on');document.getElementById('lineNext').disabled=false;state.line=true;self.textContent='＋ Lokuと連携する';},600);
+  });
+  // Step3 Google / 代行
+  function searchOn(label){document.getElementById('gDone').classList.add('on');document.getElementById('gNext').disabled=false;state.search=label;}
+  document.getElementById('gBtn').addEventListener('click',function(){this.textContent='つないでいます…';var self=this;setTimeout(function(){searchOn('Googleでつなぎ済み');self.textContent='🟦 Googleでつなぐ（許可を押すだけ）';},600);});
+  document.getElementById('gSkip').addEventListener('click',function(){searchOn('おまかせ（代行）');});
+
+  show(0);
+})();
+</script>
+</body>
+</html>

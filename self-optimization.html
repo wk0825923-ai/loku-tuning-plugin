@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>自己改善サイクル — Loku Attention は自分自身にも効く</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 50% -10%, #16324b33, transparent 60%),var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  .num{font-family:var(--num);font-feature-settings:"tnum"}
+  header{padding:48px 0 14px;text-align:center}
+  .badge{display:inline-block;font-size:11px;letter-spacing:.16em;color:var(--pur);border:1px solid #b78cff44;border-radius:999px;padding:6px 15px;margin-bottom:16px}
+  h1{font-size:clamp(24px,4.6vw,38px);font-weight:800}
+  .lead{color:var(--sub);margin-top:12px;font-size:15px;max-width:720px;margin-left:auto;margin-right:auto}
+
+  section{padding:28px 0;border-top:1px solid var(--line)}
+  .kicker{font-size:12px;letter-spacing:.12em;color:var(--pur);font-weight:700;margin-bottom:14px;text-align:center}
+
+  .cycle{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;justify-content:center}
+  .cy{flex:1;min-width:150px;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
+  .cy .n{font-family:var(--num);color:var(--pur);font-size:12px;font-weight:700}
+  .cy h3{font-size:14px;margin:6px 0 4px}.cy p{color:var(--sub);font-size:12.5px}
+  .cy .em{font-size:22px}
+  .arrow{align-self:center;color:var(--pur);font-size:20px}
+  @media(max-width:760px){.arrow{transform:rotate(90deg)}}
+  .loopback{text-align:center;color:var(--mut);font-size:12px;margin-top:12px}
+
+  .demo{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:8px}
+  .demo .th{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .demo .th h3{font-size:15px}
+  .toggle{display:flex;gap:4px;background:#0b0f14;border:1px solid var(--line);border-radius:10px;padding:3px}
+  .toggle button{background:transparent;border:none;color:var(--sub);font-size:12px;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .toggle button.on{background:#241a3a;color:var(--ink)}
+  .funnel{display:flex;align-items:flex-end;gap:8px;height:160px;margin:20px 0 6px}
+  .fb{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+  .fb .col{width:100%;max-width:70px;border-radius:8px 8px 0 0;background:linear-gradient(180deg,#2b3646,#20293648);transition:.4s}
+  .fb.drop .col{background:linear-gradient(180deg,var(--red),#8a2b2b)}
+  .fb.win .col{background:linear-gradient(180deg,var(--grn),#0e8f63)}
+  .fb .v{font-family:var(--num);font-size:13px;font-weight:700}
+  .fb .q{color:var(--mut);font-size:10.5px;text-align:center}
+  .insight{margin-top:12px;font-size:13px;color:var(--sub)}.insight b{color:var(--ink)}
+  .kpi{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px}
+  .kpi .m .v{font-family:var(--num);font-size:26px;font-weight:800;color:var(--grn)}
+  .kpi .m .l{color:var(--mut);font-size:11px}
+
+  .backlog{margin-top:8px}
+  .bl{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .bl:last-child{border:none}
+  .pri{font-family:var(--num);font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:6px;white-space:nowrap}
+  .pri.h{color:#fff;background:#8a2b2b}.pri.m{color:#04180f;background:var(--gold)}.pri.l{color:#04180f;background:var(--grn)}
+  .bl .d{flex:1;color:var(--sub)}.bl .d b{color:var(--ink)}
+  .bl .src{color:var(--mut);font-size:11px}
+
+  .concl{margin-top:20px;background:linear-gradient(160deg,#241a3a,#160f24);border:1px solid #b78cff44;border-radius:14px;padding:18px;font-size:14px;color:var(--sub);text-align:center}
+  .concl b{color:var(--ink)}.concl .g{color:var(--grn)}
+  .foot{padding:24px 0 60px;text-align:center;color:var(--mut);font-size:12px}.foot a{color:var(--pur)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">SELF-OPTIMIZATION / ドッグフーディング</div>
+    <h1>作ったツールで、作ったツールを直す。</h1>
+    <p class="lead">Loku Attention の計測は「どのページのどこを見たか」を測る汎用のしくみ。だから<b style="color:var(--ink)">自分の画面（導入ガイド・管理画面）も同じように計測</b>して、詰まる場所を実データで見つけ、改善し、また測る——を回せます。</p>
+  </header>
+
+  <section>
+    <div class="kicker">回るサイクル（お客様のLPでやることと同じ）</div>
+    <div class="cycle">
+      <div class="cy"><div class="em">📏</div><div class="n">STEP 1</div><h3>自分の画面を計測</h3><p>導入ガイド・管理画面のどこで止まった/押さなかったかを記録</p></div>
+      <div class="arrow">→</div>
+      <div class="cy"><div class="em">🔍</div><div class="n">STEP 2</div><h3>詰まる場所が分かる</h3><p>「Step3で離脱が多い」等が数字で出る（勘でなく）</p></div>
+      <div class="arrow">→</div>
+      <div class="cy"><div class="em">🛠️</div><div class="n">STEP 3</div><h3>直す</h3><p>その一点を改善（例：代行ボタンを足す）</p></div>
+      <div class="arrow">→</div>
+      <div class="cy"><div class="em">📈</div><div class="n">STEP 4</div><h3>また測る</h3><p>効果を数字で確認 → 次の詰まりへ</p></div>
+    </div>
+    <div class="loopback">↺ STEP4 → STEP1 に戻って永久に回る（改善のたびに比較表・画面が良くなる）</div>
+  </section>
+
+  <section>
+    <div class="kicker">実例：導入ガイドの「詰まり」を直した</div>
+    <div class="demo">
+      <div class="th"><h3>導入ガイド 完了ファネル（Step別の残存率）</h3>
+        <div class="toggle"><button class="on" data-ver="before">改善前</button><button data-ver="after">改善後</button></div>
+      </div>
+      <div class="funnel" id="funnel"></div>
+      <div class="insight" id="insight"></div>
+      <div class="kpi">
+        <div class="m"><div class="v" id="kFin">62%</div><div class="l">導入 完了率</div></div>
+        <div class="m"><div class="v" id="kDrop">Step3</div><div class="l">最大の離脱ポイント</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">改善バックログ（実データが優先順位を決める）</div>
+    <div class="backlog">
+      <div class="bl"><span class="pri h">最優先</span><div class="d"><b>導入 Step3（検索連携）</b>の離脱24pt → 「おまかせ代行」ボタンを追加</div><span class="src">対応済 ✅</span></div>
+      <div class="bl"><span class="pri m">中</span><div class="d">管理画面ホームの<b>「送る」ボタン押下率が低い</b>店 → 文面プレビューを1タップで</div><span class="src">検討中</span></div>
+      <div class="bl"><span class="pri m">中</span><div class="d"><b>根拠カードの展開率</b>が懐疑ゾーンで高い → 最初から開いておく</div><span class="src">検討中</span></div>
+      <div class="bl"><span class="pri l">低</span><div class="d">62歳層で<b>用語のつまずき</b> → 日常語化（結合→つながった等）</div><span class="src">対応済 ✅</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">同じサイクルは「お店のLP」にも効く</div>
+    <div class="demo">
+      <div class="th"><h3>例：料金セクションを上に移動したLP（提案→店主が承認→公開）</h3></div>
+      <div style="display:flex;gap:24px;align-items:flex-end;height:130px;margin:18px 0 6px">
+        <div style="flex:1;text-align:center"><div style="height:62px;background:linear-gradient(180deg,#2b3646,#20293648);border-radius:8px 8px 0 0"></div><div class="num" style="margin-top:6px;font-weight:800">6.2%</div><div style="color:var(--mut);font-size:11px">改善前 LINE登録率</div></div>
+        <div style="flex:1;text-align:center"><div style="height:89px;background:linear-gradient(180deg,var(--grn),#0e8f63);border-radius:8px 8px 0 0"></div><div class="num" style="margin-top:6px;font-weight:800;color:var(--grn)">8.9%</div><div style="color:var(--mut);font-size:11px">改善後 LINE登録率</div></div>
+      </div>
+      <div class="insight">「料金を上に」提案 → <b>店主が承認</b>して公開 → 登録率 6.2%→<b>8.9%（+2.7pt）</b>。<b style="color:var(--grn)">文言でなく"導線"の改善</b>なので広告規制リスクなし（法務対策と両立）。</div>
+    </div>
+  </section>
+
+  <div class="concl">
+    私（Claude）が<b>ペルソナで立てた「たぶんここが不満」という仮説</b>を、実ユーザーの計測が<span class="g">当たっていたか自動で答え合わせ</span>し、優先順位をつける。<br><b>仮説駆動 → データ駆動</b>の改善が、お店のLPだけでなく<b>Loku Attention 自身にも</b>効き続けます。
+  </div>
+
+  <div class="foot">自己改善サイクル ／ 内部資料・noindex ／ 2026-07-07 ／ 実データAPI <code style="font-family:var(--num);color:var(--grn)">/api/attn/product-funnel</code> 実装済（本番は各画面から自動計測・ここは実例値）／ <a href="test-report.html">戻る</a></div>
+</div>
+
+<script>
+(function(){
+  var DATA={
+    before:{ vals:[100,92,68,66,62], drop:2, fin:'62%', dropLbl:'Step3',
+      insight:'📉 <b>Step3「検索データをつなぐ」で24pt離脱</b>。むずかしそうで手が止まっている、と数字が言っている。' },
+    after:{ vals:[100,93,88,84,80], drop:-1, fin:'80%', dropLbl:'なだらか',
+      insight:'✅ 「おまかせ（代行）」ボタンを足したら <b>Step3の離脱が24pt→5ptに</b>。完了率 62%→<b>80%（+18pt）</b>。' }
+  };
+  var labels=['① ようこそ','② ページ','③ 検索連携','④ プライバシー','⑤ 完了'];
+  function render(ver){
+    var d=DATA[ver], f=document.getElementById('funnel'); f.innerHTML='';
+    d.vals.forEach(function(v,i){
+      var cls='fb'+(i===d.drop?' drop':'')+(i===d.vals.length-1?' win':'');
+      var b=document.createElement('div'); b.className=cls;
+      b.innerHTML='<div class="v">'+v+'%</div><div class="col" style="height:'+v+'%"></div><div class="q">'+labels[i]+'</div>';
+      f.appendChild(b);
+    });
+    document.getElementById('insight').innerHTML=d.insight;
+    document.getElementById('kFin').textContent=d.fin;
+    document.getElementById('kDrop').textContent=d.dropLbl;
+  }
+  document.querySelectorAll('[data-ver]').forEach(function(b){b.addEventListener('click',function(){
+    document.querySelectorAll('[data-ver]').forEach(function(x){x.classList.remove('on');});b.classList.add('on');
+    render(b.dataset.ver);
+  });});
+  render('before');
+})();
+</script>
+</body>
+</html>

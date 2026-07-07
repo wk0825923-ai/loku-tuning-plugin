@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>機能比較 — GA4 × Search Console × Loku Attention</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 70% -10%, #16324b33, transparent 60%),var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  .num{font-family:var(--num)}
+  header{padding:50px 0 20px;text-align:center}
+  .badge{display:inline-block;font-size:11px;letter-spacing:.16em;color:var(--grn);border:1px solid #22c58b44;border-radius:999px;padding:6px 15px;margin-bottom:18px}
+  h1{font-size:clamp(24px,4.6vw,38px);font-weight:800}
+  .lead{color:var(--sub);margin-top:12px;font-size:15px;max-width:720px;margin-left:auto;margin-right:auto}
+  .legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin:22px 0 6px;font-size:12.5px;color:var(--sub)}
+  .legend b{font-family:var(--num)}
+  .m-y{color:var(--grn)} .m-p{color:var(--blue)} .m-t{color:var(--gold)} .m-n{color:var(--mut)}
+
+  .tblwrap{overflow-x:auto;margin-top:20px;border:1px solid var(--line);border-radius:16px}
+  table{width:100%;border-collapse:collapse;min-width:760px}
+  thead th{position:sticky;top:0;background:#0e131b;padding:16px 14px;text-align:left;font-size:13px;border-bottom:1px solid var(--line)}
+  thead th.svc{text-align:center;width:210px}
+  thead th.mine{background:linear-gradient(180deg,#12341f,#0e2418);color:var(--grn)}
+  thead .sub{display:block;color:var(--mut);font-size:11px;font-weight:400;margin-top:3px}
+  tbody td{padding:13px 14px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+  tbody td.feat{color:var(--ink);font-weight:600;width:280px}
+  tbody td.svc{text-align:center}
+  tbody td.mine{background:#12341f22}
+  .mk{font-family:var(--num);font-size:15px;font-weight:800;display:block}
+  .mk.y{color:var(--grn)} .mk.p{color:var(--blue)} .mk.t{color:var(--gold)} .mk.n{color:var(--mut)}
+  .cap{display:block;color:var(--mut);font-size:11px;margin-top:3px;line-height:1.4}
+  .cat td{background:#0e131b;color:var(--grn);font-size:11px;letter-spacing:.1em;font-weight:700;padding:9px 14px;border-bottom:1px solid var(--line)}
+  tr:hover td:not(.cat){background:#ffffff05}
+  tr:hover td.mine{background:#12341f33}
+
+  .concl{margin-top:26px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:760px){.concl{grid-template-columns:1fr}}
+  .cc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .cc.win{background:linear-gradient(160deg,#12341f,#0d2418);border-color:#22c58b55}
+  .cc .n{font-weight:800;font-size:14px}.cc.win .n{color:var(--grn)}
+  .cc p{color:var(--sub);font-size:12.5px;margin-top:6px}
+  .oneline{margin-top:20px;background:var(--panel);border:1px solid #22c58b44;border-radius:14px;padding:18px;text-align:center;font-size:15px;color:var(--ink);font-weight:700}
+  .oneline span{color:var(--grn)}
+  .foot{padding:26px 0 60px;text-align:center;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">FEATURE COMPARISON</div>
+    <h1>GA4 × Search Console × Loku Attention</h1>
+    <p class="lead">「見るだけで・匿名で・途中で途切れる」3つのツールと、それを実名で1本化するこのサービスの機能比較。</p>
+    <div class="legend">
+      <span><b class="m-y">◎</b> 得意/内蔵</span>
+      <span><b class="m-p">○</b> 可（条件付/連携）</span>
+      <span><b class="m-t">△</b> 弱い/制約あり</span>
+      <span><b class="m-n">×</b> 非対応</span>
+    </div>
+  </header>
+
+  <div class="tblwrap">
+    <table>
+      <thead>
+        <tr>
+          <th>機能 / 観点</th>
+          <th class="svc">GA4<span class="sub">アクセス解析</span></th>
+          <th class="svc">Search Console<span class="sub">検索パフォーマンス</span></th>
+          <th class="svc mine">Loku Attention<span class="sub">Loku本体プラグイン</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="cat"><td colspan="4">計測レンジ（ファネルのどこを見るか）</td></tr>
+        <tr><td class="feat">来る前：検索クエリ・流入</td>
+          <td class="svc"><span class="mk n">×</span><span class="cap">検索語は原則見えない</span></td>
+          <td class="svc"><span class="mk y">◎</span><span class="cap">Googleが所有</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">Search Console 無料APIで取込</span></td></tr>
+        <tr><td class="feat">来た後：ページ内の行動</td>
+          <td class="svc"><span class="mk p">○</span><span class="cap">ページ/イベント単位</span></td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">ボックス単位の視線</span></td></tr>
+        <tr><td class="feat">その後：LINE追加・予約・購入</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">別ツール連携が必要</span></td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">Loku内で地続き</span></td></tr>
+
+        <tr class="cat"><td colspan="4">粒度（どこまで細かく見えるか）</td></tr>
+        <tr><td class="feat">計測単位</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">ページ/イベント</span></td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">クエリ/URL</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">ボックス（画像/価格/CTA…）</span></td></tr>
+        <tr><td class="feat">スクロール・読了の深さ</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">ページのscroll率のみ</span></td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">露出秒・停止・読了率</span></td></tr>
+
+        <tr class="cat"><td colspan="4">個人特定（匿名 or 実名）</td></tr>
+        <tr><td class="feat">データの単位</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">匿名・集計</span></td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">匿名・集計</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">実名（LINE友だち結合）</span></td></tr>
+        <tr><td class="feat">個人ごとの行動履歴</td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">「誰が・どこを見たか」</span></td></tr>
+
+        <tr class="cat"><td colspan="4">計測品質</td></tr>
+        <tr><td class="feat">アドブロック/ITP耐性</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">3rd party欠損</span></td>
+          <td class="svc"><span class="mk y">◎</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">自社1st party配信</span></td></tr>
+        <tr><td class="feat">サンプリング/しきい値</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">サンプリングあり</span></td>
+          <td class="svc"><span class="mk p">○</span><span class="cap">行数上限あり</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">自社全量</span></td></tr>
+        <tr><td class="feat">LINE遷移後の継続計測</td>
+          <td class="svc"><span class="mk n">×</span><span class="cap">遷移で切れる</span></td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">予約まで一気通貫</span></td></tr>
+        <tr><td class="feat">匿名化・しきい値による欠測</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">閾値適用・高カーディナリティはOther集約</span></td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">匿名化クエリ（数十人未満）は非表示</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">自社全量・欠測なし</span></td></tr>
+        <tr><td class="feat">同意（Consent）非取得時</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">識別子欠損で個人結合不可・過小計上</span></td>
+          <td class="svc"><span class="mk p">○</span><span class="cap">検索集計は影響小</span></td>
+          <td class="svc mine"><span class="mk p">○</span><span class="cap">非同意は匿名集計のみ・実名結合しない（設計）</span></td></tr>
+
+        <tr class="cat"><td colspan="4">データの保持・所有・鮮度</td></tr>
+        <tr><td class="feat">データ保持期間</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">既定2ヶ月〜最大14ヶ月</span></td>
+          <td class="svc"><span class="mk p">○</span><span class="cap">16ヶ月</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">自社DB（保持方針で長期可）</span></td></tr>
+        <tr><td class="feat">生データ（RAW）アクセス</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">BigQuery連携で可（無料）</span></td>
+          <td class="svc"><span class="mk p">○</span><span class="cap">API経由</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">自社DBを直接</span></td></tr>
+        <tr><td class="feat">データの所有・持ち出し</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">Google基盤内</span></td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">Google基盤内</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">自社・店に帰属</span></td></tr>
+        <tr><td class="feat">データ鮮度（リアルタイム）</td>
+          <td class="svc"><span class="mk p">○</span><span class="cap">ほぼリアルタイム</span></td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">1〜2日遅延</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">即時</span></td></tr>
+
+        <tr class="cat"><td colspan="4">検索面（SEO/AEO）</td></tr>
+        <tr><td class="feat">表示回数・CTR・掲載順位</td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc"><span class="mk y">◎</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">無料APIで取込・1画面化</span></td></tr>
+        <tr><td class="feat">インデックス/カバレッジ</td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc"><span class="mk y">◎</span></td>
+          <td class="svc mine"><span class="mk p">○</span><span class="cap">URL検査API</span></td></tr>
+        <tr><td class="feat">構造化データ自動付与</td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">見るだけ</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">自社配信で内蔵</span></td></tr>
+
+        <tr class="cat"><td colspan="4">実行・活用（見るだけ or 動かす）</td></tr>
+        <tr><td class="feat">改善の実行</td>
+          <td class="svc"><span class="mk n">×</span><span class="cap">見るだけ</span></td>
+          <td class="svc"><span class="mk n">×</span><span class="cap">見るだけ</span></td>
+          <td class="svc mine"><span class="mk p">○</span><span class="cap">構造/導線提案＋人承認（文言自動公開はしない）</span></td></tr>
+        <tr><td class="feat">セグメント配信への接続</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">広告向け</span></td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">Loku一斉配信/シナリオが即発火</span></td></tr>
+        <tr><td class="feat">カゴ落ち・迷いの検知→自動化</td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc"><span class="mk n">×</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">タグ→リマインド/クーポン</span></td></tr>
+
+        <tr class="cat"><td colspan="4">運用・コスト</td></tr>
+        <tr><td class="feat">導入</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">タグ設置</span></td>
+          <td class="svc"><span class="mk p">○</span><span class="cap">所有権確認</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">Loku内蔵・店主は設定不要</span></td></tr>
+        <tr><td class="feat">費用</td>
+          <td class="svc"><span class="mk p">○</span><span class="cap">無料（GA360は有料）</span></td>
+          <td class="svc"><span class="mk y">◎</span><span class="cap">無料</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">Lokuの機能（外部API無料）</span></td></tr>
+        <tr><td class="feat">店主にとっての使いやすさ</td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">専門知識が要る</span></td>
+          <td class="svc"><span class="mk t">△</span><span class="cap">専門知識が要る</span></td>
+          <td class="svc mine"><span class="mk y">◎</span><span class="cap">管理画面のタブ1枚</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="concl">
+    <div class="cc"><div class="n">GA4</div><p>「来た後」の匿名の行動を、ページ/イベント粒度で集計。実行はしない。LINE遷移で切れる。</p></div>
+    <div class="cc"><div class="n">Search Console</div><p>「来る前」の検索面（クエリ/順位/CTR）を所有。ページ内も個人も見えない。見るだけ。</p></div>
+    <div class="cc win"><div class="n">Loku Attention</div><p>両者を<b style="color:var(--ink)">実名で1本化</b>し、ボックス視線で深く、LINE〜予約まで途切れず、配信まで動かす。</p></div>
+  </div>
+
+  <div class="oneline">GA4＝来た後の匿名集計。サチコ＝来る前の検索。<span>このサービス＝両方を実名でつなぎ、実行まで閉じる。</span></div>
+
+  <div class="foot">機能比較 — GA4 × Search Console × Loku Attention ／ 内部資料・noindex ／ 2026-07-07 ／ <a href="test-report.html" style="color:var(--grn)">テスト結果へ戻る</a></div>
+</div>
+</body>
+</html>

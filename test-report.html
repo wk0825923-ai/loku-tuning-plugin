@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Attention — テスト結果ダッシュボード</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 70% -10%, #16324b33, transparent 60%),var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 22px}
+  .num{font-family:var(--num);font-feature-settings:"tnum"}
+  header{padding:54px 0 26px;text-align:center}
+  .allgreen{display:inline-flex;align-items:center;gap:10px;font-size:13px;letter-spacing:.14em;color:var(--grn);border:1px solid #22c58b55;border-radius:999px;padding:8px 20px;margin-bottom:22px;background:#12341f44}
+  .allgreen .d{width:10px;height:10px;border-radius:50%;background:var(--grn);box-shadow:0 0 12px #22c58b}
+  h1{font-size:clamp(26px,5vw,40px);font-weight:800}
+  .lead{color:var(--sub);margin-top:14px;font-size:15px}
+  .totals{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:28px 0 8px}
+  @media(max-width:640px){.totals{grid-template-columns:1fr}}
+  .tot{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:20px;text-align:center}
+  .tot .big{font-family:var(--num);font-size:34px;font-weight:800;color:var(--grn)}
+  .tot .lb{color:var(--sub);font-size:12.5px;margin-top:4px}
+  .tot .sub{color:var(--mut);font-size:11px;margin-top:2px}
+  section{padding:26px 0;border-top:1px solid var(--line)}
+  .kicker{font-size:12px;letter-spacing:.16em;color:var(--grn);font-weight:700;margin-bottom:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px}
+  .card .h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .card .h .t{font-weight:800;font-size:15px}
+  .badge{font-family:var(--num);font-size:12px;font-weight:700;color:var(--grn);border:1px solid #22c58b55;border-radius:999px;padding:4px 11px;white-space:nowrap}
+  .card p{color:var(--sub);font-size:13.5px;margin-top:6px}
+  .chk{list-style:none;margin-top:10px}
+  .chk li{padding-left:24px;position:relative;color:var(--sub);font-size:13.5px;margin-bottom:6px}
+  .chk li::before{content:"✓";position:absolute;left:0;top:0;color:var(--grn);font-weight:800}
+  pre{background:#0b0f14;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:12px;overflow-x:auto;
+    font-family:var(--num);font-size:12px;color:#cfe;line-height:1.5;white-space:pre-wrap}
+  pre .g{color:var(--grn)} pre .m{color:var(--mut)}
+  .bugs{background:linear-gradient(160deg,#2a230e55,#1a140855);border:1px solid #e7b84f44;border-radius:14px;padding:18px 20px}
+  .bugs h3{color:var(--gold);font-size:14px}
+  .bugs li{color:var(--sub);font-size:13.5px;margin:8px 0 0 18px}
+  .try{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:6px}
+  @media(max-width:640px){.try{grid-template-columns:1fr}}
+  a.tile{display:block;background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:18px;text-decoration:none;transition:.2s}
+  a.tile:hover{border-color:#22c58b66;transform:translateY(-2px)}
+  a.tile .t{font-weight:800;color:var(--ink);font-size:15px}
+  a.tile .d{color:var(--mut);font-size:12.5px;margin-top:5px}
+  a.tile .go{color:var(--grn);font-size:12px;margin-top:8px;font-weight:700}
+  .howto{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-top:14px}
+  .howto b{color:var(--ink)}
+  .howto ol{margin:8px 0 0 18px;color:var(--sub);font-size:13.5px}.howto li{margin-bottom:5px}
+  footer{padding:26px 0 60px;text-align:center;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="allgreen"><span class="d"></span>ALL GREEN — 2026-07-07</div>
+    <h1>Loku Attention テスト結果</h1>
+    <p class="lead">バックエンド・ブラウザ実行・クロスプロセスの3層で検証。ランタイムエラーゼロ。</p>
+    <div class="totals">
+      <div class="tot"><div class="big num">4,750</div><div class="lb">バックエンド</div><div class="sub">22シナリオ × 50周</div></div>
+      <div class="tot"><div class="big num">390</div><div class="lb">使用ユーザー(jsdom)</div><div class="sub">全11ページ × 10周</div></div>
+      <div class="tot"><div class="big num">0</div><div class="lb">失敗 / エラー</div><div class="sub">fail=0 exit=0</div></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="kicker">① バックエンド（ロジック）</div>
+    <div class="card">
+      <div class="h"><span class="t">全API ＋ 異常系・型頑健・並行・境界・契約 ＋ 法務ハードニング・監査ログ</span><span class="badge">pass 4,750 · fail 0</span></div>
+      <p>視線→結合→ジャーニー→タグ→サチコ→実測CVR に加え、異常系・型・並行・境界・契約、さらにNG拡充／健康語の推知フラグ／配信オプトアウト／機微操作の監査ログまで検証。各テストは新インスタンスで状態隔離、22シナリオを50周で安定確認。</p>
+      <ul class="chk">
+        <li>同意ゲート：consent=false は journey 除外・タグ不適用（プライバシー）</li>
+        <li>冪等性：collect / merge 再送で行・タグが重複しない</li>
+        <li>流入タグは到達で即発火／温度感 ≥60／集約 ≥55</li>
+        <li>後追いcollect：結合後さらに読むとタグが増える</li>
+        <li>バリデーション：欠落=400 / 未知ページ=404 / 壊れJSON=400</li>
+      </ul>
+      <pre>=== Loku Attention handoff テスト（50周） ===
+周回 50/50: OK  (累計 pass=4750 fail=0)
+結果: pass=4750 fail=0
+<span class="g">✅ 全テスト通過（手戻りゼロ確認）</span></pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">② 使用ユーザーとしての実行（ブラウザ相当・jsdom）</div>
+    <div class="card">
+      <div class="h"><span class="t">全11ページを実ロードして全ボタン・タブ・トグルを操作</span><span class="badge">pass 390 · fail 0</span></div>
+      <p>console.error・未捕捉例外・jsdomError を全部拾いながら、全画面の操作をシミュレート。ランタイムエラーは全ページ・全操作を通してゼロ。</p>
+      <ul class="chk">
+        <li>スクロール計測でスコアが増える（バー幅 &gt; 0）</li>
+        <li>閾値超えで温度感タグが点灯（料金検討中 / カゴ落ち予備軍）</li>
+        <li>LINE追加でプロフィール表示・計測パネルが隠れる・タグ付与</li>
+        <li>リセットで計測に戻り、スコアが0化</li>
+        <li>EC：カート凝視＋未購入でカゴ落ち点灯、購入すると消える</li>
+      </ul>
+      <pre>=== 使用ユーザー実行テスト（jsdom・3周） ===
+周回 10/10: OK  (累計 pass=390 fail=0)
+結果: pass=390 fail=0
+<span class="g">✅ ブラウザ相当の実行テスト 全通過（ランタイムエラーゼロ）</span></pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">③ クロスプロセスE2E（別プロセスの実サーバ）</div>
+    <div class="card">
+      <div class="h"><span class="t">サーバ起動 → 外から叩く → graceful shutdown</span><span class="badge">OK · exit 0</span></div>
+      <p>本番と同じHTTP経路で、匿名→実名結合とタグ適用が別プロセス越しに通ることを確認。</p>
+      <pre>→ 別プロセスの生サーバに疎通OK (port 8790)
+collect 発火タグ: [ '整体LP-A 流入', '料金検討中', '効果重視' ]
+merge: { ok: true, friend_id: 'f_live', consented: true, applied: true }
+friend_tags: [ '整体LP-A 流入', '料金検討中', '効果重視' ]
+<span class="g">✅ 生サーバ E2E OK</span></pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">統合シナリオ（全機能を1本で通す）</div>
+    <div class="card">
+      <div class="h"><span class="t">導入 → 計測 → 結合 → サチコ → ジャーニー → 予約 → 実測CVR</span><span class="badge">1本で通過</span></div>
+      <p>1人の店主の1日を実データで再現。全機能がつながって動くことを確認。</p>
+      <pre>① 導入ファネル記録
+② 計測 → タグ自動発火：料金検討中 / 効果重視 / 口コミ重視
+③ LINE結合（同意）→ 友だちにタグ適用
+④ サチコ取込（無料API）→ 来る前を搭載
+⑤ ジャーニー：来る前＋来た後＋タグ
+⑥ 予約 → 実測CVR タグ有 &gt; タグ無
+<span class="g">✅ 1本で通った（node scenario.mjs）</span></pre>
+    </div>
+    <div class="card">
+      <div class="h"><span class="t">大量データ負荷（10,000件の来訪→結合→予約）</span><span class="badge">集計 28ms</span></div>
+      <p>全件を正しく集計・落ちず・高速。データ3.3倍でも集計は2.2倍＝準線形にスケール。</p>
+      <pre>取り込み 448件/秒 ／ 集計 28ms（対象 10,000人）
+実測CVR タグ有 33%（予約 3,334人）
+<span class="g">✅ 全10,000人を集計・予約者数一致・線形スケール（node load-test.mjs 10000）</span></pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">透明性：テストが実際に捕まえたバグ（＝先に潰した手戻り）</div>
+    <div class="bugs">
+      <h3>⚠ 3件検出 → すべて修正済み</h3>
+      <ol>
+        <li>ID取り違え（td_price / td_pricing）でnull参照クラッシュ → 構文チェックでは出ず、実行テストで検出</li>
+        <li>リセット直後は次の描画tick（200ms間隔）未到来でDOM未更新＋再カウント → 画面外化＋1周待ちで確定</li>
+        <li>コンプラNGチェッカーが「完全予約制」の"完全"を景表法NGと誤検知 → 辞書を「完全に治」に精緻化。バックエンドテストで検出</li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">自分の目で触って確かめる</div>
+    <div class="try">
+      <a class="tile" style="border-color:#22c58b88" href="onboarding.html"><div class="t">👋 かんたん導入ガイド（分からん人用）</div><div class="d">むずかしい言葉なし。ボタンを押していくだけで導入完了。ページ/LINE/検索/プライバシーを5分で。</div><div class="go">開く →</div></a>
+      <a class="tile" style="border-color:#b78cff66" href="admin-console.html"><div class="t">🏢 管理者コンソール（運営／代理店／店主設定）</div><div class="d">上部で3つのロールを切替。全店横断の監視・コンプラ、代理店の担当店成果、店主の詳細設定。</div><div class="go">開く →</div></a>
+      <a class="tile" style="border-color:#b78cff66" href="self-optimization.html"><div class="t">🔁 自己改善サイクル（ドッグフーディング）</div><div class="d">作ったツールで作ったツールを直す。導入ガイドの離脱を計測→改善→再計測（改善前/後を切替）。</div><div class="go">開く →</div></a>
+      <a class="tile" style="border-color:#22c58b66" href="loku-admin-view.html"><div class="t">🖥️ 店主が見る画面（使用ユーザー）</div><div class="d">Loku管理画面の友だち詳細に足した「来訪ジャーニー」タブ1枚。田中/佐藤/鈴木を切替えて、検索→視線→予約見込み＋自動タグ＋おすすめ配信を確認。</div><div class="go">開く →</div></a>
+      <a class="tile" href="index.html"><div class="t">🩺 LP版プロトタイプ（訪問者側）</div><div class="d">整体LPをスクロール → 料金・写真で止まると右パネルのスコアが伸び、タグが点灯。下で「LINE追加」。</div><div class="go">開く →</div></a>
+      <a class="tile" href="ec-product.html"><div class="t">🛒 EC商品ページ版</div><div class="d">玄米の商品ページ。カートを見て買わずに「LINE登録」すると「カゴ落ち予備軍」タグが点く。</div><div class="go">開く →</div></a>
+      <a class="tile" style="border-color:#22c58b66" href="comparison.html"><div class="t">📊 かんたん比較（GA4×サチコ×本サービス）</div><div class="d">むずかしい機能名でなく「お店に何がうれしいか」で。ファネル図＋5つの気になること＋詳細折りたたみ。</div><div class="go">開く →</div></a>
+      <a class="tile" style="border-color:#e7b84f55" href="legal-audit.html"><div class="t">⚖️ 法務監査（業務停止・個人情報）</div><div class="d">柔整/あはき広告規制・要配慮個人情報・外部送信規律を日本法で監査。リスク一覧＋対策＋導入前チェックリスト。</div><div class="go">開く →</div></a>
+      <a class="tile" href="loku-integration-map.html"><div class="t">🧩 Loku機能 統合マップ</div><div class="d">Lokuの全機能に、Attentionがどう絡む/EC・Mallまで広がるかを色分けで一望。</div><div class="go">開く →</div></a>
+      <a class="tile" href="../lp-hisho-pitch/concept-v2.html"><div class="t">📄 新コンセプト1枚</div><div class="d">「匿名の視線が、LINE追加で顔付きに」— 事業コンセプトの要約。</div><div class="go">開く →</div></a>
+    </div>
+    <div class="howto">
+      <b>テストを自分で走らせたいとき</b>（社長も同じコマンドでOK）：
+      <ol>
+        <li>ターミナルで <code style="font-family:var(--num);color:var(--grn)">cd loku-attention-plugin/handoff-demo</code></li>
+        <li><code style="font-family:var(--num);color:var(--grn)">node test.mjs 10</code>（バックエンド）／<code style="font-family:var(--num);color:var(--grn)">node ui-test.mjs 3</code>（ブラウザ相当）／<code style="font-family:var(--num);color:var(--grn)">node e2e.mjs</code>（実サーバ）</li>
+      </ol>
+    </div>
+  </section>
+
+  <footer>Loku Attention — テスト結果ダッシュボード ／ 内部資料・noindex ／ 2026-07-07</footer>
+</div>
+</body>
+</html>

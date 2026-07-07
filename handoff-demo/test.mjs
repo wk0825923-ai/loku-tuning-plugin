@@ -1,0 +1,350 @@
+// 自動テスト（依存ゼロ）。各テストは createServer() で新インスタンス＝状態隔離。
+// フルスイートを N 回ループして安定性・冪等性を確認する。
+import { createServer } from './app.mjs';
+
+let pass = 0, fail = 0;
+const fails = [];
+function ok(cond, msg) { if (cond) { pass++; } else { fail++; fails.push(msg); console.log('  ✗ ' + msg); } }
+const eq = (a, b, msg) => ok(JSON.stringify(a) === JSON.stringify(b), `${msg} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`);
+
+// 1テスト = サーバ起動→処理→クローズ
+async function withServer(fn) {
+  const server = createServer();
+  await new Promise(r => server.listen(0, r));
+  const port = server.address().port;
+  const base = `http://127.0.0.1:${port}`;
+  const post = (p, body) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const raw = (p, text) => fetch(base + p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: text });
+  const get = (p) => fetch(base + p);
+  try { await fn({ post, get, raw }); } finally { await new Promise(r => server.close(r)); }
+}
+
+const HOT_BOXES = [
+  { box_key: 'hero', active_view: 7, engagement: 97, revisits: 1 },
+  { box_key: 'beforeafter', active_view: 3, engagement: 100, revisits: 2 },
+  { box_key: 'pricing', active_view: 4, engagement: 100, revisits: 3 },
+  { box_key: 'voice', active_view: 12, engagement: 71, revisits: 1 },
+  { box_key: 'staff', active_view: 1, engagement: 6, revisits: 1 },
+];
+
+async function suite() {
+  // 1) ハッピーパス：熱い閲覧→同意結合→journey に実名で出る＋タグ適用
+  await withServer(async ({ post, get }) => {
+    const c = await (await post('/api/attn/collect', { anon_id: 'A1', page_slug: 'seitai-lp-a', entry: { query: '肩こり 整体 世田谷', pos: 3, device: 'スマホ' }, active_sec: 42, boxes: HOT_BOXES })).json();
+    ok(c.ok, 'collect ok');
+    ok(c.fired.includes('整体LP-A 流入'), '流入タグ発火');
+    ok(c.fired.includes('料金検討中'), '料金検討中 発火');
+    ok(c.fired.includes('効果重視'), '効果重視 発火');
+    ok(c.fired.includes('口コミ重視'), '口コミ重視 発火(voice=71)');
+
+    const m = await (await post('/api/attn/merge', { anon_id: 'A1', friend_id: 'f_100', consented: true })).json();
+    ok(m.ok && m.applied, 'merge 同意 適用');
+
+    const j = await (await get('/api/attn/journey?friend_id=f_100')).json();
+    eq(j.journeys.length, 1, 'journey 1件');
+    eq(j.journeys[0].entry_query, '肩こり 整体 世田谷', 'journey 検索語');
+    eq(j.journeys[0].box_engagement.pricing, 100, 'journey pricing=100');
+
+    const t = await (await get('/api/attn/friend-tags?friend_id=f_100')).json();
+    ok(t.tags.includes('整体LP-A 流入') && t.tags.includes('料金検討中') && t.tags.includes('効果重視'), 'friend_tags 適用済み');
+  });
+
+  // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    const m = await (await post('/api/attn/merge', { anon_id: 'A2', friend_id: 'f_200', consented: false })).json();
+    ok(!m.applied, 'merge 非同意 未適用');
+    const j = await (await get('/api/attn/journey?friend_id=f_200')).json();
+    eq(j.journeys.length, 0, '非同意は journey に出ない');
+    const t = await (await get('/api/attn/friend-tags?friend_id=f_200')).json();
+    eq(t.tags.length, 0, '非同意はタグ適用なし');
+  });
+
+  // 3) 冪等性：collect2回・merge2回で重複しない
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'A3', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/collect', { anon_id: 'A3', page_slug: 'seitai-lp-a', boxes: HOT_BOXES }); // 再送
+    await post('/api/attn/merge', { anon_id: 'A3', friend_id: 'f_300', consented: true });
+    await post('/api/attn/merge', { anon_id: 'A3', friend_id: 'f_300', consented: true }); // 再送
+    const j = await (await get('/api/attn/journey?friend_id=f_300')).json();
+    eq(j.journeys.length, 1, '再送してもjourney 1件（重複なし）');
+    const t = await (await get('/api/attn/friend-tags?friend_id=f_300')).json();
+    // Set なので重複しない：整体LP-A流入/料金検討中/効果重視/口コミ重視(+ホットリードは平均次第)
+    ok(new Set(t.tags).size === t.tags.length, 'タグ重複なし');
+  });
+
+  // 4) 流入タグは到達（薄い閲覧）でも即発火
+  await withServer(async ({ post }) => {
+    const c = await (await post('/api/attn/collect', { anon_id: 'A4', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'hero', active_view: 0.5, engagement: 7 }] })).json();
+    ok(c.fired.includes('整体LP-A 流入'), '薄い閲覧でも流入タグ');
+    ok(!c.fired.includes('料金検討中'), '薄い閲覧で温度感タグは出ない');
+  });
+
+  // 5) 閾値境界：engagement=60 で発火、59 で不発
+  await withServer(async ({ post }) => {
+    const c60 = await (await post('/api/attn/collect', { anon_id: 'A5a', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'pricing', engagement: 60 }] })).json();
+    ok(c60.fired.includes('料金検討中'), '60ちょうどで発火');
+    const c59 = await (await post('/api/attn/collect', { anon_id: 'A5b', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'pricing', engagement: 59 }] })).json();
+    ok(!c59.fired.includes('料金検討中'), '59では不発');
+  });
+
+  // 6) 集約タグ：全ボックス高でホットリード発火
+  await withServer(async ({ post }) => {
+    const all = ['hero','problem','beforeafter','staff','pricing','voice','faq','cta'].map(k => ({ box_key: k, engagement: 90 }));
+    const c = await (await post('/api/attn/collect', { anon_id: 'A6', page_slug: 'seitai-lp-a', boxes: all })).json();
+    ok(c.fired.includes('ホットリード'), '全体高でホットリード');
+  });
+
+  // 7) 友だち隔離：別friendのjourneyは混ざらない
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'B1', page_slug: 'seitai-lp-a', boxes: [{ box_key:'pricing', engagement:100 }] });
+    await post('/api/attn/collect', { anon_id: 'B2', page_slug: 'seitai-lp-a', boxes: [{ box_key:'voice', engagement:100 }] });
+    await post('/api/attn/merge', { anon_id: 'B1', friend_id: 'f_A', consented: true });
+    await post('/api/attn/merge', { anon_id: 'B2', friend_id: 'f_B', consented: true });
+    const jA = await (await get('/api/attn/journey?friend_id=f_A')).json();
+    const jB = await (await get('/api/attn/journey?friend_id=f_B')).json();
+    eq(jA.journeys.length, 1, 'f_A 1件');
+    eq(jB.journeys.length, 1, 'f_B 1件');
+    eq(jA.journeys[0].box_engagement.pricing, 100, 'f_A は pricing');
+    eq(jB.journeys[0].box_engagement.voice, 100, 'f_B は voice');
+  });
+
+  // 8) 後追いcollect：結合後にさらに読んだら friend_tags が増える
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'C1', page_slug: 'seitai-lp-a', boxes: [{ box_key:'hero', engagement:20 }] });
+    await post('/api/attn/merge', { anon_id: 'C1', friend_id: 'f_C', consented: true });
+    let t = await (await get('/api/attn/friend-tags?friend_id=f_C')).json();
+    ok(!t.tags.includes('料金検討中'), '結合時点では料金タグなし');
+    await post('/api/attn/collect', { anon_id: 'C1', page_slug: 'seitai-lp-a', boxes: [{ box_key:'pricing', engagement:80 }] }); // 後で料金熟読
+    t = await (await get('/api/attn/friend-tags?friend_id=f_C')).json();
+    ok(t.tags.includes('料金検討中'), '後追いで料金検討中が付く');
+  });
+
+  // 9) バリデーション：不正入力は 400/404、壊れたJSONも 400
+  await withServer(async ({ post, get, raw }) => {
+    const r1 = await post('/api/attn/collect', { page_slug: 'seitai-lp-a' }); eq(r1.status, 400, 'anon_id欠落→400');
+    const r2 = await post('/api/attn/collect', { anon_id: 'X', page_slug: 'no-such' }); eq(r2.status, 404, '未知ページ→404');
+    const r3 = await post('/api/attn/merge', { anon_id: 'X' }); eq(r3.status, 400, 'friend_id欠落→400');
+    const r4 = await get('/api/attn/journey'); eq(r4.status, 400, 'friend_id欠落→400');
+    const r5 = await raw('/api/attn/collect', '{ this is not json'); eq(r5.status, 400, '壊れたJSON→400');
+    const r6 = await get('/api/attn/nope'); eq(r6.status, 404, '未知ルート→404');
+  });
+
+  // 10) コンプラ：NGワードチェッカー（業種で厳格度が変わる）
+  await withServer(async ({ post }) => {
+    const bad = await (await post('/api/attn/check-copy', { text: '肩こりが必ず治る！地域No.1', industry: 'rikaku' })).json();
+    ok(bad.blocked, 'NG: 「治る/必ず/No.1」で公開ブロック');
+    ok(bad.violations.some(v => v.category === '薬機法') && bad.violations.some(v => v.category === '景表法'), '薬機・景表を検出');
+    const clean = await (await post('/api/attn/check-copy', { text: '駅前の整体院。初回¥5,500・完全予約制', industry: 'rikaku' })).json();
+    ok(clean.ok && !clean.blocked, 'クリーンなコピーは通過');
+    // 業種格上げ：体験談は整体(rikaku)ではmedium、接骨院(judo)ではhigh=ブロック
+    const taikenR = await (await post('/api/attn/check-copy', { text: 'お客様の声を多数掲載', industry: 'rikaku' })).json();
+    const taikenJ = await (await post('/api/attn/check-copy', { text: 'お客様の声を多数掲載', industry: 'judo' })).json();
+    ok(!taikenR.blocked && taikenJ.blocked, '体験談: 整体は要承認/接骨院はブロック（業種で厳格度が変わる）');
+    const r = await post('/api/attn/check-copy', {}); eq(r.status, 400, 'text欠落→400');
+    // 正規化バイパス対策：全角・文字間スペース・ひらがな開きでも回避できない
+    ok((await (await post('/api/attn/check-copy', { text: 'Ｎｏ．１の実績', industry: 'rikaku' })).json()).blocked, '全角「Ｎｏ．１」もブロック');
+    ok((await (await post('/api/attn/check-copy', { text: 'ＮＯ１', industry: 'rikaku' })).json()).blocked, '区切りなし全角「ＮＯ１」もブロック');
+    ok((await (await post('/api/attn/check-copy', { text: '１００％効く', industry: 'rikaku' })).json()).blocked, '全角「１００％」もブロック');
+    ok((await (await post('/api/attn/check-copy', { text: '絶　対', industry: 'rikaku' })).json()).blocked, '文字間スペース「絶　対」もブロック');
+    ok((await (await post('/api/attn/check-copy', { text: 'ぜっ たい に な お る', industry: 'rikaku' })).json()).blocked, 'ひらがな開き＋スペース「ぜったい/なおる」もブロック');
+  });
+
+  // 11) 要配慮個人情報ガード：症状フィールドは結合させず剥がす
+  await withServer(async ({ post, get }) => {
+    const c = await (await post('/api/attn/collect', { anon_id: 'S1', page_slug: 'seitai-lp-a', symptom: '慢性腰痛', diagnosis: '椎間板ヘルニア', boxes: HOT_BOXES })).json();
+    ok(Array.isArray(c.stripped) && c.stripped.includes('symptom') && c.stripped.includes('diagnosis'), '症状/診断フィールドを剥がした');
+    await post('/api/attn/merge', { anon_id: 'S1', friend_id: 'f_S', consented: true });
+    const j = await (await get('/api/attn/journey?friend_id=f_S')).json();
+    ok(!JSON.stringify(j).includes('腰痛') && !JSON.stringify(j).includes('ヘルニア'), '要配慮情報はjourneyに一切残らない');
+  });
+
+  // 12) 忘れられる権利/オプトアウト：friend単位で計測データを削除
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'D1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'D1', friend_id: 'f_D', consented: true });
+    let t = await (await get('/api/attn/friend-tags?friend_id=f_D')).json();
+    ok(t.tags.length > 0, '削除前はタグあり');
+    const del = await (await post('/api/attn/forget', { friend_id: 'f_D' })).json();
+    ok(del.ok && del.forgotten.includes('D1'), 'forget 実行');
+    const j = await (await get('/api/attn/journey?friend_id=f_D')).json();
+    eq(j.journeys.length, 0, '削除後は journey 空');
+    t = await (await get('/api/attn/friend-tags?friend_id=f_D')).json();
+    eq(t.tags.length, 0, '削除後はタグも撤回');
+    const r = await post('/api/attn/forget', {}); eq(r.status, 400, 'anon/friend欠落→400');
+  });
+
+  // 13) サチコ連携：APIで引っ張った行を取り込み、来る前をjourneyに搭載
+  await withServer(async ({ post, get }) => {
+    const rows = [
+      { keys: ['肩こり 整体 世田谷'], impressions: 1200, clicks: 74, position: 3.1 },
+      { keys: ['整体 産後 骨盤'], impressions: 800, clicks: 33, position: 5.4 },
+      { keys: ['デスクワーク 肩こり'], impressions: 500, clicks: 39, position: 2.2 },
+    ];
+    const ing = await (await post('/api/attn/search-console/ingest', { page_slug: 'seitai-lp-a', date: '2026-07-07', rows })).json();
+    eq(ing.ingested, 3, 'サチコ3行を取り込み');
+    const sum = await (await get('/api/attn/search-summary?page_slug=seitai-lp-a')).json();
+    eq(sum.search.impressions, 2500, '表示回数の合計を集計');
+    eq(sum.search.clicks, 146, 'クリック合計を集計');
+    ok(sum.search.top[0].query === '肩こり 整体 世田谷', 'クリック上位クエリを抽出');
+    // 冪等：同じ行を再取り込みしても重複しない
+    await post('/api/attn/search-console/ingest', { page_slug: 'seitai-lp-a', date: '2026-07-07', rows });
+    const sum2 = await (await get('/api/attn/search-summary?page_slug=seitai-lp-a')).json();
+    eq(sum2.search.impressions, 2500, '再取込でも重複せず合計不変');
+    // journey に「来る前」が載る
+    await post('/api/attn/collect', { anon_id: 'SC1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'SC1', friend_id: 'f_SC', consented: true });
+    const j = await (await get('/api/attn/journey?friend_id=f_SC')).json();
+    ok(j.journeys[0].search && j.journeys[0].search.clicks === 146, 'journeyに検索サマリ（来る前）が合成される');
+    const r = await post('/api/attn/search-console/ingest', { page_slug: 'seitai-lp-a' }); eq(r.status, 400, 'rows欠落→400');
+  });
+
+  // 14) 自己改善サイクル：自分の画面(オンボ)のステップ別残存率を実データで集計
+  await withServer(async ({ post, get }) => {
+    for (let k = 0; k < 5; k++) await post('/api/attn/product-event', { surface: 'onboarding', step: 1 });
+    for (let k = 0; k < 4; k++) await post('/api/attn/product-event', { surface: 'onboarding', step: 2 });
+    for (let k = 0; k < 3; k++) await post('/api/attn/product-event', { surface: 'onboarding', step: 3 });
+    const f = await (await get('/api/attn/product-funnel?surface=onboarding')).json();
+    eq(f.funnel.length, 3, '3ステップ集計');
+    eq(f.funnel[0].rate, 100, '先頭は100%');
+    eq(f.funnel[1].rate, 80, 'step2 残存80%');
+    eq(f.funnel[2].rate, 60, 'step3 残存60%（離脱が見える）');
+    const r = await post('/api/attn/product-event', { surface: 'x' }); eq(r.status, 400, 'step欠落→400');
+  });
+
+  // 15) 実測CVR：タグ有/無の予約率を実データから集計（比較表の数字の裏付け）
+  await withServer(async ({ post, get }) => {
+    const thin = [{ box_key: 'hero', engagement: 10 }];
+    // タグ有(料金検討中) 3人：A,B,C
+    for (const [a, f] of [['A', 'f_A'], ['B', 'f_B'], ['C', 'f_C']]) {
+      await post('/api/attn/collect', { anon_id: a, page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+      await post('/api/attn/merge', { anon_id: a, friend_id: f, consented: true });
+    }
+    // タグ無 2人：D,E
+    for (const [a, f] of [['D', 'f_D'], ['E', 'f_E']]) {
+      await post('/api/attn/collect', { anon_id: a, page_slug: 'seitai-lp-a', boxes: thin });
+      await post('/api/attn/merge', { anon_id: a, friend_id: f, consented: true });
+    }
+    // 予約：A,B（タグ有2/3）、D（タグ無1/2）
+    for (const f of ['f_A', 'f_B', 'f_D']) await post('/api/attn/booking', { friend_id: f });
+    const conv = await (await get('/api/attn/conversion-by-tag?tag=' + encodeURIComponent('料金検討中'))).json();
+    eq(conv.with.rate, 67, 'タグ有の予約率 2/3=67%');
+    eq(conv.without.rate, 50, 'タグ無の予約率 1/2=50%');
+    ok(conv.with.rate > conv.without.rate, 'タグ有 > タグ無（タグに意味がある）');
+    const r = await post('/api/attn/booking', {}); eq(r.status, 400, 'friend_id欠落→400');
+  });
+
+  // 16) エッジケース：空・未知・二重でも壊れない（手戻り防止の要）
+  await withServer(async ({ post, get }) => {
+    const c0 = await (await get('/api/attn/conversion-by-tag?tag=' + encodeURIComponent('存在しないタグ'))).json();
+    eq(c0.with.n, 0, '該当0人でもエラーなし');
+    eq(c0.with.rate, 0, '0除算せず0%');
+    const f0 = await (await get('/api/attn/product-funnel?surface=none')).json();
+    eq(f0.funnel.length, 0, 'イベント無し→空ファネル');
+    const s0 = await (await get('/api/attn/search-summary?page_slug=seitai-lp-a')).json();
+    eq(s0.search, null, 'サチコ未取込→null（落ちない）');
+    const j0 = await (await get('/api/attn/journey?friend_id=nobody')).json();
+    eq(j0.journeys.length, 0, '未知friend→空');
+    // 二重booking は冪等
+    await post('/api/attn/collect', { anon_id: 'z', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'z', friend_id: 'f_z', consented: true });
+    await post('/api/attn/booking', { friend_id: 'f_z' });
+    await post('/api/attn/booking', { friend_id: 'f_z' });
+    const cv = await (await get('/api/attn/conversion-by-tag?tag=' + encodeURIComponent('料金検討中'))).json();
+    eq(cv.with.booked, 1, '二重bookingでも予約者1人（Set）');
+    // forget後は再取得しても空のまま（復活しない）
+    await post('/api/attn/forget', { friend_id: 'f_z' });
+    const jz = await (await get('/api/attn/journey?friend_id=f_z')).json();
+    eq(jz.journeys.length, 0, 'forget後は空のまま（復活しない）');
+    const tz = await (await get('/api/attn/friend-tags?friend_id=f_z')).json();
+    eq(tz.tags.length, 0, 'forget後はタグも空');
+  });
+
+  // 17) 型の頑健性：不正な型でも落とさず安全化
+  await withServer(async ({ post, get }) => {
+    let j = await (await post('/api/attn/collect', { anon_id: 't1', page_slug: 'seitai-lp-a', boxes: 'not-array' })).json();
+    ok(j.ok && j.fired.includes('整体LP-A 流入'), 'boxes非配列でも落ちず流入タグ');
+    await post('/api/attn/collect', { anon_id: 't2', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'pricing', engagement: 'abc' }] });
+    await post('/api/attn/collect', { anon_id: 't3', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'pricing', engagement: 999 }] });
+    await post('/api/attn/merge', { anon_id: 't2', friend_id: 'f_t2', consented: true });
+    await post('/api/attn/merge', { anon_id: 't3', friend_id: 'f_t3', consented: true });
+    eq((await (await get('/api/attn/journey?friend_id=f_t2')).json()).journeys[0].box_engagement.pricing, 0, '文字列engagementは0に安全化');
+    eq((await (await get('/api/attn/journey?friend_id=f_t3')).json()).journeys[0].box_engagement.pricing, 100, '999はclamp 100');
+    ok((await (await post('/api/attn/collect', { anon_id: 't4', page_slug: 'seitai-lp-a', boxes: [{ engagement: 80 }] })).json()).ok, 'box_key欠落boxは無視して継続');
+    const r = await post('/api/attn/product-event', { surface: 'x', step: 'abc' }); eq(r.status, 400, 'step非数→400');
+  });
+
+  // 18) 並行リクエスト：同時でも一貫（競合で壊れない）
+  await withServer(async ({ post, get }) => {
+    await Promise.all([0, 1, 2, 3, 4].map(() => post('/api/attn/collect', { anon_id: 'p1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES })));
+    await Promise.all([0, 1, 2].map(() => post('/api/attn/merge', { anon_id: 'p1', friend_id: 'f_p1', consented: true })));
+    const j = await (await get('/api/attn/journey?friend_id=f_p1')).json();
+    eq(j.journeys.length, 1, '同時collect/mergeでも重複せず1件');
+    eq(j.journeys[0].box_engagement.pricing, 100, '値も一貫');
+  });
+
+  // 19) 境界値：集約タグは平均55で発火・54で不発
+  await withServer(async ({ post }) => {
+    const mk = v => ['hero', 'problem', 'beforeafter', 'staff', 'pricing', 'voice', 'faq', 'cta'].map(k => ({ box_key: k, engagement: v }));
+    ok((await (await post('/api/attn/collect', { anon_id: 'b55', page_slug: 'seitai-lp-a', boxes: mk(55) })).json()).fired.includes('ホットリード'), '平均55ちょうどでホットリード発火');
+    ok(!(await (await post('/api/attn/collect', { anon_id: 'b54', page_slug: 'seitai-lp-a', boxes: mk(54) })).json()).fired.includes('ホットリード'), '平均54では不発');
+  });
+
+  // 20) 契約テスト：各APIのレスポンス形（本番Supabase移植後も同じ形を保証）
+  await withServer(async ({ post, get }) => {
+    const has = (o, keys, m) => ok(o && keys.every(k => k in o), m + ' 契約: {' + keys.join(',') + '}');
+    has(await (await post('/api/attn/collect', { anon_id: 'k', page_slug: 'seitai-lp-a', boxes: HOT_BOXES })).json(), ['ok', 'fired', 'stripped'], 'collect');
+    has(await (await post('/api/attn/merge', { anon_id: 'k', friend_id: 'f_k', consented: true })).json(), ['ok', 'friend_id', 'consented', 'applied'], 'merge');
+    const j = await (await get('/api/attn/journey?friend_id=f_k')).json();
+    has(j, ['friend_id', 'journeys'], 'journey');
+    has(j.journeys[0], ['friend_id', 'page_slug', 'page_kind', 'entry_query', 'box_engagement', 'search'], 'journey.row');
+    has(await (await post('/api/attn/check-copy', { text: '必ず治る', industry: 'judo' })).json(), ['ok', 'blocked', 'industry', 'violations'], 'check-copy');
+    const cv = await (await get('/api/attn/conversion-by-tag?tag=x')).json();
+    has(cv, ['tag', 'with', 'without'], 'conversion-by-tag');
+    has(cv.with, ['n', 'booked', 'rate'], 'conversion.with');
+    has(await (await get('/api/attn/product-funnel?surface=onboarding')).json(), ['surface', 'funnel'], 'product-funnel');
+    has(await (await get('/api/attn/search-summary?page_slug=seitai-lp-a')).json(), ['page_slug', 'search'], 'search-summary');
+  });
+
+  // 21) 法務ハードニング：NG拡充・健康語の推知フラグ・配信オプトアウト
+  await withServer(async ({ post, get }) => {
+    // NG拡充：接骨院で「五十肩」等の適応症＋薬機表現をブロック
+    ok((await (await post('/api/attn/check-copy', { text: '五十肩が改善します', industry: 'judo' })).json()).blocked, '接骨院で適応症「五十肩」＋改善をブロック');
+    ok((await (await post('/api/attn/check-copy', { text: '根本改善で即効性', industry: 'rikaku' })).json()).blocked, '「根本改善/即効性」を薬機NGでブロック');
+    // 健康語の推知フラグ
+    await post('/api/attn/collect', { anon_id: 'h1', page_slug: 'seitai-lp-a', entry: { query: '肩こり 整体 世田谷' }, boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'h1', friend_id: 'f_h1', consented: true });
+    eq((await (await get('/api/attn/journey?friend_id=f_h1')).json()).journeys[0].entry_health, true, '健康語を含む検索は推知フラグを立てる');
+    await post('/api/attn/collect', { anon_id: 'h2', page_slug: 'seitai-lp-a', entry: { query: '駅前 整体 予約' }, boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'h2', friend_id: 'f_h2', consented: true });
+    eq((await (await get('/api/attn/journey?friend_id=f_h2')).json()).journeys[0].entry_health, false, '健康語なしはフラグ立たず');
+    // 配信オプトアウト
+    await post('/api/attn/opt-out', { friend_id: 'f_h1' });
+    eq((await (await get('/api/attn/can-send?friend_id=f_h1')).json()).can_send, false, '配信停止した人には送らない');
+    eq((await (await get('/api/attn/can-send?friend_id=f_h2')).json()).can_send, true, '停止していない人は送れる');
+    const r = await post('/api/attn/opt-out', {}); eq(r.status, 400, 'friend_id欠落→400');
+  });
+
+  // 22) 監査ログ：機微操作の証跡（安全管理措置・従業者の監督）
+  await withServer(async ({ post, get }) => {
+    await post('/api/attn/collect', { anon_id: 'a', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'a', friend_id: 'f_a', consented: true });
+    await post('/api/attn/opt-out', { friend_id: 'f_a' });
+    await post('/api/attn/forget', { friend_id: 'f_a' });
+    const log = await (await get('/api/attn/audit-log?friend_id=f_a')).json();
+    const actions = log.entries.map(e => e.action);
+    ok(actions.includes('merge') && actions.includes('opt-out') && actions.includes('forget'), '結合/配信停止/削除がすべて監査ログに残る');
+    ok(log.entries.every(e => e.at && e.friend_id), '各証跡に時刻とfriend_id');
+  });
+}
+
+const LOOPS = Number(process.argv[2] || 5);
+console.log(`\n=== Loku Attention handoff テスト（${LOOPS}周） ===`);
+for (let i = 1; i <= LOOPS; i++) {
+  const before = fail;
+  await suite();
+  console.log(`周回 ${i}/${LOOPS}: ${fail === before ? 'OK' : 'NG'}  (累計 pass=${pass} fail=${fail})`);
+}
+console.log(`\n結果: pass=${pass} fail=${fail}`);
+if (fail) { console.log('失敗:', fails.slice(0, 10)); process.exit(1); }
+console.log('✅ 全テスト通過（手戻りゼロ確認）');

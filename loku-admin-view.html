@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>店主が見る画面 — Loku 友だち詳細「来訪ジャーニー」タブ</title>
+<style>
+  :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
+    --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--line2:#06C755;
+    --num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Segoe UI",Meiryo,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .num{font-family:var(--num);font-feature-settings:"tnum";letter-spacing:-.02em}
+
+  .shell{display:grid;grid-template-columns:210px 1fr;min-height:100vh}
+  @media(max-width:820px){.shell{grid-template-columns:1fr}.side{display:none}}
+  /* サイドバー（Loku管理画面の雰囲気） */
+  .side{border-right:1px solid var(--line);padding:16px 12px;background:#0e131b}
+  .logo{font-weight:800;padding:6px 8px 14px}.logo .d{color:var(--grn)}
+  .navcat{font-size:10px;letter-spacing:.12em;color:var(--mut);margin:14px 8px 6px}
+  .nav a{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;color:var(--sub);text-decoration:none;font-size:13px}
+  .nav a.on{background:#12341f66;color:var(--ink)}
+  .nav a .em{width:16px;text-align:center}
+
+  .main{padding:0}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0b0f14ee;backdrop-filter:blur(6px);z-index:5}
+  .crumb{color:var(--mut);font-size:12.5px}.crumb b{color:var(--ink)}
+  .store{font-size:12px;color:var(--sub);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+
+  .body{display:grid;grid-template-columns:230px 1fr;gap:0}
+  @media(max-width:820px){.body{grid-template-columns:1fr}.flist{display:none}}
+  /* 友だちリスト */
+  .flist{border-right:1px solid var(--line);padding:12px}
+  .flsearch{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--mut);font-size:12.5px;margin-bottom:10px}
+  .fitem{display:flex;align-items:center;gap:10px;padding:9px;border-radius:10px;cursor:pointer;transition:.15s}
+  .fitem:hover{background:#ffffff06}.fitem.on{background:#12341f66;border:1px solid #22c58b44}
+  .fav{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:15px}
+  .fitem .nm{font-size:13.5px;font-weight:600}.fitem .tg{font-size:10.5px;color:var(--mut)}
+
+  /* 友だち詳細 */
+  .detail{padding:20px 22px}
+  .dhead{display:flex;align-items:center;gap:14px}
+  .dava{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:22px}
+  .dhead .nm{font-size:19px;font-weight:800}.dhead .meta{color:var(--mut);font-size:12.5px}
+  .dtags{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .tag{font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid #22c58b55;color:var(--grn);background:#12341f55}
+  .tag.route{color:var(--blue);border-color:#4c8dff55;background:#0e1c3a55}
+  .tag.auto::after{content:" ·auto";color:var(--mut);font-size:9px}
+
+  .tabs{display:flex;gap:4px;margin:20px 0 0;border-bottom:1px solid var(--line)}
+  .tab{padding:10px 14px;font-size:13.5px;color:var(--mut);cursor:pointer;border-bottom:2px solid transparent;position:relative}
+  .tab.on{color:var(--ink);border-bottom-color:var(--grn);font-weight:700}
+  .tab .new{font-size:9px;color:#04180f;background:var(--grn);border-radius:4px;padding:1px 5px;margin-left:6px;font-weight:800;vertical-align:1px}
+  .tabpane{display:none;padding:20px 0}.tabpane.on{display:block}
+  .placeholder{color:var(--mut);font-size:13.5px;padding:30px;text-align:center;border:1px dashed var(--line);border-radius:12px}
+
+  /* 来訪ジャーニー */
+  .jrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:680px){.jrow{grid-template-columns:1fr}}
+  .jcard{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:14px;padding:16px}
+  .jcard.hot{border-color:#22c58b55}
+  .jcard .cap{font-size:10px;letter-spacing:.1em;color:var(--grn);font-weight:700;margin-bottom:8px}
+  .jcard .big{font-size:15px;font-weight:800}
+  .jcard p{color:var(--sub);font-size:12.5px;margin-top:4px}
+  .jcard .kv{display:flex;justify-content:space-between;font-size:12px;color:var(--mut);margin-top:6px}.jcard .kv b{color:var(--ink);font-family:var(--num)}
+
+  .seen{margin-top:20px}
+  .seen h3{font-size:12px;letter-spacing:.06em;color:var(--sub);margin-bottom:10px}
+  .srow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .srow .lb{width:120px;font-size:12.5px;color:var(--sub)}
+  .srow .bar{flex:1;height:9px;border-radius:5px;background:#1b2432;overflow:hidden}
+  .srow .bar>i{display:block;height:100%;border-radius:5px}
+  .srow .v{width:34px;text-align:right;font-family:var(--num);font-size:12px;font-weight:700}
+  .srow .rd{width:60px;text-align:right;font-family:var(--num);font-size:10.5px;color:var(--mut)}
+
+  .action{margin-top:22px;background:linear-gradient(160deg,#12341f,#0d2418);border:1px solid #22c58b44;border-radius:14px;padding:18px}
+  .action .cap{font-size:10px;letter-spacing:.1em;color:var(--grn);font-weight:700}
+  .action .msg{background:#0b0f1466;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:10px;font-size:13.5px;color:var(--ink)}
+  .btns{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .btn{border:none;border-radius:10px;padding:11px 16px;font-weight:800;font-size:13.5px;cursor:pointer}
+  .btn.line{background:var(--line2);color:#fff}.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--sub)}
+  .toast{margin-top:10px;font-size:12.5px;color:var(--grn);display:none}.toast.on{display:block}
+  .note{color:var(--mut);font-size:11.5px;margin-top:16px;text-align:center}
+  .cbadge{display:inline-block;font-size:11px;color:var(--grn);border:1px solid #22c58b44;border-radius:999px;padding:3px 9px;margin-top:8px}
+  .compchk{margin-top:10px;font-size:12.5px;color:var(--grn)}
+  .compchk.warn{color:var(--gold)}
+  /* 今日のホーム（毎日開く動機） */
+  .home{background:linear-gradient(160deg,#12341f,#0d2418);border:1px solid #22c58b44;border-radius:14px;padding:16px 18px;margin-bottom:18px}
+  .home .wk{display:flex;gap:22px;flex-wrap:wrap}
+  .home .wk .v{font-family:var(--num);font-size:22px;font-weight:800;color:var(--grn)}
+  .home .wk .l{font-size:10.5px;color:var(--mut)}
+  .home .story{color:var(--sub);font-size:12px;margin-top:8px}.home .story b{color:var(--ink)}
+  .home h3{font-size:13px;margin:14px 0 8px}
+  .hotcards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:640px){.hotcards{grid-template-columns:1fr}}
+  .hot{background:#0b0f1466;border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;transition:.15s}
+  .hot:hover{border-color:#22c58b66;transform:translateY(-1px)}
+  .hot .nm{font-weight:700;font-size:13.5px}
+  .hot .rs{color:var(--sub);font-size:12px;margin-top:3px;line-height:1.5}
+  .hot .ac{margin-top:9px;display:flex;gap:8px;align-items:center}
+  .hot .send{background:var(--grn);color:#04180f;border:none;border-radius:8px;padding:7px 12px;font-size:11.5px;font-weight:800;cursor:pointer}
+  .hot .b{font-size:10px;color:var(--gold);border:1px solid #e7b84f44;border-radius:5px;padding:2px 6px}
+  .fitem .temp{margin-left:auto;font-size:13px}
+  .newdot{width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;margin-left:5px;vertical-align:2px}
+  /* 懐疑派向け：根拠（実測） */
+  .evidence{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-top:16px}
+  .evidence .t{font-size:11px;letter-spacing:.06em;color:var(--blue);font-weight:700;margin-bottom:8px}
+  .evidence .r{display:flex;justify-content:space-between;font-size:12.5px;color:var(--sub);padding:5px 0;border-bottom:1px solid var(--line)}
+  .evidence .r:last-child{border:none}.evidence .r b{color:var(--ink);font-family:var(--num)}
+  .evidence .caveat{color:var(--mut);font-size:11px;margin-top:8px}
+  .spark{display:flex;align-items:flex-end;gap:5px;height:40px;margin-top:12px}
+  .spark .sb{flex:1;background:#223042;border-radius:3px 3px 0 0}
+  .spark .sb.now{background:var(--grn)}
+  .sparkl{font-size:11px;color:var(--mut);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- サイドバー -->
+  <aside class="side">
+    <div class="logo">Loku <span class="d">◇</span></div>
+    <div class="navcat">SUITE</div>
+    <nav class="nav">
+      <a href="#"><span class="em">▤</span>ダッシュボード</a>
+      <a href="#"><span class="em">💬</span>チャット</a>
+      <a href="#" class="on"><span class="em">👤</span>友だち管理</a>
+      <a href="#"><span class="em">🏷️</span>タグ管理</a>
+    </nav>
+    <div class="navcat">メッセージ</div>
+    <nav class="nav">
+      <a href="#"><span class="em">📣</span>一斉配信</a>
+      <a href="#"><span class="em">🔁</span>シナリオ配信</a>
+    </nav>
+    <div class="navcat">コンテンツ</div>
+    <nav class="nav">
+      <a href="#"><span class="em">🎯</span>流入経路</a>
+      <a href="#"><span class="em">📈</span>トラッキング</a>
+      <a href="#"><span class="em">📊</span>分析</a>
+    </nav>
+  </aside>
+
+  <!-- メイン -->
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb">友だち管理 › <b>友だち詳細</b></div>
+      <div class="store">整体サロン Recovery（テスト店舗）</div>
+    </div>
+
+    <div class="body">
+      <!-- 友だちリスト -->
+      <div class="flist">
+        <div class="flsearch">🔍 友だちを検索…</div>
+        <div class="fitem on" data-f="tanaka"><div class="fav" style="background:linear-gradient(135deg,#06C755,#0a8a44)">田</div><div><div class="nm">田中 さん<span class="newdot"></span></div><div class="tg">料金検討中 / 効果重視</div></div><span class="temp">🔥</span></div>
+        <div class="fitem" data-f="sato"><div class="fav" style="background:linear-gradient(135deg,#4c8dff,#2c5fd0)">佐</div><div><div class="nm">佐藤 さん</div><div class="tg">カゴ落ち予備軍</div></div><span class="temp">🔥</span></div>
+        <div class="fitem" data-f="suzuki"><div class="fav" style="background:linear-gradient(135deg,#b78cff,#7c4fd6)">鈴</div><div><div class="nm">鈴木 さん</div><div class="tg">様子見</div></div><span class="temp">💤</span></div>
+      </div>
+
+      <!-- 友だち詳細 -->
+      <div class="detail">
+        <!-- 今日のホーム（毎朝ここだけ見ればいい） -->
+        <div class="home">
+          <div class="wk">
+            <div><div class="v num">48</div><div class="l">今週つながった人</div></div>
+            <div><div class="v num">12</div><div class="l">今アツいお客様</div></div>
+            <div><div class="v num">+7</div><div class="l">予約になりそう（前週 +3）</div></div>
+          </div>
+          <div class="story">📈 <b>先週よりいい流れです。</b>先週「料金の不安」に案内を送った8人のうち <b>3人が予約</b>。今週も同じような人が来ています。</div>
+          <div class="spark"><div class="sb" style="height:35%"></div><div class="sb" style="height:48%"></div><div class="sb" style="height:42%"></div><div class="sb" style="height:66%"></div><div class="sb" style="height:60%"></div><div class="sb now" style="height:88%"></div></div>
+          <div class="sparkl">直近6週の「予約になりそう」の推移 ↗ 右肩上がり</div>
+          <h3>🔥 今、声をかけるとよい人</h3>
+          <div class="hotcards">
+            <div class="hot" data-hot="tanaka"><div class="nm">田中 さん</div><div class="rs">料金で迷って登録。今なら「初回¥5,500・回数券のコスパ」が刺さる。</div><div class="ac"><button class="send" data-send>この案内を送る</button><span class="b">今日中がおすすめ</span></div></div>
+            <div class="hot" data-hot="sato"><div class="nm">佐藤 さん</div><div class="rs">カートを見て未購入。送料無料クーポンで戻せる可能性大。</div><div class="ac"><button class="send" data-send>この案内を送る</button><span class="b">要フォロー</span></div></div>
+          </div>
+        </div>
+        <div class="dhead">
+          <div class="dava" id="dava" style="background:linear-gradient(135deg,#06C755,#0a8a44)">田</div>
+          <div>
+            <div class="nm" id="dname">田中 さん</div>
+            <div class="meta" id="dmeta">友だち #f_8821 · 追加 2026-07-06 · スマホ</div>
+            <div class="dtags" id="dtags"></div>
+            <div><span class="cbadge">🔒 計測結合 同意済（オプトイン）・症状などデリケート情報は未結合</span></div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab" data-tab="profile">プロフィール</div>
+          <div class="tab" data-tab="talk">トーク</div>
+          <div class="tab on" data-tab="journey">来訪ジャーニー<span class="new">NEW</span></div>
+        </div>
+
+        <!-- プロフィール（既存タブの雰囲気） -->
+        <div class="tabpane" data-pane="profile"><div class="placeholder">（Loku既存のプロフィール項目：氏名・連絡先・メモ・会員情報など）</div></div>
+        <div class="tabpane" data-pane="talk"><div class="placeholder">（Loku既存のトーク履歴）</div></div>
+
+        <!-- ★ Attentionが足すのはこの1枚だけ -->
+        <div class="tabpane on" data-pane="journey">
+          <div class="jrow">
+            <div class="jcard"><div class="cap">来る前 · 検索</div><div class="big" id="jq">「肩こり 整体 世田谷」</div>
+              <div class="kv"><span>掲載順位</span><b id="jpos">3位</b></div><div class="kv"><span>流入</span><b>Google検索</b></div>
+              <p style="font-size:10.5px;color:var(--mut)">Search Console 無料API</p></div>
+            <div class="jcard"><div class="cap">来た後 · ページ視線</div><div class="big" id="jtop">料金表を熟読</div>
+              <div class="kv"><span>アクティブ滞在</span><b id="jactive">42s</b></div><div class="kv"><span>閲覧LP</span><b>整体LP-A</b></div>
+              <p style="font-size:10.5px;color:var(--mut)">Attention 自前計測</p></div>
+            <div class="jcard hot"><div class="cap">その後 · Loku</div><div class="big" id="jafter">予約見込み 高</div>
+              <div class="kv"><span>友だち追加</span><b>済</b></div><div class="kv"><span>予約</span><b id="jresv">未</b></div>
+              <p style="font-size:10.5px;color:var(--mut)">Loku 予約・決済</p></div>
+          </div>
+
+          <div class="seen">
+            <h3>このLPで、どこを見たか（ボックス単位）</h3>
+            <div id="seenList"></div>
+          </div>
+
+          <div class="action">
+            <div class="cap">この人に効くアクション（自動提案）</div>
+            <div class="msg" id="actMsg">「初回¥5,500・回数券のコスパ」を先出しする案内が刺さります。</div>
+            <div class="compchk" id="compchk">✅ 送信前チェック済：薬機法・景表法・柔整/あはき 広告規制クリア</div>
+            <div class="btns">
+              <button class="btn line" id="sendBtn">この文面でLINE送信</button>
+              <button class="btn ghost">シナリオに追加</button>
+              <button class="btn ghost">一斉配信のセグメントに使う</button>
+              <button class="btn ghost" id="forgetBtn" style="border-color:#e7b84f55;color:var(--gold)">🗑 計測データを削除</button>
+            </div>
+            <div class="toast" id="toast">✅ 送信キューに追加しました（デモ）。既存の一斉配信/シナリオ機能がそのまま発火します。</div>
+            <div class="toast" id="toast2" style="color:var(--gold)">🗑 このお客様の計測データを削除しました（forget API）。実名プロフィールとタグを撤回。</div>
+          </div>
+
+          <div class="evidence">
+            <div class="t">この判断の根拠（予測でなく "実測" で照合）<span style="font-size:9.5px;color:#04180f;background:var(--grn);border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:800">実測・自動更新</span></div>
+            <div class="r"><span>「料金検討中」タグの人の実際の予約率</span><b>34%</b></div>
+            <div class="r"><span>タグが付かなかった人の予約率</span><b>11%</b></div>
+            <div class="r"><span>先月、この店で 案内→予約 に至った実数</span><b>9件</b></div>
+            <div class="caveat">※ 視線は「注意の目安」であって本人の内心そのものではありません。当たり外れは、実際の予約・クリック実績と<b style="color:var(--sub)">毎月照合して補正</b>しています。症状などデリケートな情報は結合していません。</div>
+          </div>
+          <p class="note">Attentionが足すのは<b style="color:var(--sub)">この「来訪ジャーニー」タブ1枚だけ</b>。新しいメニューは作らず、店主は今の友だち詳細の延長で使えます（肥大化させない規律）。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var DATA = {
+    tanaka: { name:'田中 さん', ini:'田', grad:'linear-gradient(135deg,#06C755,#0a8a44)', meta:'友だち #f_8821 · 追加 2026-07-06 · スマホ',
+      tags:[{t:'整体LP-A 流入',c:'route'},{t:'料金検討中',c:'auto'},{t:'効果重視',c:'auto'},{t:'ホットリード',c:'auto'}],
+      q:'「肩こり 整体 世田谷」', pos:'3位', top:'料金表を熟読', active:'42s', after:'予約見込み 高', resv:'未',
+      seen:[['料金表',92,'9/4s'],['Before/After',88,'12/3s'],['お客様の声',64,'11/17s'],['悩み提起',38,'8/22s'],['院長プロフィール',9,'1/18s']],
+      msg:'「初回¥5,500・回数券のコスパ」を先出しする案内が刺さります。' },
+    sato: { name:'佐藤 さん', ini:'佐', grad:'linear-gradient(135deg,#4c8dff,#2c5fd0)', meta:'友だち #f_5521 · 追加 2026-07-06 · PC',
+      tags:[{t:'有機玄米5kg 閲覧',c:'route'},{t:'カゴ落ち予備軍',c:'auto'},{t:'価格検討',c:'auto'}],
+      q:'「有機玄米 5kg 無農薬」', pos:'2位', top:'カートを凝視（未購入）', active:'38s', after:'カゴ落ち → 要リマインド', resv:'未購入',
+      seen:[['カート/購入',61,'2/4s'],['価格',78,'3/4s'],['レビュー',44,'7/18s'],['商品説明',30,'6/20s'],['商品画像',22,'1/3s']],
+      msg:'「送料無料・14%OFF定期便は今だけ」のカゴ落ちリマインド＋クーポンを自動送信。' },
+    suzuki: { name:'鈴木 さん', ini:'鈴', grad:'linear-gradient(135deg,#b78cff,#7c4fd6)', meta:'友だち #f_3310 · 追加 2026-07-05 · スマホ',
+      tags:[{t:'整体LP-A 流入',c:'route'},{t:'様子見',c:'auto'}],
+      q:'「首こり 頭痛 整体 口コミ」', pos:'8位', top:'ざっと流し読み', active:'11s', after:'温度低・育成対象', resv:'未',
+      seen:[['お客様の声',28,'5/17s'],['ヒーロー',20,'1/7s'],['料金表',12,'0/4s'],['悩み提起',8,'2/22s'],['FAQ',4,'0/15s']],
+      msg:'まだ温度が低いので、まずは「よくある質問＋通った人の変化」を軽く1通。売り込みは避けます。' }
+  };
+  function heat(v){ return v>=60?'#22c58b':v>=30?'#e7b84f':'#5a6b80'; }
+  function render(key){
+    var d = DATA[key];
+    document.getElementById('dava').textContent=d.ini; document.getElementById('dava').style.background=d.grad;
+    document.getElementById('dname').textContent=d.name; document.getElementById('dmeta').textContent=d.meta;
+    var tg=document.getElementById('dtags'); tg.innerHTML='';
+    d.tags.forEach(function(x){var e=document.createElement('span');e.className='tag '+(x.c==='route'?'route':'auto');e.textContent=x.t;tg.appendChild(e);});
+    document.getElementById('jq').textContent=d.q; document.getElementById('jpos').textContent=d.pos;
+    document.getElementById('jtop').textContent=d.top; document.getElementById('jactive').textContent=d.active;
+    document.getElementById('jafter').textContent=d.after; document.getElementById('jresv').textContent=d.resv;
+    document.getElementById('actMsg').textContent=d.msg;
+    updateCompliance(d.msg);
+    document.getElementById('toast2').classList.remove('on');
+    var sl=document.getElementById('seenList'); sl.innerHTML='';
+    d.seen.forEach(function(s){var row=document.createElement('div');row.className='srow';
+      row.innerHTML='<span class="lb">'+s[0]+'</span><span class="bar"><i style="width:'+s[1]+'%;background:'+heat(s[1])+'"></i></span><span class="v" style="color:'+heat(s[1])+'">'+s[1]+'</span><span class="rd">'+s[2]+'</span>';
+      sl.appendChild(row);});
+    document.getElementById('toast').classList.remove('on');
+  }
+  document.querySelectorAll('.fitem').forEach(function(el){el.addEventListener('click',function(){
+    document.querySelectorAll('.fitem').forEach(function(x){x.classList.remove('on');}); el.classList.add('on');
+    document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');}); document.querySelector('.tab[data-tab="journey"]').classList.add('on');
+    document.querySelectorAll('.tabpane').forEach(function(p){p.classList.remove('on');}); document.querySelector('.tabpane[data-pane="journey"]').classList.add('on');
+    render(el.dataset.f);
+  });});
+  document.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');}); t.classList.add('on');
+    document.querySelectorAll('.tabpane').forEach(function(p){p.classList.remove('on');});
+    document.querySelector('.tabpane[data-pane="'+t.dataset.tab+'"]').classList.add('on');
+  });});
+  var ADNG=['治る','完治','必ず','絶対','No.1','日本一','100%','最強','最高','唯一'];
+  function updateCompliance(msg){
+    var hit=ADNG.filter(function(w){return msg.indexOf(w)>=0;});
+    var el=document.getElementById('compchk');
+    if(hit.length){el.className='compchk warn';el.textContent='⚠ 要承認：「'+hit.join('／')+'」が広告規制に触れる可能性（公開ブロック）';}
+    else{el.className='compchk';el.textContent='✅ 送信前チェック済：薬機法・景表法・柔整/あはき 広告規制クリア';}
+  }
+  document.getElementById('sendBtn').addEventListener('click',function(){document.getElementById('toast').classList.add('on');});
+  document.getElementById('forgetBtn').addEventListener('click',function(){document.getElementById('toast2').classList.add('on');});
+  // ホームの「今声をかけるとよい人」→その人を開く
+  document.querySelectorAll('[data-hot]').forEach(function(el){el.addEventListener('click',function(){
+    var k=el.dataset.hot;
+    document.querySelectorAll('.fitem').forEach(function(x){x.classList.toggle('on',x.dataset.f===k);});
+    render(k);
+    document.querySelector('.tab[data-tab="journey"]').click();
+  });});
+  document.querySelectorAll('[data-send]').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();document.getElementById('toast').classList.add('on');b.textContent='✅ 送信済 · 既読待ち';b.disabled=true;b.style.opacity='.7';b.style.cursor='default';});});
+  render('tanaka');
+})();
+</script>
+</body>
+</html>
