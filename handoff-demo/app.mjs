@@ -239,12 +239,17 @@ function handle(store, req, res, body) {
     // APPI31条(個人関連情報の第三者提供)：提供元Lokuの「本人同意の確認・記録義務」。
     // 同意の由来(誰が・どの方法で・いつ)を記録する。obtained_by/method が揃って初めて記録が"完全"。
     const cr = d.consent_record || {};
+    const is_minor = cr.is_minor === true; // 本人が未成年か
     const consent_record = consented ? {
       obtained_by: cr.obtained_by || null, // 例: 店舗のLIFF同意画面 / スタッフ対面
       method: cr.method || null,           // 例: 'liff_optin' / 'paper' / 'verbal'
+      is_minor,
+      guardian_consent: is_minor ? (cr.guardian_consent === true) : null, // 未成年は保護者同意が必須
       at: Number.isFinite(cr.at) ? cr.at : Date.now(),
     } : null;
-    const consent_record_complete = !!(consented && consent_record.obtained_by && consent_record.method);
+    // 未成年は「本人＋保護者同意」が揃って初めて記録完全（保護者同意欠落は不完全）
+    const consent_record_complete = !!(consented && consent_record.obtained_by && consent_record.method
+      && (!is_minor || consent_record.guardian_consent === true));
 
     // idempotent：同じ結合は上書きのみ、重複行を作らない
     store.identity.set(d.anon_id, { friend_id: d.friend_id, consented, consent_record, consent_record_complete });

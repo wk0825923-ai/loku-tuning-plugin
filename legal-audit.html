@@ -257,6 +257,17 @@
         </ul></div>
       </div>
     </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev md">中</span><div><div class="t">⑬ 未成年の同意（保護者同意）</div><div class="law">個人情報保護委員会ガイドライン（同意能力）／要配慮個人情報</div></div></div>
+      <div class="bd">
+        施術所の患者には<b>未成年</b>が含まれ得る。ガイドライン上、一般に<b>低年齢の本人からの同意は有効な同意と認められにくく、法定代理人（保護者）の同意</b>が求められる。症状（要配慮）も絡むため、未成年の同意取得は特に慎重に。
+        <div class="fix"><div class="ft">対策</div><ul>
+          <li>結合(merge)時に<b>未成年フラグ＋保護者同意</b>を記録（consent_record.is_minor / guardian_consent）</li>
+          <li>未成年で<b>保護者同意が無い同意は"不完全"</b>としてフラグ化（証跡で可視化）</li>
+        </ul></div>
+      </div>
+    </div>
   </section>
 
   <section>
@@ -286,6 +297,7 @@
       <li><b>個人関連情報の提供＝同意の確認・記録</b>（APPI31条）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge時にconsent_record(誰が/方法/日時)を記録・不完全はフラグ・consent-record APIで証跡・回帰テスト済</span></li>
       <li><b>越境移転の情報提供・委託先の把握</b>（APPI28/25条）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> subprocessors APIで委託先レジストリ＋越境判定・保管国未設定は"要確認"に倒す・保管国は運用者が登録・回帰テスト済</span></li>
       <li><b>プロファイリングの透明化・拒否権</b>（利用目的特定/消費者保護）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> profiling-infoで付与根拠を開示・profiling-opt-outで既存タグ撤回＋再付与停止・回帰テスト済</span></li>
+      <li><b>未成年は保護者同意を記録</b>（同意能力）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge時にis_minor/guardian_consentを記録・未成年で保護者同意なしは不完全フラグ・回帰テスト済</span></li>
       <li><b>開示・削除・オプトアウト</b>（friend単位で削除）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> forget API</span></li>
       <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意・buildDisclosure()/GET disclosureで「何を/どこへ/何のため」をLP埋め込み(第三者提供なし・要配慮除外を明示・ポリシーURLは店舗設定)</span></li>
       <li><b>安全管理措置</b>：テナント分離（RLS）・アクセス制御<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> DB=schema.sqlのRLSポリシー(tenant_id=auth.jwt)／アプリ層もtenantOfFriend+x-tenant-idで自テナント外のjourney/tags/export/disclosureを403(回帰テスト済)</span>／<b>保持期間purge</b><span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> purgeExpired()/POST purge・最終アクセスから既定730日で計測データを消去(cron想定)・回帰テスト済</span></li>

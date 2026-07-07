@@ -109,6 +109,26 @@ async function suite() {
     eq((await post('/api/attn/profiling-opt-out', {})).status, 400, 'friend_id欠落→400');
   });
 
+  // 1e) 未成年の同意：未成年は本人＋保護者同意が揃って初めて記録完全
+  await withServer(async ({ post, get }) => {
+    // 未成年＋保護者同意あり → 完全
+    await post('/api/attn/collect', { anon_id: 'MN1', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    const ok1 = await (await post('/api/attn/merge', { anon_id: 'MN1', friend_id: 'f_MN1', consented: true,
+      consent_record: { obtained_by: '店舗対面', method: 'paper', is_minor: true, guardian_consent: true } })).json();
+    ok(ok1.consent_record_complete, '未成年＋保護者同意ありは記録完全');
+    // 未成年＋保護者同意なし → 結合はするが不完全
+    await post('/api/attn/collect', { anon_id: 'MN2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    const ng = await (await post('/api/attn/merge', { anon_id: 'MN2', friend_id: 'f_MN2', consented: true,
+      consent_record: { obtained_by: '店舗対面', method: 'paper', is_minor: true } })).json();
+    ok(!ng.consent_record_complete && ng.applied, '未成年で保護者同意なしは不完全フラグ(結合自体はする)');
+    const cr = await (await get('/api/attn/consent-record?friend_id=f_MN2')).json();
+    ok(cr.records[0].record.is_minor === true && cr.records[0].record.guardian_consent === false, '未成年フラグ・保護者同意欠落が証跡に残る');
+    // 成人（is_minor未指定）は従来どおり obtained_by+method だけで完全
+    await post('/api/attn/collect', { anon_id: 'MN3', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
+    ok((await (await post('/api/attn/merge', { anon_id: 'MN3', friend_id: 'f_MN3', consented: true,
+      consent_record: { obtained_by: 'LIFF', method: 'liff_optin' } })).json()).consent_record_complete, '成人は従来どおり完全');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });
