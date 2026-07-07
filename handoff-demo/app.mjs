@@ -6,7 +6,7 @@
 
 import http from 'node:http';
 import crypto from 'node:crypto';
-import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure } from './compliance.mjs';
+import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure, defaultSubprocessors, transferAssessment } from './compliance.mjs';
 import { ingestSearchConsole, searchSummary } from './search-console.mjs';
 
 // ---- サンプルページ定義（本番は loku_attn_pages / _boxes 相当） ----
@@ -48,6 +48,7 @@ function seedStore() {
     opt_out: new Set(),       // 配信停止した friend_id（送らない）
     audit_log: [],            // 機微操作の証跡（安全管理措置・従業者の監督）
     privacy_policy_urls: new Map(), // tenant_id -> 店舗が設定したプライバシーポリシーURL
+    subprocessors: defaultSubprocessors(), // 委託先レジストリ（越境移転28条・委託先監督25条）
   };
 }
 
@@ -430,6 +431,20 @@ function handle(store, req, res, body) {
     store.audit_log.push({ action: 'export', friend_id: d.friend_id, actor: String(d.actor), rows, encrypted, at: Date.now() });
     if (encrypted) return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: true, payload: encryptCsv(csv, d.passphrase) });
     return send(200, { ok: true, friend_id: d.friend_id, rows, encrypted: false, csv });
+  }
+
+  // GET /api/attn/subprocessors — 委託先レジストリ＋越境判定（APPI28条 越境移転／25条 委託先監督）
+  if (req.method === 'GET' && url.pathname === '/api/attn/subprocessors') {
+    return send(200, transferAssessment(store.subprocessors));
+  }
+  // POST /api/attn/subprocessors — 委託先のリージョン(保管国)を運用者が登録（当方で断定しない）
+  if (req.method === 'POST' && url.pathname === '/api/attn/subprocessors') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.id || !d.region) return send(400, { error: 'id and region required（保管国コード 例:JP/US）' });
+    const sp = store.subprocessors.find(s => s.id === d.id);
+    if (!sp) return send(404, { error: 'unknown subprocessor' });
+    sp.region = String(d.region).toUpperCase();
+    return send(200, { ok: true, subprocessor: sp, assessment: transferAssessment(store.subprocessors) });
   }
 
   // POST /api/attn/privacy-policy — 店舗が自らのプライバシーポリシーURLを登録（当方で代筆しない）

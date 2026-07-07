@@ -71,6 +71,26 @@ async function suite() {
     eq((await (await get('/api/attn/consent-record?friend_id=f_CR2')).json()).all_complete, false, '不完全な記録はall_complete=false');
   });
 
+  // 1c) 越境移転（APPI28条）：委託先レジストリ＋越境判定・リージョンは運用者が登録
+  await withServer(async ({ post, get }) => {
+    // 初期はリージョン未設定＝判定不可(要確認)で通知が必要
+    const a0 = await (await get('/api/attn/subprocessors')).json();
+    ok(a0.needs_notice && a0.unknown.length >= 1, '初期は保管国未設定＝要確認で通知必要');
+    // 国内(JP)を登録すると越境ではない
+    await post('/api/attn/subprocessors', { id: 'google_sc', region: 'JP' });
+    await post('/api/attn/subprocessors', { id: 'line', region: 'JP' });
+    const sp = await (await post('/api/attn/subprocessors', { id: 'supabase', region: 'US' })).json();
+    ok(sp.assessment.cross_border.some(x => x.id === 'supabase'), 'US保管は越境として検出(28条の情報提供が必要)');
+    const a1 = await (await get('/api/attn/subprocessors')).json();
+    ok(a1.needs_notice && a1.unknown.length === 0, '全て登録済でも越境が1つあれば通知必要');
+    // 全てJPなら通知不要
+    await post('/api/attn/subprocessors', { id: 'supabase', region: 'JP' });
+    eq((await (await get('/api/attn/subprocessors')).json()).needs_notice, false, '全て国内なら通知不要');
+    // バリデーション
+    eq((await post('/api/attn/subprocessors', { id: 'nope', region: 'JP' })).status, 404, '未知の委託先→404');
+    eq((await post('/api/attn/subprocessors', { id: 'supabase' })).status, 400, 'region欠落→400');
+  });
+
   // 2) 同意なし：journey に出ない・タグ適用されない（プライバシーゲート）
   await withServer(async ({ post, get }) => {
     await post('/api/attn/collect', { anon_id: 'A2', page_slug: 'seitai-lp-a', boxes: HOT_BOXES });

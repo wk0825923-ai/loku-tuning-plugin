@@ -232,6 +232,20 @@
         <div class="src">出典: <a href="https://www.ppc.go.jp/personalinfo/legal/guidelines_kanren/">個人情報保護委員会 個人関連情報ガイドライン（31条）</a></div>
       </div>
     </div>
+
+    <div class="risk">
+      <div class="rh"><span class="sev md">中</span><div><div class="t">⑪ 外国にある第三者への提供（越境移転）</div><div class="law">個人情報保護法 第28条／委託先の監督 第25条</div></div></div>
+      <div class="bd">
+        計測データの保管・処理を<b>外部サービス（DB・検索連携・配信基盤）に委託</b>し、データが<b>日本国外に保管される</b>場合、本人への<b>移転先国・当該国の制度・講じる措置の情報提供</b>が必要（28条）。また委託先は<b>監督義務</b>の対象（25条）。委託先の保管国を把握していないと、そもそも越境の有無が判定できない。
+        <div class="who">誰が処分される？ → 情報提供・監督を怠った<b>提供元（Loku）</b>。</div>
+        <div class="fix"><div class="ft">対策</div><ul>
+          <li><b>委託先レジストリ</b>で処理目的と<b>保管国</b>を管理（subprocessors API）</li>
+          <li><b>越境判定</b>：国内=通知不要／国外=28条の情報提供が必要／<b>未設定は"要確認"</b>として通知対象に倒す（誤って国内扱いしない）</li>
+          <li>保管国は<b>運用者が登録</b>（当方で断定しない＝誤判定回避）</li>
+        </ul></div>
+        <div class="src">出典: <a href="https://www.ppc.go.jp/personalinfo/legal/guidelines_offshore/">個人情報保護委員会 外国third提供ガイドライン（28条）</a></div>
+      </div>
+    </div>
   </section>
 
   <section>
@@ -259,6 +273,7 @@
       <li><b>結合は行動データのみ・症状は非結合</b>（要配慮該当を回避）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> stripSensitive()・大文字キー/ネスト/配列内も再帰剥離</span></li>
       <li><b>友だち追加時の明示同意</b>／非同意は匿名集計のみ<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge consentゲート</span></li>
       <li><b>個人関連情報の提供＝同意の確認・記録</b>（APPI31条）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> merge時にconsent_record(誰が/方法/日時)を記録・不完全はフラグ・consent-record APIで証跡・回帰テスト済</span></li>
+      <li><b>越境移転の情報提供・委託先の把握</b>（APPI28/25条）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> subprocessors APIで委託先レジストリ＋越境判定・保管国未設定は"要確認"に倒す・保管国は運用者が登録・回帰テスト済</span></li>
       <li><b>開示・削除・オプトアウト</b>（friend単位で削除）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> forget API</span></li>
       <li><b>プライバシーポリシー・外部送信通知</b>を各店LPに標準設置<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 訪問者UIに通知＋同意・buildDisclosure()/GET disclosureで「何を/どこへ/何のため」をLP埋め込み(第三者提供なし・要配慮除外を明示・ポリシーURLは店舗設定)</span></li>
       <li><b>安全管理措置</b>：テナント分離（RLS）・アクセス制御<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> DB=schema.sqlのRLSポリシー(tenant_id=auth.jwt)／アプリ層もtenantOfFriend+x-tenant-idで自テナント外のjourney/tags/export/disclosureを403(回帰テスト済)</span>／<b>保持期間purge</b><span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> purgeExpired()/POST purge・最終アクセスから既定730日で計測データを消去(cron想定)・回帰テスト済</span></li>

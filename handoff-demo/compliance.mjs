@@ -97,6 +97,33 @@ export function buildDisclosure({ serviceName = 'Loku Tuning 計測', privacyPol
   };
 }
 
+// 委託先（サブプロセッサ）レジストリの初期値。事実として「使う機能」は挙げるが、
+// リージョン(保管国)は運用者が入れる欄＝当方で断定しない（誤った越境判定を避ける）。
+export function defaultSubprocessors() {
+  return [
+    { id: 'supabase', name: 'Supabase', purpose: 'データベース/認証（計測データの保管）', region: null },
+    { id: 'google_sc', name: 'Google Search Console API', purpose: '検索流入データの取得（readonly）', region: null },
+    { id: 'line', name: 'LINE（Messaging API）', purpose: '友だちへの配信', region: null },
+  ];
+}
+
+// 越境判定：region未設定=判定不可(要確認)、JP=国内、それ以外=越境(28条の情報提供が必要)。
+export function classifyTransfer(region) {
+  if (region == null || region === '') return 'unknown';
+  return String(region).toUpperCase() === 'JP' ? 'domestic' : 'cross_border';
+}
+
+/**
+ * 委託先リストに越境判定を付与し、28条対応で通知が要る先を洗い出す。
+ * @returns {{subprocessors:Array, cross_border:Array, unknown:Array, needs_notice:boolean}}
+ */
+export function transferAssessment(subprocessors = defaultSubprocessors()) {
+  const withClass = subprocessors.map(s => ({ ...s, transfer: classifyTransfer(s.region) }));
+  const cross_border = withClass.filter(s => s.transfer === 'cross_border');
+  const unknown = withClass.filter(s => s.transfer === 'unknown');
+  return { subprocessors: withClass, cross_border, unknown, needs_notice: cross_border.length > 0 || unknown.length > 0 };
+}
+
 // ② 要配慮個人情報ガード：結合してはいけない健康・症状系フィールドを検出して除去
 const SENSITIVE_KEYS = ['symptom', 'symptoms', 'diagnosis', 'disease', 'condition', 'health', 'medical', 'injury', '症状', '病名', '既往歴'];
 
