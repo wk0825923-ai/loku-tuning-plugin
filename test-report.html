@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>Loku Attention — テスト結果ダッシュボード</title>
+<title>Loku Tuning — テスト結果ダッシュボード</title>
 <style>
   :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
     --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
@@ -57,7 +57,7 @@
 <div class="wrap">
   <header>
     <div class="allgreen"><span class="d"></span>ALL GREEN — 2026-07-07</div>
-    <h1>Loku Attention テスト結果</h1>
+    <h1>Loku Tuning テスト結果</h1>
     <p class="lead">バックエンド・ブラウザ実行・クロスプロセスの3層で検証。ランタイムエラーゼロ。</p>
     <div class="totals">
       <div class="tot"><div class="big num">4,750</div><div class="lb">バックエンド</div><div class="sub">22シナリオ × 50周</div></div>
@@ -78,7 +78,7 @@
         <li>後追いcollect：結合後さらに読むとタグが増える</li>
         <li>バリデーション：欠落=400 / 未知ページ=404 / 壊れJSON=400</li>
       </ul>
-      <pre>=== Loku Attention handoff テスト（50周） ===
+      <pre>=== Loku Tuning handoff テスト（50周） ===
 周回 50/50: OK  (累計 pass=4750 fail=0)
 結果: pass=4750 fail=0
 <span class="g">✅ 全テスト通過（手戻りゼロ確認）</span></pre>
@@ -162,19 +162,19 @@ friend_tags: [ '整体LP-A 流入', '料金検討中', '効果重視' ]
       <a class="tile" href="ec-product.html"><div class="t">🛒 EC商品ページ版</div><div class="d">玄米の商品ページ。カートを見て買わずに「LINE登録」すると「カゴ落ち予備軍」タグが点く。</div><div class="go">開く →</div></a>
       <a class="tile" style="border-color:#22c58b66" href="comparison.html"><div class="t">📊 かんたん比較（GA4×サチコ×本サービス）</div><div class="d">むずかしい機能名でなく「お店に何がうれしいか」で。ファネル図＋5つの気になること＋詳細折りたたみ。</div><div class="go">開く →</div></a>
       <a class="tile" style="border-color:#e7b84f55" href="legal-audit.html"><div class="t">⚖️ 法務監査（業務停止・個人情報）</div><div class="d">柔整/あはき広告規制・要配慮個人情報・外部送信規律を日本法で監査。リスク一覧＋対策＋導入前チェックリスト。</div><div class="go">開く →</div></a>
-      <a class="tile" href="loku-integration-map.html"><div class="t">🧩 Loku機能 統合マップ</div><div class="d">Lokuの全機能に、Attentionがどう絡む/EC・Mallまで広がるかを色分けで一望。</div><div class="go">開く →</div></a>
+      <a class="tile" href="loku-integration-map.html"><div class="t">🧩 Loku機能 統合マップ</div><div class="d">Lokuの全機能に、Tuningがどう絡む/EC・Mallまで広がるかを色分けで一望。</div><div class="go">開く →</div></a>
       <a class="tile" href="../lp-hisho-pitch/concept-v2.html"><div class="t">📄 新コンセプト1枚</div><div class="d">「匿名の視線が、LINE追加で顔付きに」— 事業コンセプトの要約。</div><div class="go">開く →</div></a>
     </div>
     <div class="howto">
       <b>テストを自分で走らせたいとき</b>（社長も同じコマンドでOK）：
       <ol>
-        <li>ターミナルで <code style="font-family:var(--num);color:var(--grn)">cd loku-attention-plugin/handoff-demo</code></li>
+        <li>ターミナルで <code style="font-family:var(--num);color:var(--grn)">cd loku-tuning-plugin/handoff-demo</code></li>
         <li><code style="font-family:var(--num);color:var(--grn)">node test.mjs 10</code>（バックエンド）／<code style="font-family:var(--num);color:var(--grn)">node ui-test.mjs 3</code>（ブラウザ相当）／<code style="font-family:var(--num);color:var(--grn)">node e2e.mjs</code>（実サーバ）</li>
       </ol>
     </div>
   </section>
 
-  <footer>Loku Attention — テスト結果ダッシュボード ／ 内部資料・noindex ／ 2026-07-07</footer>
+  <footer>Loku Tuning — テスト結果ダッシュボード ／ 内部資料・noindex ／ 2026-07-07</footer>
 </div>
 </body>
 </html>

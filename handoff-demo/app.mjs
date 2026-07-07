@@ -1,4 +1,4 @@
-// Loku Attention — 引き渡しデモ用バックエンド（依存ゼロ・node:http）
+// Loku Tuning — 引き渡しデモ用バックエンド（依存ゼロ・node:http）
 // 本番Lokuには一切触れない。ロジック（collect / merge / journey / tag発火）を
 // schema.sql と 1:1 対応させ、社長が Next.js + Supabase へ写経すれば動く形にする。
 //

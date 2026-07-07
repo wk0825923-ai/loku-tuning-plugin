@@ -1,4 +1,4 @@
-# Loku Attention — 引き渡しデモ（バックエンド）
+# Loku Tuning — 引き渡しデモ（バックエンド）
 
 社長（フルスタック）が **Loku本体（`tyatjidou`/`my-app`・Next.js + Supabase）へ写経**すれば動くように、
 `collect → merge(LIFF結合) → journey → タグ発火` のロジックを **依存ゼロ・本番非接触**で実装＆テスト済み。

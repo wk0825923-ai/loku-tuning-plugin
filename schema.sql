@@ -1,4 +1,4 @@
--- Loku Attention — Supabase / Postgres スキーマ
+-- Loku Tuning — Supabase / Postgres スキーマ
 -- Loku本体DBに同居させる前提。既存の tenants(店) / friends(友だち) / friend_tags を参照する。
 -- 汎用計測レイヤ: page × box を単位にし、ページ種別(LP/予約/EC/メニュー…)に依存しない。
 -- 命名は loku_attn_* で本体と衝突回避。

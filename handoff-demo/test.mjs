@@ -2,6 +2,7 @@
 // フルスイートを N 回ループして安定性・冪等性を確認する。
 import { createServer, csvCell, encryptCsv } from './app.mjs';
 import { stripSensitive } from './compliance.mjs';
+import { assertReadonlyScope, REQUIRED_SCOPE, fetchSearchConsole } from './search-console.mjs';
 import crypto from 'node:crypto';
 
 let pass = 0, fail = 0;
@@ -262,6 +263,22 @@ async function suite() {
     ok(enc2.encrypted && enc2.payload.alg === 'aes-256-gcm' && !enc2.csv, 'passphrase指定で暗号化・平文は返さない');
   });
 
+  // 12e) Google連携のスコープ最小化：Search Consoleは readonly 限定（書き込みスコープを拒否）
+  ok(REQUIRED_SCOPE.endsWith('/webmasters.readonly'), '必要スコープはwebmasters.readonly');
+  ok(assertReadonlyScope(REQUIRED_SCOPE), 'readonlyスコープは通過');
+  ok(assertReadonlyScope([REQUIRED_SCOPE]), '配列でのreadonly指定も通過');
+  const rejects = (fn) => { try { fn(); return false; } catch { return true; } };
+  ok(rejects(() => assertReadonlyScope([REQUIRED_SCOPE, 'https://www.googleapis.com/auth/webmasters'])), '書き込み可能scope混入を拒否');
+  ok(rejects(() => assertReadonlyScope('https://www.googleapis.com/auth/siteverification')), 'サイト認証scopeを拒否');
+  ok(rejects(() => assertReadonlyScope('')), 'scope未指定を拒否');
+  {
+    const rows = await fetchSearchConsole({ siteUrl: 's', startDate: 'a', endDate: 'b', fetcher: () => [{ keys: ['k'], clicks: 1, impressions: 10 }] });
+    eq(rows.length, 1, 'readonly既定でfetch成功');
+    let threw = false;
+    try { await fetchSearchConsole({ siteUrl: 's', fetcher: () => [], scopes: 'https://www.googleapis.com/auth/webmasters' }); } catch { threw = true; }
+    ok(threw, 'fetch時に書き込みscopeを拒否');
+  }
+
   // 13) サチコ連携：APIで引っ張った行を取り込み、来る前をjourneyに搭載
   await withServer(async ({ post, get }) => {
     const rows = [
@@ -435,7 +452,7 @@ async function suite() {
 }
 
 const LOOPS = Number(process.argv[2] || 5);
-console.log(`\n=== Loku Attention handoff テスト（${LOOPS}周） ===`);
+console.log(`\n=== Loku Tuning handoff テスト（${LOOPS}周） ===`);
 for (let i = 1; i <= LOOPS; i++) {
   const before = fail;
   await suite();

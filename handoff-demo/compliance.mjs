@@ -75,7 +75,7 @@ export function checkCopy(text = '', industry = 'rikaku') {
  * privacyPolicyUrl は店舗が自ら設定する欄（未設定なら null＝空欄のまま出さない）。
  * @returns {{legal_basis, items, destination, purposes, sensitive_excluded, opt_in_required_for_merge, privacy_policy_url}}
  */
-export function buildDisclosure({ serviceName = 'Loku Attention 計測', privacyPolicyUrl = null } = {}) {
+export function buildDisclosure({ serviceName = 'Loku Tuning 計測', privacyPolicyUrl = null } = {}) {
   return {
     legal_basis: '改正電気通信事業法 外部送信規律',
     service_name: serviceName,

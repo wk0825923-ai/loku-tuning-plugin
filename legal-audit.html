@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>法務監査 — Loku Attention 導入リスク（業務停止・個人情報）</title>
+<title>法務監査 — Loku Tuning 導入リスク（業務停止・個人情報）</title>
 <style>
   :root{--bg:#0b0f14;--panel:#121821;--panel2:#161d28;--line:#232c3a;--ink:#eef2f7;--sub:#9fb0c3;--mut:#6f8298;
     --grn:#22c58b;--gold:#e7b84f;--blue:#4c8dff;--pur:#b78cff;--red:#ff6b6b;--num:"SF Mono","Segoe UI",Menlo,Consolas,monospace;}
@@ -72,7 +72,7 @@
 <div class="wrap">
   <header>
     <div class="badge">法務監査 / LEGAL AUDIT</div>
-    <h1>Loku Attention 導入の法務リスク監査</h1>
+    <h1>Loku Tuning 導入の法務リスク監査</h1>
     <p class="lead">「業務停止に抵触しないか」「個人情報の取扱い」を中心に、日本法で確認した論点と対策。</p>
     <div class="disc">⚠ 本資料は社内検討用の<b>整理</b>であり、法的助言ではありません。実運用前に、個人情報・広告規制・電気通信事業法に詳しい弁護士／個人情報保護委員会窓口での確認を推奨します。出典は各項末尾。</div>
   </header>
@@ -93,8 +93,8 @@
     <table>
       <thead><tr><th>層</th><th>対象</th><th>状態</th></tr></thead>
       <tbody>
-        <tr><td><b style="color:var(--grn)">機械で解消済</b><br><span style="color:var(--mut);font-size:11px">コード＋テスト</span></td><td>NG表現ブロック／症状の非結合／同意ゲート／削除(forget)／配信停止(opt-out)／健康語の推知フラグ／監査ログ</td><td><span class="tag both">テストで担保</span></td></tr>
-        <tr><td><b style="color:var(--blue)">設計で低減</b></td><td>RLSテナント分離／readonlyスコープ／CSVの安全管理／保持期間の purge</td><td><span class="tag plat">スキーマ/設計に反映</span></td></tr>
+        <tr><td><b style="color:var(--grn)">機械で解消済</b><br><span style="color:var(--mut);font-size:11px">コード＋テスト</span></td><td>NG表現ブロック(正規化で全角/空白/ひらがな/英語/カタカナ回避も遮断)／症状×効能の共起ブロック／症状の非結合(再帰strip)／同意ゲート／削除(forget)／配信停止(opt-out)／健康語の推知フラグ／保持期間purge／外部送信通知／CSV安全管理(持ち出しログ+暗号化)／Google readonly強制／監査ログ</td><td><span class="tag both">テストで担保</span></td></tr>
+        <tr><td><b style="color:var(--blue)">設計で低減</b></td><td>RLSテナント分離／アクセス制御</td><td><span class="tag plat">スキーマ/設計に反映</span></td></tr>
         <tr><td><b style="color:var(--gold)">運用・専門家</b><br><span style="color:var(--mut);font-size:11px">機械では解消不可</span></td><td>DPA委託契約／従業者教育／特商法の個別表記／弁護士・個情委の最終確認</td><td><span class="tag store">運用で担保</span></td></tr>
       </tbody>
     </table>
@@ -144,7 +144,7 @@
       <div class="rh"><span class="sev md">中</span><div><div class="t">③ 外部送信規律（日本版Cookie規制）</div><div class="law">改正電気通信事業法（2023年6月16日施行）</div></div></div>
       <div class="bd">
         Cookie・閲覧履歴・IP・端末情報を<b>外部送信</b>する際、送信情報の内容・送信先・利用目的の<b>通知または公表</b>が必要。サービス（サイト/アプリ）単位で対象、自社集客サイトも対象になり得る。
-        <div class="who">Attentionは<b>自社1st-party配信で送信先＝Loku自社</b>のため第三者送信は限定的だが、通知・公表義務は残る。</div>
+        <div class="who">Tuningは<b>自社1st-party配信で送信先＝Loku自社</b>のため第三者送信は限定的だが、通知・公表義務は残る。</div>
         <div class="fix"><div class="ft">対策</div>
           <ul>
             <li>各店LPに<b>外部送信の通知</b>（何を・どこへ・何のため）とプライバシーポリシーへの導線を標準テンプレで自動設置</li>
@@ -249,13 +249,13 @@
       <li><b>委託契約（DPA）</b>：店舗＝取扱事業者、Loku＝委託先を書面化<span class="st ops">運用</span></li>
       <li><b>配信頻度の上限＋配信停止（オプトアウト）導線</b>（LINE規約・特商法）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 頻度上限＋停止を明示</span></li>
       <li><b>スタッフの権限最小化・退職時アクセス削除</b>（従業者の監督）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> 見るだけ/送信の別</span></li>
-      <li><b>Google連携は readonly スコープに限定</b>（Google APIs規約）<span class="st plan">設計</span></li>
+      <li><b>Google連携は readonly スコープに限定</b>（Google APIs規約）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> assertReadonlyScope()でwebmasters.readonly以外(書込/サイト認証)を実行時に拒否・fetchSearchConsoleが強制</span></li>
       <li><b>持ち出しCSVの安全管理</b>（暗号化・アクセス制御・ログ）<span class="st done">実装済</span><span style="color:var(--mut);font-size:11.5px"> POST export・actor必須で持ち出しログ／CSV数式インジェクション対策／任意でAES-256-GCM暗号化(scrypt鍵導出)</span></li>
       <li><b>最終レビュー</b>：弁護士＋（必要に応じ）個人情報保護委員会への事前確認<span class="st ops">運用</span></li>
     </ul>
   </section>
 
-  <footer>法務監査 — Loku Attention ／ 内部検討用・法的助言ではない ／ 2026-07-07 ／ <a href="test-report.html">テスト結果へ戻る</a><br>出典: 厚労省 あはき・柔整広告GL・柔整法／個人情報保護委員会 要配慮個人情報FAQ／総務省 外部送信規律</footer>
+  <footer>法務監査 — Loku Tuning ／ 内部検討用・法的助言ではない ／ 2026-07-07 ／ <a href="test-report.html">テスト結果へ戻る</a><br>出典: 厚労省 あはき・柔整広告GL・柔整法／個人情報保護委員会 要配慮個人情報FAQ／総務省 外部送信規律</footer>
 </div>
 </body>
 </html>

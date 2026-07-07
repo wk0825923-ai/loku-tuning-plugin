@@ -5,8 +5,27 @@
 // デモ: 実APIの代わりに fetcher を差し替え可能にする（下の fetchSearchConsole）。
 // レスポンス行の形は本番と同じ: { keys:[query, page?], clicks, impressions, ctr, position }
 
+// 必要最小のスコープ＝Search Consoleの読み取り専用（スコープ最小化：Google APIs規約・目的外利用禁止）。
+export const REQUIRED_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
+// 明示的に禁止する書き込み可能スコープ（サイトマップ送信等ができてしまう）。
+const WRITE_SCOPES = ['https://www.googleapis.com/auth/webmasters', 'https://www.googleapis.com/auth/siteverification'];
+
+/**
+ * 付与スコープがreadonlyに収まっているか検証。書き込み可能スコープが混じれば拒否。
+ * @param {string[]|string} granted OAuthで付与されたスコープ
+ */
+export function assertReadonlyScope(granted) {
+  const list = (Array.isArray(granted) ? granted : String(granted || '').split(/\s+/)).filter(Boolean);
+  if (list.length === 0) throw new Error('scope required（readonlyスコープの付与が必要）');
+  const bad = list.filter(s => WRITE_SCOPES.includes(s) || (s.includes('/auth/webmasters') && !s.endsWith('.readonly')));
+  if (bad.length) throw new Error(`書き込み可能スコープは禁止（readonly限定）: ${bad.join(', ')}`);
+  if (!list.includes(REQUIRED_SCOPE)) throw new Error(`readonlyスコープ(${REQUIRED_SCOPE})が必要`);
+  return true;
+}
+
 /** 本番はGoogle API・デモはモックを渡す。fetcher(siteUrl,start,end) => rows[] */
-export async function fetchSearchConsole({ siteUrl, startDate, endDate, fetcher }) {
+export async function fetchSearchConsole({ siteUrl, startDate, endDate, fetcher, scopes = REQUIRED_SCOPE }) {
+  assertReadonlyScope(scopes); // スコープ最小化を実行時に強制（write混入を拒否）
   if (typeof fetcher !== 'function') throw new Error('fetcher required (本番はGoogle API呼び出しを渡す)');
   return await fetcher(siteUrl, startDate, endDate);
 }
