@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Tuning — QAレポート（蓄積・内部）</title>
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#12161d; --panel2:#161b24; --line:#232a35;
+    --ink:#eef2f7; --mut:#8c97a6; --sub:#aab4c2;
+    --grn:#3ddc97; --red:#ff6b6b; --amb:#ffcf5c; --blu:#6cb6ff; --pur:#b592ff;
+    --num:"SF Mono",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:980px;margin:0 auto;padding:56px 24px 96px}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  code{font-family:var(--num);font-size:.85em;color:var(--blu)}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:26px}
+  .kicker{font-size:12px;letter-spacing:.18em;color:var(--grn);font-weight:700;text-transform:uppercase}
+  h1{font-size:29px;line-height:1.3;margin:14px 0 8px}
+  .lead{color:var(--sub);font-size:15px;margin:0}
+  .meta{color:var(--mut);font-size:12.5px;margin-top:12px}
+
+  h2{font-size:19px;margin:0 0 8px}
+  .sec-no{font-family:var(--num);color:var(--grn);font-size:13px;font-weight:700}
+  section{margin:40px 0}
+  p{color:var(--sub);margin:0 0 12px}
+
+  /* KPI cards */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+  @media(max-width:680px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 16px}
+  .kpi.ok{border-color:#1e3a30}
+  .kpi .n{font-family:var(--num);font-size:26px;font-weight:700;color:var(--grn);font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:12px;color:var(--mut);margin-top:2px}
+  .kpi .s{font-size:11px;color:var(--sub);margin-top:6px}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:12px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{color:var(--mut);font-size:11.5px;font-weight:600;letter-spacing:.03em}
+  td.r,th.r{text-align:right;font-family:var(--num);font-variant-numeric:tabular-nums}
+  .passv{color:var(--grn);font-family:var(--num)} .failv{color:var(--red);font-family:var(--num)}
+  .badge{font-family:var(--num);font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .b-ok{color:#0c0f14;background:var(--grn)}
+  .tagA{color:var(--blu)} .tagB{color:var(--grn)} .tagC{color:var(--pur)}
+
+  .cov{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 18px;margin-top:10px}
+  .cov div{padding:9px 0;border-bottom:1px dashed var(--line);font-size:13.5px;color:var(--sub)}
+  .cov div:last-child{border-bottom:none}
+  .cov b{color:var(--ink)} .cov .g{color:var(--num);font-family:var(--num);color:var(--grn);font-size:12px}
+
+  .method{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+  @media(max-width:680px){.method{grid-template-columns:1fr 1fr}}
+  .mcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .mcard h3{margin:0 0 5px;font-size:14px;color:var(--grn)}
+  .mcard p{margin:0;font-size:12.5px;color:var(--mut)}
+
+  .note{background:linear-gradient(180deg,#10241c,#0f1a16);border:1px solid #1e3a30;border-radius:12px;padding:16px 18px;margin-top:14px;color:var(--ink);font-size:14px}
+  .note b{color:var(--grn)}
+
+  footer{border-top:1px solid var(--line);margin-top:48px;padding-top:18px;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Loku Tuning · QAレポート（蓄積・追記型）</div>
+    <h1>回したQAを、ぜんぶ記録し続ける。</h1>
+    <p class="lead">「追加機能のQA」と「追加による元機能への影響（回帰）」を分けて計測。高回数・高頻度・複数条件・複数場面・複合条件で実行。<b style="color:var(--grn)">本ドキュメントはQAを回すたびに追記される。</b></p>
+    <div class="meta">最終更新: 2026-07-08 ｜ ハーネス: <code>handoff-demo/test.mjs</code>（依存ゼロ・状態隔離・N周ループ）｜ noindex・社内資料</div>
+  </header>
+
+  <!-- 最新サマリ -->
+  <section>
+    <div class="sec-no">LATEST</div>
+    <h2>最新結果（50周・2026-07-08）</h2>
+    <div class="kpis">
+      <div class="kpi ok"><div class="n">29,550</div><div class="l">総 pass</div><div class="s">1周=591項目 ×50周</div></div>
+      <div class="kpi ok"><div class="n">0</div><div class="l">総 fail</div><div class="s">全周回・全緑</div></div>
+      <div class="kpi ok"><div class="n">205<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagA">A. 元機能（回帰）</div><div class="s">③追加前と<b style="color:var(--grn)">完全一致</b></div></div>
+      <div class="kpi ok"><div class="n">375<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagB">B. ③新機能</div><div class="s">＋ C. 相互作用 11/loop</div></div>
+    </div>
+  </section>
+
+  <!-- セクション別 -->
+  <section>
+    <div class="sec-no">01</div>
+    <h2>セクション別内訳（何を・どれだけ検証したか）</h2>
+    <table>
+      <thead><tr><th>セクション</th><th>対象</th><th class="r">1周</th><th class="r">50周</th><th>状態</th></tr></thead>
+      <tbody>
+        <tr><td class="tagA">A. 元機能</td><td>計測 / 実名結合 / タグ / 法務18項目 / 集計 / 堅牢性 / 契約</td><td class="r passv">205</td><td class="r passv">10,250</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td class="tagB">B. ③新機能</td><td>因果エンジン P0–P3（純関数 / 診断 / セグメント / dispatch-plan / 64通り複合 / 契約）</td><td class="r passv">375</td><td class="r passv">18,750</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td class="tagC">C. 相互作用/回帰</td><td>③追加で元の法務ゲート・削除・保持・テナント・契約が壊れないか</td><td class="r passv">11</td><td class="r passv">550</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td><b>合計</b></td><td>—</td><td class="r passv">591</td><td class="r passv">29,550</td><td><span class="badge b-ok">PASS</span></td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>回帰の決定的証拠</b> — セクションAは <b>205項目/周が③追加の前後で完全一致</b>し、50周で 10,250 全通過。つまり<b>元機能のコードは無改変・挙動不変</b>。さらにCで「新経路が既存の法務ゲート/削除/保持/テナント分離を迂回しない」ことも実データ経路で確認済み。</div>
+  </section>
+
+  <!-- カバレッジ -->
+  <section>
+    <div class="sec-no">02</div>
+    <h2>③新機能・回帰のテスト内容</h2>
+    <div class="cov">
+      <div><span class="g">群23</span> <b>純関数ユニット</b> — deriveExit（離脱点5種）／inferCause（因果8コード）の決定的判定</div>
+      <div><span class="g">群24</span> <b>診断E2E</b> — 各因果（converted/cta/faq/価値前料金/料金不安/信頼途中/FV直帰）を実データ経路で的中＋説明＋打ち手</div>
+      <div><span class="g">群25</span> <b>因果セグメント</b> — 複数friendを離脱理由でグルーピング（複合条件）</div>
+      <div><span class="g">群26</span> <b>dispatch-plan</b> — 承認必須／自動送信しない／opt-out・プロファイリング拒否・他テナント除外／全下書きが接骨院checkCopy通過</div>
+      <div><span class="g">群27</span> <b>複合条件64通り総当り</b> — 深度×予約×FAQ×実績 の全組合せで不変条件（有効コード/exit/ラベル/converted整合/actions形）</div>
+      <div><span class="g">群28</span> <b>契約テスト</b> — diagnose / cause-segments / dispatch-plan / journey.exit のレスポンス形を固定</div>
+      <div><span class="g">群29</span> <b>相互作用/回帰</b> — forget後/非同意/要配慮/他テナント/purge後/通知必須ON で新経路が漏れ・迂回しない（8場面）</div>
+    </div>
+  </section>
+
+  <!-- 手法 -->
+  <section>
+    <div class="sec-no">03</div>
+    <h2>QAの回し方（要件対応）</h2>
+    <div class="method">
+      <div class="mcard"><h3>高回数</h3><p>フルスイートを50周＝29,550アサーション/実行。</p></div>
+      <div class="mcard"><h3>高頻度</h3><p>短周期で連続反復。30周×複数回とも <b class="num">17,730</b> で完全同一＝flakinessゼロ。</p></div>
+      <div class="mcard"><h3>複数条件・複合</h3><p>深度×予約×FAQ×実績の64通り総当り＋dispatch複合フィルタ（停止/拒否/テナント）。</p></div>
+      <div class="mcard"><h3>複数場面</h3><p>相互作用C＝forget/purge/非同意/要配慮/テナント/通知必須の実場面で回帰確認。</p></div>
+    </div>
+  </section>
+
+  <!-- 実行ログ -->
+  <section>
+    <div class="sec-no">04</div>
+    <h2>実行ログ（追記型・新しい順）</h2>
+    <table>
+      <thead><tr><th>#</th><th>日時</th><th>対象</th><th class="r">周回</th><th class="r">pass</th><th class="r">fail</th><th>内訳/備考</th></tr></thead>
+      <tbody>
+        <tr><td class="num">6</td><td class="num">07-08</td><td>高頻度反復（群29込み）</td><td class="r num">30×3</td><td class="r passv">17,730×3</td><td class="r passv">0</td><td>3回とも完全同一＝決定的・flakinessなし</td></tr>
+        <tr><td class="num">5</td><td class="num">07-08</td><td>高回数（群29＋計測込み）</td><td class="r num">50</td><td class="r passv">29,550</td><td class="r passv">0</td><td>A10,250 / B18,750 / C550</td></tr>
+        <tr><td class="num">4</td><td class="num">07-08</td><td>回帰群29＋セクション計測 追加後 検証</td><td class="r num">1</td><td class="r passv">591</td><td class="r passv">0</td><td>A205 / B375 / C11（Aは旧205と一致）</td></tr>
+        <tr><td class="num">3</td><td class="num">07-08</td><td>③実装 高頻度反復</td><td class="r num">40×3</td><td class="r passv">全緑</td><td class="r passv">0</td><td>群29追加前・flakinessなし</td></tr>
+        <tr><td class="num">2</td><td class="num">07-08</td><td>③実装 高回数</td><td class="r num">50</td><td class="r passv">29,000</td><td class="r passv">0</td><td>群29追加前（1周=580）</td></tr>
+        <tr><td class="num">1</td><td class="num">07-08</td><td>③実装 初回検証</td><td class="r num">1</td><td class="r passv">580</td><td class="r passv">0</td><td>P0–P3配線直後の健全性確認</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px;font-size:12.5px;color:var(--mut)">※ 実行コマンド: <code>node handoff-demo/test.mjs &lt;周回&gt;</code>（末尾に <code>QA_JSON:</code> で機械可読サマリを出力）。以降のQAはこの表に追記していく。</p>
+  </section>
+
+  <footer>
+    Loku Tuning QAレポート（蓄積） ／ 社内資料・noindex ／ 最終更新 2026-07-08 ／ 関連: roadmap.html・strategy.html・feature-inventory.html・legal-audit.html
+  </footer>
+
+</div>
+</body>
+</html>

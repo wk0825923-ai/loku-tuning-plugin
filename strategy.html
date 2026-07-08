@@ -192,6 +192,27 @@
     </div>
   </section>
 
+  <!-- 6 構造で作ってお任せ -->
+  <section>
+    <div class="sec-no">06</div>
+    <h2>実装思想 — <span class="g">構造で作って、あとはお任せ</span></h2>
+    <p>「業種特化」と「構造化してお任せ」は対立しない。<b>層を割れば両立する。</b>手で業種ごとにコードを書くのではなく、構造は汎用・業種知識はデータで注入・改善はデータで自走。</p>
+    <div class="axes" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="axis"><div class="n">LAYER 1</div><h3>構造（エンジン）</h3><p><b>業種非依存・汎用。</b>実名×視線×因果→次アクションの “仕組み”。ここは業種ごとに書かない。</p></div>
+      <div class="axis"><div class="n">LAYER 2</div><h3>業種知識（楔）</h3><p><b>データ/設定で注入。</b>NGワード辞書・導線の型・声かけのトーンを「接骨院プリセット」として差すだけ。</p></div>
+      <div class="axis"><div class="n">LAYER 3</div><h3>自己最適化</h3><p><b>データにお任せ。</b>計測が溜まるほど因果とプリセットが自動で育つ（self-optimization の思想）。</p></div>
+    </div>
+
+    <div class="quote" style="margin-top:20px">“お任せ” の主体は <span style="color:var(--red)">店主じゃない</span>（施術者は設定しない）。<span class="em">データ ＆ Loku本体</span>にお任せする。</div>
+
+    <p class="ink"><b>ずぶずぶの妙</b> — 「次アクションを撃つ」インフラ（AI配信・シナリオ・自動応答）は <b>Loku本体が既に持っている</b>。だから Loku Tuning の ③ は送信エンジンを作り直さない。<span class="em">「この友だちは料金不安で離脱」という因果とセグメントを Loku に渡すだけ</span>。撃つのは Loku の AI配信。＝構造で作って、実行は Loku にお任せ＝1機能として溶ける最短形。</p>
+
+    <div class="verdict" style="background:linear-gradient(180deg,#1c1a12,#12161d);border-color:#3a3322">
+      <div class="l" style="color:var(--amb)">順番だけは死守（本末転倒チェック）</div>
+      <p style="font-size:15.5px">最初からフル自動を狙うと ③ が永遠に完成しない。<b>最初の接骨院だけは手で因果の “型” を作り込む</b>（＝教師データ）。1業種ぶん溜まって初めてプリセット化＆自己最適化に委譲できる。<br><span style="color:var(--amb);font-family:var(--num);font-size:13px">手で型を作る（接骨院）→ 構造化・プリセット化 → データとLokuにお任せ → 横展開</span></p>
+    </div>
+  </section>
+
   <!-- 尖りの最終形 -->
   <section>
     <div class="sec-no">→</div>

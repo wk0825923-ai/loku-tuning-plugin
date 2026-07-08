@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Tuning — ③因果エンジン 完成ロードマップ（内部）</title>
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#12161d; --panel2:#161b24; --line:#232a35;
+    --ink:#eef2f7; --mut:#8c97a6; --sub:#aab4c2;
+    --grn:#3ddc97; --red:#ff6b6b; --amb:#ffcf5c; --blu:#6cb6ff; --pur:#b592ff;
+    --num:"SF Mono",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:940px;margin:0 auto;padding:56px 24px 96px}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  code{font-family:var(--num);font-size:.85em;color:var(--blu)}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:26px;margin-bottom:14px}
+  .kicker{font-size:12px;letter-spacing:.18em;color:var(--grn);font-weight:700;text-transform:uppercase}
+  h1{font-size:30px;line-height:1.3;margin:14px 0 8px}
+  .lead{color:var(--sub);font-size:15.5px;margin:0}
+  .meta{color:var(--mut);font-size:12.5px;margin-top:12px}
+
+  .spine-mini{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:22px 0 8px;font-size:13px}
+  .spine-mini .s{padding:5px 12px;border-radius:20px;border:1px solid var(--line);color:var(--sub)}
+  .spine-mini .s.done{border-color:#1e3a30;color:var(--grn);background:#0f2a20}
+  .spine-mini .s.now{border-color:var(--amb);color:var(--amb);background:#1c1a12}
+  .spine-mini .a{color:var(--mut)}
+
+  /* timeline */
+  .tl{position:relative;margin:30px 0 0;padding-left:34px}
+  .tl::before{content:"";position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:var(--line)}
+  .ph{position:relative;margin-bottom:20px}
+  .ph::before{content:"";position:absolute;left:-29px;top:20px;width:16px;height:16px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--line);z-index:2}
+  .ph.now::before{border-color:var(--amb);box-shadow:0 0 0 4px rgba(255,207,92,.15)}
+  .ph.done::before{border-color:var(--grn);background:var(--grn)}
+  .ph.gate::before{border-color:var(--pur);background:var(--pur);border-radius:3px}
+
+  .box{background:var(--panel);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .ph.now .box{border-color:#3a3322}
+  .ph.gate .box{border-color:#2c2547;background:linear-gradient(180deg,#171331,#12161d)}
+  .box-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .ph.gate .box-h{background:transparent}
+  .box-h .l{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .pno{font-family:var(--num);font-size:12px;font-weight:700;color:var(--grn)}
+  .ph.now .pno{color:var(--amb)} .ph.gate .pno{color:var(--pur)}
+  .box-h h2{font-size:16.5px;margin:0}
+  .size{font-family:var(--num);font-size:10.5px;padding:2px 8px;border-radius:20px;border:1px solid var(--line);color:var(--mut)}
+  .stage-tag{font-size:10.5px;font-family:var(--num);padding:2px 7px;border-radius:5px;border:1px solid var(--line);color:var(--sub)}
+
+  .box-b{padding:15px 18px}
+  .row{display:grid;grid-template-columns:88px 1fr;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--mut);font-size:12px;padding-top:1px}
+  .row .v{color:var(--sub)} .row .v b{color:var(--ink)}
+  .dod{color:var(--grn)} .dod::before{content:"✓ ";font-weight:700}
+
+  .gatemsg{padding:16px 18px;color:var(--ink);font-size:14.5px}
+  .gatemsg b{color:var(--pur)}
+
+  .guard{margin-top:34px;background:linear-gradient(180deg,#1c1216,#12161d);border:1px solid #3a2226;border-radius:13px;padding:18px 20px}
+  .guard h3{margin:0 0 8px;font-size:15px;color:var(--red)}
+  .guard ul{margin:0;padding-left:18px;color:var(--sub);font-size:13.5px}
+  .guard li{margin:4px 0} .guard b{color:var(--ink)}
+
+  .principle{margin-top:16px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 18px;color:var(--sub);font-size:13.5px}
+  .principle .em{color:var(--grn);font-family:var(--num);font-size:12.5px}
+
+  footer{border-top:1px solid var(--line);margin-top:44px;padding-top:18px;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Loku Tuning · ③因果エンジン 完成ロードマップ</div>
+    <h1>心臓を組み上げる。数値化 → 因果 → 撃つ。</h1>
+    <p class="lead">①計測・②実名結合は厚い。空いている ③「因果 → 次アクション」を、接骨院で手で型を作り込み → 構造化 → データに委譲、の順で埋める。</p>
+    <div class="spine-mini">
+      <span class="s done">① 数値化 済</span><span class="a">→</span>
+      <span class="s done">② 因果 済</span><span class="a">→</span>
+      <span class="s done">③ 次アクション 済</span><span class="a">→</span>
+      <span class="s now">L3 自己最適化</span>
+    </div>
+    <div style="margin-top:14px;background:linear-gradient(180deg,#10241c,#0f1a16);border:1px solid #1e3a30;border-radius:12px;padding:14px 18px;color:var(--ink);font-size:14px">
+      <b style="color:var(--grn)">✅ P0–P3 実装完了（2026-07-08）</b> — <code>causal.mjs</code> 新設（deriveExit/inferCause/suggestActions）＋ diagnose / cause-segments / dispatch-plan の3エンドポイント。
+      QAハーネス <code>test.mjs</code> に③テスト群(23–28)を増築し、<b class="num" style="color:var(--grn)">pass=29,000 / fail=0（50周・複合条件64通り総当り込み）</b>・高頻度連続でも全緑。
+    </div>
+    <div class="meta">2026-07-08 ｜ noindex・社内資料 ｜ サイズ目安 S/M/L ｜ 関連: strategy.html / feature-inventory.html / competitor-analysis.html</div>
+  </header>
+
+  <div class="tl">
+
+    <!-- P0 -->
+    <div class="ph done">
+      <div class="box">
+        <div class="box-h"><div class="l"><span class="pno">PHASE 0</span><h2>離脱の定義と接骨院LPの標準化</h2><span class="stage-tag">STAGE1→2 の橋</span></div><span class="size">S</span></div>
+        <div class="box-b">
+          <div class="row"><div class="k">目的</div><div class="v">③の<b>入力</b>を整える。今の <code>journey</code> は「見た順」までしか無い。因果を測るには「どこで折れたか」を明示化する必要がある。</div></div>
+          <div class="row"><div class="k">やること</div><div class="v"><b>離脱点の抽出</b>（最後に見たボックス／直帰／フォーム離脱）を <code>journey</code> から導出。接骨院LPの<b>ボックス構造を標準化</b>（FV／悩み共感／実績Before-After／料金／院長／FAQ／CTA）。</div></div>
+          <div class="row"><div class="k">成果物</div><div class="v"><code>journey</code> に <code>exit_box</code>／<code>exit_type</code> を付与・接骨院ボックス辞書（L2の器）</div></div>
+          <div class="row"><div class="k">DoD</div><div class="v dod">全来訪ログに「離脱ポイント」が付き、ボックス単位で離脱率が出る</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P1 -->
+    <div class="ph done">
+      <div class="box">
+        <div class="box-h"><div class="l"><span class="pno">PHASE 1</span><h2>因果の“型”を手で作る（接骨院・教師データ）</h2><span class="stage-tag">STAGE2 因果</span></div><span class="size">L</span></div>
+        <div class="box-b">
+          <div class="row"><div class="k">目的</div><div class="v"><b>本丸の入口。</b>「なぜ折れたか」を人間が仮説化し、ルールベースでラベル化する。ここがエンジンの教師データ。</div></div>
+          <div class="row"><div class="k">やること</div><div class="v">離脱パターン→因果ラベルの<b>カタログ化</b>（例:「料金直前で離脱＝料金不安」「実績を見ずにFV直帰＝信頼未形成」「FAQ長滞在後離脱＝不安未解消」）。<code>causal.mjs</code> を <code>compliance.mjs</code> の隣に新設し、まず<b>ルールベース（LLM不要）</b>で推定。</div></div>
+          <div class="row"><div class="k">成果物</div><div class="v"><code>causal.mjs</code>（inferCause: 離脱ボックス×滞在パターン→因果ラベル）・接骨院因果プリセット(L2)・<code>test.mjs</code> に因果回帰</div></div>
+          <div class="row"><div class="k">DoD</div><div class="v dod">実データ想定で主要な離脱に因果ラベルが安定して付く（回帰pass）</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P2 -->
+    <div class="ph done">
+      <div class="box">
+        <div class="box-h"><div class="l"><span class="pno">PHASE 2</span><h2>因果の言語化 ＋ 次アクション候補</h2><span class="stage-tag">STAGE2→3</span></div><span class="size">M</span></div>
+        <div class="box-b">
+          <div class="row"><div class="k">目的</div><div class="v">ラベルを<b>店主が読める日本語</b>にし、打ち手を<b>提案</b>する（作るのは提案、実行判断は人間）。</div></div>
+          <div class="row"><div class="k">やること</div><div class="v">因果→説明文（「料金を見る前の“不安の解消”が足りず離脱」）。<b>2系統の次アクション</b>を出す：(a) 導線チューニング案（L1構造・例:料金前に実績を差す） (b) 声かけ候補（離脱者へのLINE一言）。<span style="color:var(--amb)">出力は必ず <code>compliance.checkCopy</code> を通す安全弁。</span></div></div>
+          <div class="row"><div class="k">成果物</div><div class="v">因果→説明→打ち手のI/F・提案→承認→公開の型（self-optimization を実装化）</div></div>
+          <div class="row"><div class="k">DoD</div><div class="v dod">1つの離脱に対し「なぜ＋次の一手」が言語で出て、checkCopyを通過する</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P3 -->
+    <div class="ph done">
+      <div class="box">
+        <div class="box-h"><div class="l"><span class="pno">PHASE 3</span><h2>Loku本体に撃たせる（③の出口・ずぶずぶ）</h2><span class="stage-tag">STAGE3 次アクション</span></div><span class="size">M</span></div>
+        <div class="box-b">
+          <div class="row"><div class="k">目的</div><div class="v">送信エンジンは<b>作らない</b>。因果＋セグメントをLokuに渡し、Lokuの既存AI配信/シナリオ/自動応答に撃たせる。</div></div>
+          <div class="row"><div class="k">やること</div><div class="v">Tuning→Loku の受け渡しI/F（<b>因果ラベル＋対象友だち群</b>）。Lokuの <code>broadcasts_*_with_ai</code>／<code>scenarios</code>／<code>auto_responses</code> に接続。<b>human-in-the-loop</b>（店主承認 or 自動）＋撃つ一言もcheckCopy必須。</div></div>
+          <div class="row"><div class="k">成果物</div><div class="v">「離脱理由に合わせた一言を離脱翌朝にLINE送信」が通しで動く（＝“勝った”判定文の実装）</div></div>
+          <div class="row"><div class="k">DoD</div><div class="v dod">計測→因果→セグメント→Loku配信までが1本で貫通する</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- P4 -->
+    <div class="ph now">
+      <div class="box">
+        <div class="box-h"><div class="l"><span class="pno">PHASE 4</span><h2>自己最適化 — データで研ぐ（L3）</h2><span class="stage-tag">L3</span></div><span class="size">L</span></div>
+        <div class="box-b">
+          <div class="row"><div class="k">目的</div><div class="v">撃った結果を計測に戻し、因果ラベルと打ち手の<b>精度を自動で上げる</b>。ルールベース→データ駆動へ。</div></div>
+          <div class="row"><div class="k">やること</div><div class="v">送信結果（開封/クリック/予約）を計測へ環流。効いた「因果→打ち手」を強化・外れを減衰（スコア学習）。データが十分溜まったら因果推定を統計/LLMで高度化。</div></div>
+          <div class="row"><div class="k">成果物</div><div class="v">因果→打ち手の効果スコア・自己最適化ループ（接骨院プリセットが勝手に育つ）</div></div>
+          <div class="row"><div class="k">DoD</div><div class="v dod">人手で型を足さなくても、当たる因果→打ち手が増えていく</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GATE -->
+    <div class="ph gate">
+      <div class="box">
+        <div class="box-h"><div class="l"><span class="pno">◆ GATE</span><h2>「③が接骨院で証明された」</h2></div></div>
+        <div class="gatemsg">ここが<b>横展開の解禁点</b>。Phase 4まで到達＝エンジンが接骨院で自走した状態。<b>ここで初めて楔を外していい</b>（それまで非交渉）。競合マップの ★到達点 に到達し、堀が確定する。</div>
+      </div>
+    </div>
+
+    <!-- P5 -->
+    <div class="ph">
+      <div class="box">
+        <div class="box-h"><div class="l"><span class="pno">PHASE 5</span><h2>構造化・プリセット化 → 横展開（LAND &amp; EXPAND）</h2><span class="stage-tag">展開</span></div><span class="size">M</span></div>
+        <div class="box-b">
+          <div class="row"><div class="k">目的</div><div class="v">接骨院で証明された型を<b>業種プリセットの器</b>に抽象化し、隣の業種へ差し替えで着火。</div></div>
+          <div class="row"><div class="k">やること</div><div class="v">L2（ボックス辞書／因果カタログ／NGワード／声かけトーン）を<b>スキーマ化</b>。次業種＝<b>自費鍼灸</b>をプリセット差し替えだけで立ち上げ → パーソナル → 審美/自費歯科…</div></div>
+          <div class="row"><div class="k">成果物</div><div class="v">業種プリセットのスキーマ・2業種目の着火</div></div>
+          <div class="row"><div class="k">DoD</div><div class="v dod">コードを業種ごとに書かず、プリセット注入だけで新業種が回る</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- やらないこと -->
+  <div class="guard">
+    <h3>このロードマップで“やらない”こと（尖りを守る規律）</h3>
+    <ul>
+      <li><b>LPコピー/広告文の生成</b>はしない。出力は「因果の説明」と「導線の打ち手提案」まで。主張は店主が入れる（checkCopyで機械的にブロック）</li>
+      <li><b>送信エンジンを作り直さない</b>。撃つのはLoku本体のAI配信。Tuningは因果＋セグメントを渡すだけ</li>
+      <li><b>フル自動を最初から狙わない</b>。Phase 1で手で型を作るのが先。順番を飛ばすと③が永遠に完成しない</li>
+      <li><b>2軸に効かない機能を足さない</b>（分析の解像度／Loku互換の途切れなさ以外は入れない）</li>
+    </ul>
+  </div>
+
+  <div class="principle">
+    貫く原則 → <span class="em">手で型を作る（接骨院）→ 構造化・プリセット化 → データとLokuにお任せ → 横展開</span><br>
+    現在地 ＝ <b style="color:var(--amb)">Phase 4（自己最適化）</b>。P0–P3は実装＋QA完了（デモ/モック層）。P3の実配信とP4の学習は<b>実データと実Loku連携</b>が要るため、ここからは接骨院の実運用データが入って初めて前進する（＝"現状組める段階"はP3まで完成）。
+  </div>
+
+  <footer>
+    Loku Tuning ③因果エンジン 完成ロードマップ ／ 社内資料・noindex ／ 2026-07-08 ／ 実装接続先: journey・compliance.mjs・test.mjs・Loku本体AI配信 ／ 関連: strategy.html・feature-inventory.html・competitor-analysis.html
+  </footer>
+
+</div>
+</body>
+</html>
