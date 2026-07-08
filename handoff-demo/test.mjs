@@ -3,11 +3,20 @@
 import { createServer, csvCell, encryptCsv } from './app.mjs';
 import { stripSensitive } from './compliance.mjs';
 import { assertReadonlyScope, REQUIRED_SCOPE, fetchSearchConsole } from './search-console.mjs';
+import { deriveExit, inferCause, suggestActions, CAUSE_LABEL, CAUSE_CODES, BOX_ORDER } from './causal.mjs';
 import crypto from 'node:crypto';
 
 let pass = 0, fail = 0;
 const fails = [];
-function ok(cond, msg) { if (cond) { pass++; } else { fail++; fails.push(msg); console.log('  ✗ ' + msg); } }
+// セクション別集計（元機能A / ③新機能B / 相互作用・回帰C を分けて数える）
+const sections = {};
+let curSection = 'misc';
+function section(name) { curSection = name; if (!sections[name]) sections[name] = { pass: 0, fail: 0 }; }
+function ok(cond, msg) {
+  if (!sections[curSection]) sections[curSection] = { pass: 0, fail: 0 };
+  if (cond) { pass++; sections[curSection].pass++; }
+  else { fail++; sections[curSection].fail++; fails.push(msg); console.log('  ✗ ' + msg); }
+}
 const eq = (a, b, msg) => ok(JSON.stringify(a) === JSON.stringify(b), `${msg} (got ${JSON.stringify(a)}, want ${JSON.stringify(b)})`);
 
 // 1テスト = サーバ起動→処理→クローズ
@@ -34,6 +43,7 @@ const HOT_BOXES = [
 ];
 
 async function suite() {
+  section('A. 元機能（計測/結合/タグ/法務/集計/堅牢性）');
   // 1) ハッピーパス：熱い閲覧→同意結合→journey に実名で出る＋タグ適用
   await withServer(async ({ post, get }) => {
     const c = await (await post('/api/attn/collect', { anon_id: 'A1', page_slug: 'seitai-lp-a', entry: { query: '肩こり 整体 世田谷', pos: 3, device: 'スマホ' }, active_sec: 42, boxes: HOT_BOXES })).json();
@@ -631,6 +641,191 @@ async function suite() {
     ok(actions.includes('merge') && actions.includes('opt-out') && actions.includes('forget'), '結合/配信停止/削除がすべて監査ログに残る');
     ok(log.entries.every(e => e.at && e.friend_id), '各証跡に時刻とfriend_id');
   });
+
+  // ===== ③ 因果エンジン（roadmap P0–P3）=====
+  section('B. ③新機能（因果エンジン P0–P3）');
+
+  // 23) 純関数ユニット：deriveExit（離脱点）／inferCause（因果）
+  eq(deriveExit({}).exit_type, 'no_data', 'P0 空はno_data');
+  eq(deriveExit({ hero: 40 }).exit_type, 'bounce', 'P0 FVのみはbounce');
+  eq(deriveExit({ hero: 50, pricing: 70 }).exit_box, 'pricing', 'P0 最深ボックスが離脱点');
+  eq(deriveExit({ hero: 50, cta: 20 }).exit_type, 'form_abandon', 'P0 cta到達はform_abandon');
+  eq(deriveExit({ hero: 50, cta: 20 }, { booked: true }).exit_type, 'converted', 'P0 予約はconverted優先');
+  eq(inferCause({ box_engagement: { hero: 50, problem: 40, pricing: 70 } }).code, 'value_before_price', 'P1 価値提示前に料金離脱');
+  eq(inferCause({ box_engagement: { hero: 50, beforeafter: 80, pricing: 70 } }).code, 'price_anxiety', 'P1 実績を見た後の料金離脱');
+  eq(inferCause({ box_engagement: { hero: 50, pricing: 40, faq: 80 } }).code, 'unresolved_doubt', 'P1 FAQ熟読後に離脱');
+  eq(inferCause({ box_engagement: { hero: 50, beforeafter: 70 } }).code, 'proof_gap', 'P1 信頼形成の途中で離脱');
+  eq(inferCause({ box_engagement: { hero: 40 } }).code, 'weak_hook', 'P1 FVで直帰');
+  eq(inferCause({ box_engagement: { hero: 50, cta: 30 }, booked: true }).code, 'converted', 'P1 予約済みはconverted');
+  eq(inferCause({ box_engagement: { hero: 50, cta: 30 } }).code, 'cta_friction', 'P1 予約導線で離脱');
+  ok(CAUSE_CODES.every(c => CAUSE_LABEL[c] && inferCause({ box_engagement: { hero: 10 } })), 'P1 全因果コードにラベル');
+
+  // 24) 診断エンドポイント（P1+P2）：各因果を実データ経路で当てる
+  await withServer(async ({ post, get }) => {
+    const P = {
+      converted:  [{ box_key: 'hero', engagement: 50 }, { box_key: 'pricing', engagement: 70 }, { box_key: 'cta', engagement: 40 }],
+      cta:        [{ box_key: 'hero', engagement: 50 }, { box_key: 'pricing', engagement: 60 }, { box_key: 'cta', engagement: 30 }],
+      faq:        [{ box_key: 'hero', engagement: 50 }, { box_key: 'pricing', engagement: 40 }, { box_key: 'faq', engagement: 80 }],
+      valuebp:    [{ box_key: 'hero', engagement: 50 }, { box_key: 'problem', engagement: 40 }, { box_key: 'pricing', engagement: 70 }],
+      priceanx:   [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }],
+      proof:      [{ box_key: 'hero', engagement: 50 }, { box_key: 'problem', engagement: 40 }, { box_key: 'beforeafter', engagement: 70 }],
+      weak:       [{ box_key: 'hero', engagement: 40 }],
+    };
+    const mk = async (anon, fid, boxes, book) => {
+      await post('/api/attn/collect', { anon_id: anon, page_slug: 'seitai-lp-a', boxes });
+      await post('/api/attn/merge', { anon_id: anon, friend_id: fid, consented: true });
+      if (book) await post('/api/attn/booking', { friend_id: fid });
+    };
+    const code = async (fid) => (await (await get('/api/attn/diagnose?friend_id=' + fid)).json()).diagnoses[0].cause.code;
+    await mk('DG1', 'f_conv', P.converted, true);   eq(await code('f_conv'), 'converted', 'diagnose: converted');
+    await mk('DG2', 'f_cta', P.cta);                eq(await code('f_cta'), 'cta_friction', 'diagnose: cta_friction');
+    await mk('DG3', 'f_faq', P.faq);                eq(await code('f_faq'), 'unresolved_doubt', 'diagnose: unresolved_doubt');
+    await mk('DG4', 'f_vbp', P.valuebp);            eq(await code('f_vbp'), 'value_before_price', 'diagnose: value_before_price');
+    await mk('DG5', 'f_pa', P.priceanx);            eq(await code('f_pa'), 'price_anxiety', 'diagnose: price_anxiety');
+    await mk('DG6', 'f_pf', P.proof);               eq(await code('f_pf'), 'proof_gap', 'diagnose: proof_gap');
+    await mk('DG7', 'f_wk', P.weak);                eq(await code('f_wk'), 'weak_hook', 'diagnose: weak_hook');
+    // 説明文と打ち手が付く（P2）
+    const dg = await (await get('/api/attn/diagnose?friend_id=f_pa')).json();
+    ok(dg.diagnoses[0].explanation && dg.diagnoses[0].actions.funnel.length > 0, 'diagnose: 説明＋導線案が付く');
+    ok(dg.diagnoses[0].actions.outreach.has_message, 'diagnose: 離脱者への一言（下書き）が付く');
+    // 未知friendは空・friend_id欠落は400
+    eq((await (await get('/api/attn/diagnose?friend_id=nobody')).json()).diagnoses.length, 0, 'diagnose: 未知friendは空');
+    eq((await get('/api/attn/diagnose')).status, 400, 'diagnose: friend_id欠落→400');
+  });
+
+  // 25) 因果セグメント（P3入力）：離脱理由でグルーピング（複数条件の複合）
+  await withServer(async ({ post, get }) => {
+    const priceanx = [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }];
+    const weak = [{ box_key: 'hero', engagement: 40 }];
+    const cta = [{ box_key: 'hero', engagement: 50 }, { box_key: 'cta', engagement: 30 }];
+    const mk = async (anon, fid, boxes) => { await post('/api/attn/collect', { anon_id: anon, page_slug: 'seitai-lp-a', boxes }); await post('/api/attn/merge', { anon_id: anon, friend_id: fid, consented: true }); };
+    await mk('S1', 'f_s1', priceanx); await mk('S2', 'f_s2', weak); await mk('S3', 'f_s3', priceanx); await mk('S4', 'f_s4', cta);
+    const seg = await (await get('/api/attn/cause-segments')).json();
+    const find = c => seg.segments.find(s => s.cause_code === c);
+    eq(find('price_anxiety').count, 2, 'セグメント: 料金不安2人');
+    eq(find('weak_hook').count, 1, 'セグメント: FV直帰1人');
+    eq(find('cta_friction').count, 1, 'セグメント: 予約導線1人');
+    ok(find('price_anxiety').friends.includes('f_s1') && find('price_anxiety').friends.includes('f_s3'), 'セグメントにfriend_idが入る');
+  });
+
+  // 26) dispatch-plan（P3・Loku受け渡し）：コンプラゲート・opt-out除外・承認前提・テナント分離
+  await withServer(async ({ post, get, postH, getH }) => {
+    const pa = [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }];
+    for (const [a, f] of [['DA', 'f_DA'], ['DB', 'f_DB'], ['DC', 'f_DC']]) {
+      await post('/api/attn/collect', { anon_id: a, page_slug: 'seitai-lp-a', boxes: pa });
+      await post('/api/attn/merge', { anon_id: a, friend_id: f, consented: true });
+    }
+    await post('/api/attn/opt-out', { friend_id: 'f_DB' });            // 配信停止
+    await post('/api/attn/profiling-opt-out', { friend_id: 'f_DC' });  // プロファイリング拒否
+    const plan = await (await post('/api/attn/dispatch-plan', { cause_code: 'price_anxiety' })).json();
+    ok(plan.requires_approval && !plan.auto_sent, 'dispatch: 承認前提・自動送信しない（human-in-the-loop）');
+    ok(plan.delivery_via.includes('Loku'), 'dispatch: 撃つのはLoku本体AI配信');
+    ok(plan.segment.includes('f_DA'), 'dispatch: 対象者はセグメントに入る');
+    ok(!plan.segment.includes('f_DB'), 'dispatch: 配信停止者を除外');
+    ok(!plan.segment.includes('f_DC'), 'dispatch: プロファイリング拒否者を除外');
+    ok(plan.outreach.has_message && !plan.outreach.blocked && plan.outreach.message, 'dispatch: 一言はcheckCopy（接骨院基準）を通過');
+    ok(plan.funnel.length > 0, 'dispatch: 導線チューニング案が付く');
+    // 安全弁：全プリセットの一言が接骨院基準を通過（主張を作らない設計の担保）
+    for (const c of CAUSE_CODES) {
+      const p = await (await post('/api/attn/dispatch-plan', { cause_code: c })).json();
+      ok(!p.outreach.blocked, `dispatch: 「${c}」の下書きは接骨院基準を通過`);
+    }
+    // バリデーション
+    eq((await post('/api/attn/dispatch-plan', { cause_code: 'nope' })).status, 400, 'dispatch: 未知cause→400');
+    eq((await post('/api/attn/dispatch-plan', {})).status, 400, 'dispatch: cause_code欠落→400');
+    // テナント分離：t_2のfriendは t_1呼び出しのセグメントに混ざらない
+    await post('/api/attn/collect', { anon_id: 'DT2', page_slug: 'seitai-lp-b', boxes: pa });
+    await post('/api/attn/merge', { anon_id: 'DT2', friend_id: 'f_DT2', consented: true });
+    const planT1 = await (await postH('/api/attn/dispatch-plan', { cause_code: 'price_anxiety' }, { 'x-tenant-id': 't_1' })).json();
+    ok(!planT1.segment.includes('f_DT2'), 'dispatch: 他テナントのfriendは混ざらない');
+  });
+
+  // 27) 複合条件の網羅（64通り）：深度×予約×FAQ×実績 の総当りで不変条件を検証
+  {
+    const CODES = new Set(CAUSE_CODES);
+    const EXITS = new Set(['converted', 'form_abandon', 'bounce', 'dropoff', 'no_data']);
+    for (let depth = 0; depth <= 7; depth++) {
+      for (const booked of [false, true]) {
+        for (const faqHi of [false, true]) {
+          for (const baHi of [false, true]) {
+            const be = {};
+            for (let i = 0; i <= depth; i++) be[BOX_ORDER[i]] = 10 + i; // >0
+            if (faqHi && depth >= 6) be.faq = 80;
+            if (baHi && depth >= 2) be.beforeafter = 80;
+            const r = inferCause({ box_engagement: be, booked });
+            const tag = `d${depth}/b${booked ? 1 : 0}/f${faqHi ? 1 : 0}/a${baHi ? 1 : 0}`;
+            ok(CODES.has(r.code), `combo ${tag}: 有効な因果コード`);
+            ok(EXITS.has(r.exit_type), `combo ${tag}: 有効なexit_type`);
+            ok(!!r.label && !!r.explanation, `combo ${tag}: ラベル/説明あり`);
+            ok(booked ? r.code === 'converted' : r.code !== 'converted', `combo ${tag}: convertedは予約と一致`);
+            const act = suggestActions(r.code);
+            ok(Array.isArray(act.funnel) && typeof act.outreach.message === 'string', `combo ${tag}: actionsの形`);
+          }
+        }
+      }
+    }
+  }
+
+  // 28) 契約テスト（③エンジン）：新APIのレスポンス形を固定
+  await withServer(async ({ post, get }) => {
+    const has = (o, keys, m) => ok(o && keys.every(k => k in o), m + ' 契約: {' + keys.join(',') + '}');
+    await post('/api/attn/collect', { anon_id: 'CT', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }] });
+    await post('/api/attn/merge', { anon_id: 'CT', friend_id: 'f_CT', consented: true });
+    const dg = await (await get('/api/attn/diagnose?friend_id=f_CT')).json();
+    has(dg, ['friend_id', 'diagnoses'], 'diagnose');
+    has(dg.diagnoses[0], ['page_slug', 'exit_box', 'exit_type', 'cause', 'evidence', 'explanation', 'actions'], 'diagnose.row');
+    has(dg.diagnoses[0].cause, ['code', 'label', 'confidence'], 'diagnose.cause');
+    has(dg.diagnoses[0].actions, ['funnel', 'outreach'], 'diagnose.actions');
+    has(await (await get('/api/attn/cause-segments')).json(), ['segments'], 'cause-segments');
+    const plan = await (await post('/api/attn/dispatch-plan', { cause_code: 'price_anxiety' })).json();
+    has(plan, ['ok', 'cause_code', 'cause_label', 'segment', 'count', 'funnel', 'outreach', 'requires_approval', 'auto_sent', 'delivery_via'], 'dispatch-plan');
+    has(plan.outreach, ['has_message', 'message', 'blocked', 'violations'], 'dispatch-plan.outreach');
+    // P0：journeyに離脱点が載る
+    has((await (await get('/api/attn/journey?friend_id=f_CT')).json()).journeys[0], ['exit_box', 'exit_type'], 'journey.exit');
+  });
+
+  // ===== ③追加による元機能への影響（回帰・相互作用）=====
+  section('C. ③×元機能 相互作用/回帰');
+
+  // 29) 複合場面：新機能が既存の法務ゲート・削除・テナント・契約を迂回/破壊しないか
+  await withServer(async ({ post, get, getH }) => {
+    const pa = [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }];
+    // (a) forget後は diagnose も cause-segments も空（新経路から漏れない）
+    await post('/api/attn/collect', { anon_id: 'IX1', page_slug: 'seitai-lp-a', boxes: pa });
+    await post('/api/attn/merge', { anon_id: 'IX1', friend_id: 'f_ix1', consented: true });
+    ok((await (await get('/api/attn/diagnose?friend_id=f_ix1')).json()).diagnoses.length > 0, '回帰: forget前はdiagnoseあり');
+    await post('/api/attn/forget', { friend_id: 'f_ix1' });
+    eq((await (await get('/api/attn/diagnose?friend_id=f_ix1')).json()).diagnoses.length, 0, '回帰: forget後はdiagnose空（新経路も漏れない）');
+    ok(!(await (await get('/api/attn/cause-segments')).json()).segments.some(s => s.friends.includes('f_ix1')), '回帰: forget後はセグメントにも出ない');
+    // (b) 非同意は diagnose に出ない（プライバシーゲートが新経路にも効く）
+    await post('/api/attn/collect', { anon_id: 'IX2', page_slug: 'seitai-lp-a', boxes: pa });
+    await post('/api/attn/merge', { anon_id: 'IX2', friend_id: 'f_ix2', consented: false });
+    eq((await (await get('/api/attn/diagnose?friend_id=f_ix2')).json()).diagnoses.length, 0, '回帰: 非同意はdiagnoseに出ない');
+    // (c) 要配慮情報は diagnose 出力にも一切残らない
+    await post('/api/attn/collect', { anon_id: 'IX3', page_slug: 'seitai-lp-a', symptom: '慢性腰痛', diagnosis: 'ヘルニア', boxes: pa });
+    await post('/api/attn/merge', { anon_id: 'IX3', friend_id: 'f_ix3', consented: true });
+    const dgS = JSON.stringify(await (await get('/api/attn/diagnose?friend_id=f_ix3')).json());
+    ok(!dgS.includes('腰痛') && !dgS.includes('ヘルニア'), '回帰: 要配慮情報はdiagnose出力にも残らない');
+    // (d) 他テナントは diagnose も 403（RLSが新経路にも効く）
+    await post('/api/attn/collect', { anon_id: 'IX4', page_slug: 'seitai-lp-a', boxes: pa });
+    await post('/api/attn/merge', { anon_id: 'IX4', friend_id: 'f_ix4', consented: true });
+    eq((await getH('/api/attn/diagnose?friend_id=f_ix4', { 'x-tenant-id': 't_2' })).status, 403, '回帰: 他テナントのdiagnoseは403');
+    eq((await getH('/api/attn/diagnose?friend_id=f_ix4', { 'x-tenant-id': 't_1' })).status, 200, '回帰: 自テナントのdiagnoseは200');
+    // (e) journey は元フィールド＋新フィールドが両立（契約非破壊）
+    const jr = (await (await get('/api/attn/journey?friend_id=f_ix4')).json()).journeys[0];
+    ok(['friend_id', 'page_slug', 'entry_query', 'box_engagement', 'search'].every(k => k in jr) && 'exit_box' in jr, '回帰: journeyは元契約＋離脱点を両立');
+    // (f) 元のタグ発火は新機能追加後も従来どおり
+    ok((await (await get('/api/attn/friend-tags?friend_id=f_ix4')).json()).tags.includes('効果重視'), '回帰: beforeafter高で効果重視タグは従来どおり発火');
+    // (g) notice-policy ON中の未提示collectは従来どおり403（新機能は迂回路を作らない）
+    await post('/api/attn/notice-policy', { require: true });
+    eq((await post('/api/attn/collect', { anon_id: 'IX6', page_slug: 'seitai-lp-a', boxes: pa })).status, 403, '回帰: 通知必須ON時の未提示collectは403のまま');
+    // (h) purge後は diagnose も空（保持期間管理が新経路にも効く）
+    await post('/api/attn/notice-policy', { require: false });
+    await post('/api/attn/collect', { anon_id: 'IX7', page_slug: 'seitai-lp-a', boxes: pa });
+    await post('/api/attn/merge', { anon_id: 'IX7', friend_id: 'f_ix7', consented: true });
+    await post('/api/attn/purge', { retention_days: 0, now: Date.now() + 86400000 });
+    eq((await (await get('/api/attn/diagnose?friend_id=f_ix7')).json()).diagnoses.length, 0, '回帰: purge後はdiagnose空');
+  });
 }
 
 const LOOPS = Number(process.argv[2] || 5);
@@ -641,5 +836,7 @@ for (let i = 1; i <= LOOPS; i++) {
   console.log(`周回 ${i}/${LOOPS}: ${fail === before ? 'OK' : 'NG'}  (累計 pass=${pass} fail=${fail})`);
 }
 console.log(`\n結果: pass=${pass} fail=${fail}`);
+// HTMLレポート蓄積用の機械可読サマリ（1行JSON）
+console.log('QA_JSON:' + JSON.stringify({ loops: LOOPS, pass, fail, sections, at: new Date().toISOString() }));
 if (fail) { console.log('失敗:', fails.slice(0, 10)); process.exit(1); }
 console.log('✅ 全テスト通過（手戻りゼロ確認）');

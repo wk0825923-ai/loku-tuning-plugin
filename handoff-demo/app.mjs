@@ -8,6 +8,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure, defaultSubprocessors, transferAssessment, assessBreach } from './compliance.mjs';
 import { ingestSearchConsole, searchSummary } from './search-console.mjs';
+import { deriveExit, inferCause, suggestActions, CAUSE_LABEL, CAUSE_CODES } from './causal.mjs';
 
 // ---- サンプルページ定義（本番は loku_attn_pages / _boxes 相当） ----
 function seedStore() {
@@ -189,6 +190,39 @@ function applyTagsToFriend(store, friend_id, tags) {
   for (const t of tags) set.add(t);
 }
 
+// ③因果エンジン用：結合済み(同意)friendの来訪行（box_engagement＋予約有無）を作る
+function friendJourneyRows(store, fid) {
+  const rows = [];
+  const booked = store.bookings.has(fid);
+  for (const [anon, id] of store.identity) {
+    if (id.friend_id !== fid || !id.consented) continue; // 同意ゲートを踏襲
+    const sess = store.sessions.get(anon);
+    if (!sess) continue;
+    const page = store.pages.find(p => p.id === sess.page_id);
+    const box_engagement = {};
+    for (const b of store.boxes.filter(x => x.page_id === sess.page_id)) {
+      const st = store.box_stats.get(`${anon}::${b.box_key}`);
+      box_engagement[b.box_key] = st ? Math.round(st.engagement) : 0;
+    }
+    rows.push({ page_slug: page.slug, box_engagement, booked });
+  }
+  return rows;
+}
+
+// friendの「代表的な因果」を1つ選ぶ：予約済みは converted 優先、
+// それ以外は到達深度が最大（＝最も予約に近づいた）来訪を採用（最も打ち手が具体的）。
+function primaryCause(store, fid) {
+  const rows = friendJourneyRows(store, fid);
+  if (rows.length === 0) return null;
+  let best = null;
+  for (const r of rows) {
+    const cause = inferCause(r);
+    if (r.booked) return cause; // 予約済みは即 converted
+    if (!best || cause.reached_depth > best.reached_depth) best = cause;
+  }
+  return best;
+}
+
 // ---- HTTP ハンドラ ----
 function handle(store, req, res, body) {
   const url = new URL(req.url, 'http://x');
@@ -313,11 +347,13 @@ function handle(store, req, res, body) {
         const st = store.box_stats.get(`${anon}::${b.box_key}`);
         box_engagement[b.box_key] = st ? Math.round(st.engagement) : 0;
       }
+      const exit = deriveExit(box_engagement, { booked: store.bookings.has(fid) }); // P0:離脱点
       rows.push({
         friend_id: fid, page_slug: page.slug, page_kind: page.kind,
         entry_query: sess.entry_query, entry_pos: sess.entry_pos, device: sess.device,
         entry_health: !!sess.entry_health, // 健康関連検索（要配慮推知に配慮）
         active_sec: sess.active_sec, box_engagement,
+        exit_box: exit.exit_box, exit_type: exit.exit_type, // P0:離脱ポイント
         search: searchSummary(store, sess.page_id), // 来る前（サチコAPI取込・無ければnull）
       });
     }
@@ -610,6 +646,75 @@ function handle(store, req, res, body) {
     const res2 = purgeExpired(store, cutoff);
     store.audit_log.push({ action: 'purge', friend_id: `retention:${days}d`, purged: res2.purgedAnons.length, at: now });
     return send(200, { ok: true, retention_days: days, cutoff, ...res2 });
+  }
+
+  // GET /api/attn/diagnose?friend_id= — ③因果診断（P1+P2）：離脱点→なぜ→次の一手
+  if (req.method === 'GET' && url.pathname === '/api/attn/diagnose') {
+    const fid = url.searchParams.get('friend_id');
+    if (!fid) return send(400, { error: 'friend_id required' });
+    if (denyCrossTenant(tenantOfFriend(store, fid))) return send(403, { error: 'tenant scope violation' }); // RLS相当
+    const diagnoses = friendJourneyRows(store, fid).map(r => {
+      const cause = inferCause(r);
+      const actions = suggestActions(cause.code);
+      return {
+        page_slug: r.page_slug, exit_box: cause.exit_box, exit_type: cause.exit_type,
+        cause: { code: cause.code, label: cause.label, confidence: cause.confidence },
+        evidence: cause.evidence, explanation: cause.explanation, actions,
+      };
+    });
+    return send(200, { friend_id: fid, diagnoses });
+  }
+
+  // GET /api/attn/cause-segments — ③離脱理由でセグメント化（P3の入力・Loku受け渡しの材料）
+  if (req.method === 'GET' && url.pathname === '/api/attn/cause-segments') {
+    const seen = new Set(); const byCode = {};
+    for (const [, id] of store.identity) {
+      if (!id.consented || seen.has(id.friend_id)) continue;
+      seen.add(id.friend_id);
+      if (denyCrossTenant(tenantOfFriend(store, id.friend_id))) continue; // 自テナントのみ
+      const cause = primaryCause(store, id.friend_id);
+      if (!cause) continue;
+      (byCode[cause.code] ||= { cause_code: cause.code, cause_label: cause.label, friends: [] }).friends.push(id.friend_id);
+    }
+    const segments = Object.values(byCode).map(s => ({ ...s, count: s.friends.length }));
+    return send(200, { segments });
+  }
+
+  // POST /api/attn/dispatch-plan — ③の出口（P3）：因果セグメントを Loku 配信の"計画"に変換。
+  // 送信はしない（撃つのは Loku 本体AI配信）。承認前提＋一言はcheckCopyを必ず通す（安全弁）。
+  if (req.method === 'POST' && url.pathname === '/api/attn/dispatch-plan') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.cause_code) return send(400, { error: 'cause_code required' });
+    if (!CAUSE_CODES.includes(d.cause_code)) return send(400, { error: 'unknown cause_code' });
+    const industry = d.industry || 'judo'; // 接骨院を既定（最も厳しい基準で検査）
+    // セグメント抽出：同意済み・自テナント・配信可(opt_out除外)・プロファイリング拒否は除外
+    const seen = new Set(); const segment = [];
+    for (const [, id] of store.identity) {
+      if (!id.consented || seen.has(id.friend_id)) continue;
+      seen.add(id.friend_id);
+      const fid = id.friend_id;
+      if (denyCrossTenant(tenantOfFriend(store, fid))) continue;
+      if (store.opt_out.has(fid)) continue;            // 配信停止者は送らない
+      if (store.profiling_opt_out.has(fid)) continue;  // プロファイリング拒否者は対象外
+      const cause = primaryCause(store, fid);
+      if (cause && cause.code === d.cause_code) segment.push(fid);
+    }
+    const actions = suggestActions(d.cause_code);
+    const msg = actions.outreach.message;
+    const check = msg ? checkCopy(msg, industry) : { ok: true, blocked: false, violations: [] };
+    return send(200, {
+      ok: true, cause_code: d.cause_code, cause_label: CAUSE_LABEL[d.cause_code],
+      segment, count: segment.length,
+      funnel: actions.funnel, // 導線チューニング案（店主向け・構成の提案）
+      outreach: {
+        has_message: actions.outreach.has_message,
+        message: check.blocked ? null : msg, // NGならブロック＝配信下書きを渡さない（安全弁）
+        blocked: check.blocked, violations: check.violations, checked_industry: industry,
+      },
+      requires_approval: true, auto_sent: false, // human-in-the-loop・本APIは送信しない
+      delivery_via: 'Loku本体 AI配信（シナリオ/ブロードキャスト）',
+      note: '本APIは送信しない。因果＋セグメント＋下書きを作るのみ。承認後にLokuが配信する。',
+    });
   }
 
   // デモ専用：graceful shutdown（allowShutdown時のみ有効。本番には載せない）
