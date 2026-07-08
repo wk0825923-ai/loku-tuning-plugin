@@ -89,8 +89,8 @@
       <span class="s now">L3 自己最適化</span>
     </div>
     <div style="margin-top:14px;background:linear-gradient(180deg,#10241c,#0f1a16);border:1px solid #1e3a30;border-radius:12px;padding:14px 18px;color:var(--ink);font-size:14px">
-      <b style="color:var(--grn)">✅ P0–P3 実装完了（2026-07-08）</b> — <code>causal.mjs</code> 新設（deriveExit/inferCause/suggestActions）＋ diagnose / cause-segments / dispatch-plan の3エンドポイント。
-      QAハーネス <code>test.mjs</code> に③テスト群(23–28)を増築し、<b class="num" style="color:var(--grn)">pass=29,000 / fail=0（50周・複合条件64通り総当り込み）</b>・高頻度連続でも全緑。
+      <b style="color:var(--grn)">✅ P0–P3 実装完了＋P4基盤 着手（2026-07-08）</b> — <code>causal.mjs</code>（deriveExit/inferCause/suggestActions）＋ diagnose / cause-segments / dispatch-plan / <b>cause-outcomes（P4の答え合わせ信号）</b>。因果＝行動ベース、予約＝成果の別軸に分離。
+      QAは <code>test.mjs</code> 群23–31＋セクション別計測（A元/B新/C回帰/D-P4基盤）で <b class="num" style="color:var(--grn)">pass=30,050 / fail=0（50周）</b>・高頻度連続も決定的。詳細は <code>qa-report.html</code>。
     </div>
     <div class="meta">2026-07-08 ｜ noindex・社内資料 ｜ サイズ目安 S/M/L ｜ 関連: strategy.html / feature-inventory.html / competitor-analysis.html</div>
   </header>

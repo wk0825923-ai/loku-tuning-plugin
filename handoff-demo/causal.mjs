@@ -28,19 +28,19 @@ const ordOf = (k) => BOX_ORDER.indexOf(k);
 const eng = (be, k) => Number(be?.[k]) || 0;
 
 /**
- * P0：離脱点の導出。box_engagement（見た深さ）＋予約有無から exit を決める。
- * @returns {{exit_box:string|null, exit_type:'converted'|'form_abandon'|'bounce'|'dropoff'|'no_data', reached_depth:number}}
+ * P0：離脱点の導出。box_engagement（見た深さ）だけで決める＝"行動"であって"成果(予約)"とは独立。
+ * 予約は後段の outcome（cause-outcomes / diagnose.booked）で別軸に測る。
+ * @returns {{exit_box:string|null, exit_type:'form_abandon'|'bounce'|'dropoff'|'no_data', reached_depth:number}}
  */
-export function deriveExit(boxEngagement = {}, { booked = false } = {}) {
+export function deriveExit(boxEngagement = {}) {
   const engaged = BOX_ORDER.filter(k => eng(boxEngagement, k) > 0);
   if (engaged.length === 0) return { exit_box: null, exit_type: 'no_data', reached_depth: -1 };
   const reached_depth = Math.max(...engaged.map(ordOf));
   const exit_box = BOX_ORDER[reached_depth];
   let exit_type;
-  if (booked) exit_type = 'converted';            // 予約に到達（結果）
-  else if (exit_box === 'cta') exit_type = 'form_abandon'; // 予約導線まで来て予約せず
-  else if (reached_depth <= 0) exit_type = 'bounce';       // FVだけで離脱
-  else exit_type = 'dropoff';                              // 途中離脱
+  if (exit_box === 'cta') exit_type = 'form_abandon'; // 予約導線まで来た（予約有無は別軸）
+  else if (reached_depth <= 0) exit_type = 'bounce';  // FVだけで離脱
+  else exit_type = 'dropoff';                         // 途中離脱
   return { exit_box, exit_type, reached_depth };
 }
 
@@ -49,7 +49,6 @@ export function deriveExit(boxEngagement = {}, { booked = false } = {}) {
 function classify(be, exit) {
   const { exit_box, exit_type, reached_depth } = exit;
   if (exit_type === 'no_data') return { code: 'no_data', confidence: 'low' };
-  if (exit_type === 'converted') return { code: 'converted', confidence: 'high' };
   if (exit_type === 'form_abandon') return { code: 'cta_friction', confidence: 'high' };
 
   // FAQを熟読して離脱＝不安が解消されなかった（faqまで到達＆faq注視が高い）
@@ -72,7 +71,6 @@ function classify(be, exit) {
 
 // 因果コード → 店主向けの短い日本語ラベル
 export const CAUSE_LABEL = {
-  converted:          '予約に到達（結果）',
   cta_friction:       '予約導線で離脱（あと一歩）',
   unresolved_doubt:   'FAQ熟読後に離脱（不安が未解消）',
   value_before_price: '価値提示の前に料金へ到達',
@@ -85,7 +83,6 @@ export const CAUSE_LABEL = {
 
 // 因果コード → 店主向けの説明文（"なぜ"の言語化）。事実の説明のみ・効果の主張はしない。
 const CAUSE_EXPLAIN = {
-  converted:          'この方は予約まで到達しています。導線は機能しています。',
   cta_friction:       '予約導線まで到達しましたが予約に至っていません。フォームや導線の摩擦が最後の一歩を止めている可能性があります。',
   unresolved_doubt:   'よくある質問を長く読んだ後に離脱しています。疑問や不安がページ内で解消し切れなかった可能性があります。',
   value_before_price: '実績やお客様の声をほとんど見ないまま料金に到達し、そこで離脱しています。価値が伝わる前に価格を見た可能性があります。',
@@ -104,7 +101,6 @@ const CAUSE_FUNNEL = {
   price_anxiety:      ['料金に「初回の流れ」を併記して心理的ハードルを下げる', '料金の近くに施術例を再配置する'],
   proof_gap:          ['実績（beforeafter）と院長紹介（staff）を早い位置に繰り上げる'],
   weak_hook:          ['ファーストビューの情報量を絞り、次のセクションへの誘導を明確にする'],
-  converted:          [],
   unclassified:       [],
   no_data:            [],
 };
@@ -118,19 +114,18 @@ const CAUSE_OUTREACH = {
   price_anxiety:      '先日はページをご覧いただきありがとうございました。料金や初回の流れについて、ご不明点があればこのままご返信ください。',
   proof_gap:          'ご覧いただきありがとうございました。院やスタッフのこと、通い方など、気になる点があればご返信ください。',
   weak_hook:          'ご訪問ありがとうございました。もしご都合が合えば、空き状況だけでもご案内します。',
-  converted:          '', // 予約済みには追客しない
   unclassified:       '',
   no_data:            '',
 };
 
 /**
  * P1：因果推定。journey 相当の1行から「なぜ折れたか」を返す。
- * @param row {{ box_engagement:object, booked?:boolean }}
+ * @param row {{ box_engagement:object }}  ※因果は行動ベース＝予約(booked)には依存しない
  * @returns {{code,label,confidence,evidence,explanation}}
  */
 export function inferCause(row = {}) {
   const be = row.box_engagement || {};
-  const exit = deriveExit(be, { booked: row.booked === true });
+  const exit = deriveExit(be);
   const c = classify(be, exit);
   return {
     code: c.code,

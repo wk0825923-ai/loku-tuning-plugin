@@ -650,20 +650,19 @@ async function suite() {
   eq(deriveExit({ hero: 40 }).exit_type, 'bounce', 'P0 FVのみはbounce');
   eq(deriveExit({ hero: 50, pricing: 70 }).exit_box, 'pricing', 'P0 最深ボックスが離脱点');
   eq(deriveExit({ hero: 50, cta: 20 }).exit_type, 'form_abandon', 'P0 cta到達はform_abandon');
-  eq(deriveExit({ hero: 50, cta: 20 }, { booked: true }).exit_type, 'converted', 'P0 予約はconverted優先');
+  eq(deriveExit({ hero: 50, problem: 40 }).exit_type, 'dropoff', 'P0 途中離脱はdropoff');
   eq(inferCause({ box_engagement: { hero: 50, problem: 40, pricing: 70 } }).code, 'value_before_price', 'P1 価値提示前に料金離脱');
   eq(inferCause({ box_engagement: { hero: 50, beforeafter: 80, pricing: 70 } }).code, 'price_anxiety', 'P1 実績を見た後の料金離脱');
   eq(inferCause({ box_engagement: { hero: 50, pricing: 40, faq: 80 } }).code, 'unresolved_doubt', 'P1 FAQ熟読後に離脱');
   eq(inferCause({ box_engagement: { hero: 50, beforeafter: 70 } }).code, 'proof_gap', 'P1 信頼形成の途中で離脱');
   eq(inferCause({ box_engagement: { hero: 40 } }).code, 'weak_hook', 'P1 FVで直帰');
-  eq(inferCause({ box_engagement: { hero: 50, cta: 30 }, booked: true }).code, 'converted', 'P1 予約済みはconverted');
   eq(inferCause({ box_engagement: { hero: 50, cta: 30 } }).code, 'cta_friction', 'P1 予約導線で離脱');
+  eq(inferCause({ box_engagement: { hero: 40 }, booked: true }).code, inferCause({ box_engagement: { hero: 40 } }).code, 'P1 因果は予約(booked)に依存しない');
   ok(CAUSE_CODES.every(c => CAUSE_LABEL[c] && inferCause({ box_engagement: { hero: 10 } })), 'P1 全因果コードにラベル');
 
   // 24) 診断エンドポイント（P1+P2）：各因果を実データ経路で当てる
   await withServer(async ({ post, get }) => {
     const P = {
-      converted:  [{ box_key: 'hero', engagement: 50 }, { box_key: 'pricing', engagement: 70 }, { box_key: 'cta', engagement: 40 }],
       cta:        [{ box_key: 'hero', engagement: 50 }, { box_key: 'pricing', engagement: 60 }, { box_key: 'cta', engagement: 30 }],
       faq:        [{ box_key: 'hero', engagement: 50 }, { box_key: 'pricing', engagement: 40 }, { box_key: 'faq', engagement: 80 }],
       valuebp:    [{ box_key: 'hero', engagement: 50 }, { box_key: 'problem', engagement: 40 }, { box_key: 'pricing', engagement: 70 }],
@@ -677,8 +676,12 @@ async function suite() {
       if (book) await post('/api/attn/booking', { friend_id: fid });
     };
     const code = async (fid) => (await (await get('/api/attn/diagnose?friend_id=' + fid)).json()).diagnoses[0].cause.code;
-    await mk('DG1', 'f_conv', P.converted, true);   eq(await code('f_conv'), 'converted', 'diagnose: converted');
     await mk('DG2', 'f_cta', P.cta);                eq(await code('f_cta'), 'cta_friction', 'diagnose: cta_friction');
+    // 予約済みでも因果は行動ベース（cta_friction）のまま・予約は booked で別軸
+    await mk('DG1', 'f_conv', P.cta, true);
+    { const d = (await (await get('/api/attn/diagnose?friend_id=f_conv')).json()).diagnoses[0];
+      eq(d.cause.code, 'cta_friction', 'diagnose: 予約済みでも因果は行動ベース');
+      eq(d.booked, true, 'diagnose: 予約は成果として別軸で立つ'); }
     await mk('DG3', 'f_faq', P.faq);                eq(await code('f_faq'), 'unresolved_doubt', 'diagnose: unresolved_doubt');
     await mk('DG4', 'f_vbp', P.valuebp);            eq(await code('f_vbp'), 'value_before_price', 'diagnose: value_before_price');
     await mk('DG5', 'f_pa', P.priceanx);            eq(await code('f_pa'), 'price_anxiety', 'diagnose: price_anxiety');
@@ -757,7 +760,7 @@ async function suite() {
             ok(CODES.has(r.code), `combo ${tag}: 有効な因果コード`);
             ok(EXITS.has(r.exit_type), `combo ${tag}: 有効なexit_type`);
             ok(!!r.label && !!r.explanation, `combo ${tag}: ラベル/説明あり`);
-            ok(booked ? r.code === 'converted' : r.code !== 'converted', `combo ${tag}: convertedは予約と一致`);
+            ok(inferCause({ box_engagement: be }).code === r.code, `combo ${tag}: 因果はbookedに非依存（行動ベース）`);
             const act = suggestActions(r.code);
             ok(Array.isArray(act.funnel) && typeof act.outreach.message === 'string', `combo ${tag}: actionsの形`);
           }
@@ -825,6 +828,49 @@ async function suite() {
     await post('/api/attn/merge', { anon_id: 'IX7', friend_id: 'f_ix7', consented: true });
     await post('/api/attn/purge', { retention_days: 0, now: Date.now() + 86400000 });
     eq((await (await get('/api/attn/diagnose?friend_id=f_ix7')).json()).diagnoses.length, 0, '回帰: purge後はdiagnose空');
+  });
+
+  // ===== ③ P4基盤（自己最適化の答え合わせ）=====
+  section('D. ③P4基盤（成果の答え合わせ）');
+
+  // 30) cause-outcomes：因果ごとの実測予約率（成果は因果と独立に集計できる）
+  await withServer(async ({ post, get }) => {
+    const pa = [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }]; // price_anxiety
+    const weak = [{ box_key: 'hero', engagement: 40 }]; // weak_hook
+    const mk = async (a, f, boxes, book) => {
+      await post('/api/attn/collect', { anon_id: a, page_slug: 'seitai-lp-a', boxes });
+      await post('/api/attn/merge', { anon_id: a, friend_id: f, consented: true });
+      if (book) await post('/api/attn/booking', { friend_id: f });
+    };
+    await mk('O1', 'f_o1', pa, true); await mk('O2', 'f_o2', pa); await mk('O3', 'f_o3', pa); // 3人中1予約
+    await mk('O4', 'f_o4', weak); await mk('O5', 'f_o5', weak);                                  // 2人中0予約
+    const out = (await (await get('/api/attn/cause-outcomes')).json()).outcomes;
+    const pax = out.find(o => o.cause_code === 'price_anxiety');
+    const wk = out.find(o => o.cause_code === 'weak_hook');
+    eq(pax.n, 3, 'P4: price_anxiety 母数3');
+    eq(pax.booked, 1, 'P4: price_anxiety 予約1（成果は因果と独立に集計）');
+    eq(pax.booked_rate, 33, 'P4: price_anxiety 予約率33%');
+    eq(wk.booked_rate, 0, 'P4: weak_hook 予約率0%');
+    ok(pax.booked_rate > wk.booked_rate, 'P4: 因果別に成果差が出る（打ち手の優先度学習の入力）');
+    // 予約者の因果は行動ベースのまま（convertedに化けない）＋予約は別軸フラグ
+    const d = (await (await get('/api/attn/diagnose?friend_id=f_o1')).json()).diagnoses[0];
+    eq(d.cause.code, 'price_anxiety', 'P4: 予約者の因果は行動ベースのまま');
+    eq(d.booked, true, 'P4: 予約は成果フラグで別軸');
+    ok(out.length >= 2, 'P4: 因果別 outcomes を集計');
+  });
+
+  // 31) dispatch は予約済み（成果達成）を追客対象から除外
+  await withServer(async ({ post, get }) => {
+    const pa = [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }];
+    const mk = async (a, f, book) => {
+      await post('/api/attn/collect', { anon_id: a, page_slug: 'seitai-lp-a', boxes: pa });
+      await post('/api/attn/merge', { anon_id: a, friend_id: f, consented: true });
+      if (book) await post('/api/attn/booking', { friend_id: f });
+    };
+    await mk('DP1', 'f_dp1', false); await mk('DP2', 'f_dp2', true);
+    const plan = await (await post('/api/attn/dispatch-plan', { cause_code: 'price_anxiety' })).json();
+    ok(plan.segment.includes('f_dp1'), 'dispatch: 未予約者は追客対象');
+    ok(!plan.segment.includes('f_dp2'), 'dispatch: 予約済み者は追客しない（除外）');
   });
 }
 

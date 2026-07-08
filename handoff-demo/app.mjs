@@ -209,15 +209,14 @@ function friendJourneyRows(store, fid) {
   return rows;
 }
 
-// friendの「代表的な因果」を1つ選ぶ：予約済みは converted 優先、
-// それ以外は到達深度が最大（＝最も予約に近づいた）来訪を採用（最も打ち手が具体的）。
+// friendの「代表的な因果」を1つ選ぶ：到達深度が最大（＝最も予約に近づいた）来訪を採用（打ち手が具体的）。
+// 因果は行動ベース＝予約(成果)には依存しない。予約は cause-outcomes / diagnose.booked で別軸に測る。
 function primaryCause(store, fid) {
   const rows = friendJourneyRows(store, fid);
   if (rows.length === 0) return null;
   let best = null;
   for (const r of rows) {
     const cause = inferCause(r);
-    if (r.booked) return cause; // 予約済みは即 converted
     if (!best || cause.reached_depth > best.reached_depth) best = cause;
   }
   return best;
@@ -347,7 +346,7 @@ function handle(store, req, res, body) {
         const st = store.box_stats.get(`${anon}::${b.box_key}`);
         box_engagement[b.box_key] = st ? Math.round(st.engagement) : 0;
       }
-      const exit = deriveExit(box_engagement, { booked: store.bookings.has(fid) }); // P0:離脱点
+      const exit = deriveExit(box_engagement); // P0:離脱点（行動ベース・予約とは独立）
       rows.push({
         friend_id: fid, page_slug: page.slug, page_kind: page.kind,
         entry_query: sess.entry_query, entry_pos: sess.entry_pos, device: sess.device,
@@ -653,12 +652,14 @@ function handle(store, req, res, body) {
     const fid = url.searchParams.get('friend_id');
     if (!fid) return send(400, { error: 'friend_id required' });
     if (denyCrossTenant(tenantOfFriend(store, fid))) return send(403, { error: 'tenant scope violation' }); // RLS相当
+    const booked = store.bookings.has(fid); // 成果（因果とは別軸）
     const diagnoses = friendJourneyRows(store, fid).map(r => {
       const cause = inferCause(r);
       const actions = suggestActions(cause.code);
       return {
         page_slug: r.page_slug, exit_box: cause.exit_box, exit_type: cause.exit_type,
         cause: { code: cause.code, label: cause.label, confidence: cause.confidence },
+        booked, // 予約に至ったか（後段のLINE配信等の成果を含む）
         evidence: cause.evidence, explanation: cause.explanation, actions,
       };
     });
@@ -696,6 +697,7 @@ function handle(store, req, res, body) {
       if (denyCrossTenant(tenantOfFriend(store, fid))) continue;
       if (store.opt_out.has(fid)) continue;            // 配信停止者は送らない
       if (store.profiling_opt_out.has(fid)) continue;  // プロファイリング拒否者は対象外
+      if (store.bookings.has(fid)) continue;           // 予約済み（成果達成）には追客しない
       const cause = primaryCause(store, fid);
       if (cause && cause.code === d.cause_code) segment.push(fid);
     }
@@ -715,6 +717,28 @@ function handle(store, req, res, body) {
       delivery_via: 'Loku本体 AI配信（シナリオ/ブロードキャスト）',
       note: '本APIは送信しない。因果＋セグメント＋下書きを作るのみ。承認後にLokuが配信する。',
     });
+  }
+
+  // GET /api/attn/cause-outcomes — ③P4基盤：因果ごとの実測成果（予約率）。
+  // 「どの離脱理由が結局は予約に至るか」の答え合わせ信号。自己最適化(打ち手の優先度学習)の入力。
+  // ※適応的な重み学習そのものは実データの経時蓄積が要る。ここは"計測の土台"まで。
+  if (req.method === 'GET' && url.pathname === '/api/attn/cause-outcomes') {
+    const seen = new Set(); const byCode = {};
+    for (const [, id] of store.identity) {
+      if (!id.consented || seen.has(id.friend_id)) continue;
+      seen.add(id.friend_id);
+      const fid = id.friend_id;
+      if (denyCrossTenant(tenantOfFriend(store, fid))) continue; // 自テナントのみ
+      const cause = primaryCause(store, fid);
+      if (!cause) continue;
+      const rec = (byCode[cause.code] ||= { cause_code: cause.code, cause_label: cause.label, n: 0, booked: 0 });
+      rec.n++;
+      if (store.bookings.has(fid)) rec.booked++;
+    }
+    const outcomes = Object.values(byCode)
+      .map(r => ({ ...r, booked_rate: r.n ? Math.round(r.booked / r.n * 100) : 0 }))
+      .sort((a, b) => b.n - a.n); // 母数が多い順（着手優先度の目安）
+    return send(200, { outcomes });
   }
 
   // デモ専用：graceful shutdown（allowShutdown時のみ有効。本番には載せない）

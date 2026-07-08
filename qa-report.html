@@ -79,12 +79,12 @@
   <!-- 最新サマリ -->
   <section>
     <div class="sec-no">LATEST</div>
-    <h2>最新結果（50周・2026-07-08）</h2>
+    <h2>最新結果（50周・2026-07-08 P4基盤まで）</h2>
     <div class="kpis">
-      <div class="kpi ok"><div class="n">29,550</div><div class="l">総 pass</div><div class="s">1周=591項目 ×50周</div></div>
+      <div class="kpi ok"><div class="n">30,050</div><div class="l">総 pass</div><div class="s">1周=601項目 ×50周</div></div>
       <div class="kpi ok"><div class="n">0</div><div class="l">総 fail</div><div class="s">全周回・全緑</div></div>
       <div class="kpi ok"><div class="n">205<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagA">A. 元機能（回帰）</div><div class="s">③追加前と<b style="color:var(--grn)">完全一致</b></div></div>
-      <div class="kpi ok"><div class="n">375<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagB">B. ③新機能</div><div class="s">＋ C. 相互作用 11/loop</div></div>
+      <div class="kpi ok"><div class="n">396<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagB">B+C+D. ③新機能</div><div class="s">新機能375 / 回帰11 / P4基盤10</div></div>
     </div>
   </section>
 
@@ -98,7 +98,8 @@
         <tr><td class="tagA">A. 元機能</td><td>計測 / 実名結合 / タグ / 法務18項目 / 集計 / 堅牢性 / 契約</td><td class="r passv">205</td><td class="r passv">10,250</td><td><span class="badge b-ok">PASS</span></td></tr>
         <tr><td class="tagB">B. ③新機能</td><td>因果エンジン P0–P3（純関数 / 診断 / セグメント / dispatch-plan / 64通り複合 / 契約）</td><td class="r passv">375</td><td class="r passv">18,750</td><td><span class="badge b-ok">PASS</span></td></tr>
         <tr><td class="tagC">C. 相互作用/回帰</td><td>③追加で元の法務ゲート・削除・保持・テナント・契約が壊れないか</td><td class="r passv">11</td><td class="r passv">550</td><td><span class="badge b-ok">PASS</span></td></tr>
-        <tr><td><b>合計</b></td><td>—</td><td class="r passv">591</td><td class="r passv">29,550</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td class="tagB">D. ③P4基盤</td><td>因果別の実測予約率（成果の答え合わせ）・成果は因果と独立に集計</td><td class="r passv">10</td><td class="r passv">500</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td><b>合計</b></td><td>—</td><td class="r passv">601</td><td class="r passv">30,050</td><td><span class="badge b-ok">PASS</span></td></tr>
       </tbody>
     </table>
     <div class="note"><b>回帰の決定的証拠</b> — セクションAは <b>205項目/周が③追加の前後で完全一致</b>し、50周で 10,250 全通過。つまり<b>元機能のコードは無改変・挙動不変</b>。さらにCで「新経路が既存の法務ゲート/削除/保持/テナント分離を迂回しない」ことも実データ経路で確認済み。</div>
@@ -116,7 +117,10 @@
       <div><span class="g">群27</span> <b>複合条件64通り総当り</b> — 深度×予約×FAQ×実績 の全組合せで不変条件（有効コード/exit/ラベル/converted整合/actions形）</div>
       <div><span class="g">群28</span> <b>契約テスト</b> — diagnose / cause-segments / dispatch-plan / journey.exit のレスポンス形を固定</div>
       <div><span class="g">群29</span> <b>相互作用/回帰</b> — forget後/非同意/要配慮/他テナント/purge後/通知必須ON で新経路が漏れ・迂回しない（8場面）</div>
+      <div><span class="g">群30</span> <b>P4 cause-outcomes</b> — 因果別の実測予約率（母数/予約/率）・成果は因果と独立に集計・予約者の因果は行動ベースのまま</div>
+      <div><span class="g">群31</span> <b>P4 追客除外</b> — dispatchは予約済み（成果達成）を追客対象から除外</div>
     </div>
+    <div class="note" style="border-color:#3a3322;background:linear-gradient(180deg,#1c1a12,#12161d)"><b style="color:var(--amb)">⚑ 逐次QAが機能した例</b> — P4のテストを書く段階で「予約(成果)が離脱理由(行動)を上書きしてしまう」設計ミスを発見。<b>離脱理由＝行動ベース／予約＝成果の別軸</b>に分離する修正を入れ、再QAで全緑を確認。作りながら回すことで手戻りを最小化した。</div>
   </section>
 
   <!-- 手法 -->
@@ -138,6 +142,9 @@
     <table>
       <thead><tr><th>#</th><th>日時</th><th>対象</th><th class="r">周回</th><th class="r">pass</th><th class="r">fail</th><th>内訳/備考</th></tr></thead>
       <tbody>
+        <tr><td class="num">9</td><td class="num">07-08</td><td>P4基盤 高頻度反復</td><td class="r num">30×2</td><td class="r passv">18,030×2</td><td class="r passv">0</td><td>2回とも完全同一＝決定的・flakinessなし</td></tr>
+        <tr><td class="num">8</td><td class="num">07-08</td><td>P4基盤 高回数（群30–31＋成果分離）</td><td class="r num">50</td><td class="r passv">30,050</td><td class="r passv">0</td><td>A10,250 / B18,750 / C550 / D500</td></tr>
+        <tr><td class="num">7</td><td class="num">07-08</td><td>P4基盤 追加後 検証（因果と成果を分離するリファクタ込み）</td><td class="r num">1</td><td class="r passv">601</td><td class="r passv">0</td><td>Aは205で不変・converted分離の設計修正を反映</td></tr>
         <tr><td class="num">6</td><td class="num">07-08</td><td>高頻度反復（群29込み）</td><td class="r num">30×3</td><td class="r passv">17,730×3</td><td class="r passv">0</td><td>3回とも完全同一＝決定的・flakinessなし</td></tr>
         <tr><td class="num">5</td><td class="num">07-08</td><td>高回数（群29＋計測込み）</td><td class="r num">50</td><td class="r passv">29,550</td><td class="r passv">0</td><td>A10,250 / B18,750 / C550</td></tr>
         <tr><td class="num">4</td><td class="num">07-08</td><td>回帰群29＋セクション計測 追加後 検証</td><td class="r num">1</td><td class="r passv">591</td><td class="r passv">0</td><td>A205 / B375 / C11（Aは旧205と一致）</td></tr>
