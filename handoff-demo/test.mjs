@@ -3,7 +3,7 @@
 import { createServer, csvCell, encryptCsv } from './app.mjs';
 import { stripSensitive } from './compliance.mjs';
 import { assertReadonlyScope, REQUIRED_SCOPE, fetchSearchConsole } from './search-console.mjs';
-import { deriveExit, inferCause, suggestActions, CAUSE_LABEL, CAUSE_CODES, BOX_ORDER } from './causal.mjs';
+import { deriveExit, inferCause, suggestActions, CAUSE_LABEL, CAUSE_CODES, BOX_ORDER, PRESETS, DEFAULT_PRESET, getPreset } from './causal.mjs';
 import crypto from 'node:crypto';
 
 let pass = 0, fail = 0;
@@ -871,6 +871,103 @@ async function suite() {
     const plan = await (await post('/api/attn/dispatch-plan', { cause_code: 'price_anxiety' })).json();
     ok(plan.segment.includes('f_dp1'), 'dispatch: 未予約者は追客対象');
     ok(!plan.segment.includes('f_dp2'), 'dispatch: 予約済み者は追客しない（除外）');
+  });
+
+  // ===== 楔差替（2026-07-12）：ピラティス/パーソナルジム L2プリセット＋fitness法務辞書 =====
+  section('E. 楔差替（ピラティスL2＋fitness法務）');
+
+  // 32) fitness業種のNG辞書（景表法・健康増進法：痩身の断定/保証）
+  await withServer(async ({ post }) => {
+    const cc = async (text, industry = 'fitness') => (await (await post('/api/attn/check-copy', { text, industry })).json());
+    ok((await cc('このジムなら必ず痩せます')).blocked, 'fitness: 「必ず痩せ」＝断定をブロック');
+    ok((await cc('絶対痩せる！リバウンドしない身体へ')).blocked, 'fitness: 「絶対痩せ/リバウンドしない」をブロック');
+    ok((await cc('飲むだけで痩せるサプリ付き')).blocked, 'fitness: 「飲むだけで痩せ」＝楽して痩身をブロック');
+    ok((await cc('部分痩せも叶います')).blocked, 'fitness: 「部分痩せ」（優良誤認の典型）をブロック');
+    ok((await cc('痩せなければ返金します')).blocked, 'fitness: 「痩せなければ返金」＝成果保証をブロック');
+    ok((await cc('必ず　痩せ　ます')).blocked, 'fitness: 文字間スペースの回避も正規化で捕捉');
+    // medium＝要人承認（下書き止まり）だが公開ブロックまではしない
+    { const r = await cc('痩せるためのサポートをします');
+      ok(!r.ok && !r.blocked, 'fitness: 「痩せる」単体はmedium（要人承認・ブロックはしない）'); }
+    { const r = await cc('全額返金保証つき');
+      ok(!r.ok && !r.blocked, 'fitness: 「返金保証」はmedium（事実でも要人承認）'); }
+    // クリーンな事実コピーは通る
+    ok((await cc('女性専用のマシンピラティススタジオ。体験レッスン¥3,300・完全予約制')).ok, 'fitness: 事実だけのコピーはクリーン');
+    // 限定列挙ではない＝体験談/お客様の声はmedium止まり（接骨院はhigh）
+    { const f = await cc('お客様の声を多数掲載');
+      const j = await cc('お客様の声を多数掲載', 'judo');
+      ok(!f.blocked && j.blocked, 'fitness: 体験談はmedium止まり（judoはhigh）＝限定列挙型でない'); }
+    // 姿勢・体型の悩み語×成果想起語の共起は推知としてmedium（enumeratedでないのでブロックしない）
+    { const r = await cc('反り腰が引き締まったボディラインに');
+      ok(!r.ok && !r.blocked && r.inference.inferred, 'fitness: 反り腰×引き締の共起を推知として検出（medium）'); }
+    // fitnessでも薬機法・景表法の共通NGは効く
+    ok((await cc('日本一のピラティススタジオ')).blocked, 'fitness: 「日本一」（景表法）は共通でブロック');
+    ok((await cc('腰痛が治るピラティス')).blocked, 'fitness: 「治る」（薬機法）は共通でブロック');
+  });
+
+  // 33) L2プリセット機構：pilates辞書での言語化＋L1不変（因果コードはプリセット非依存）
+  await withServer(async ({ post, get }) => {
+    // プリセット台帳：pilatesが楔（wedge）・judoは温存
+    const pl = await (await get('/api/attn/presets')).json();
+    ok(pl.presets.some(p => p.key === 'pilates' && p.wedge === true && p.industry === 'fitness'), 'presets: pilatesが楔（fitness業種）');
+    ok(pl.presets.some(p => p.key === 'judo' && p.wedge === false), 'presets: judoは温存（楔からは外す）');
+    eq(pl.default, 'judo', 'presets: エンジン既定はjudo（後方互換）');
+    // 純関数：因果コードとconfidenceはプリセットに依存しない（L1不変）
+    for (const be of [{ hero: 50, problem: 40, pricing: 70 }, { hero: 40 }, { hero: 50, cta: 30 }, { hero: 50, pricing: 40, faq: 80 }]) {
+      const j = inferCause({ box_engagement: be }, 'judo');
+      const p = inferCause({ box_engagement: be }, 'pilates');
+      ok(j.code === p.code && j.confidence === p.confidence && j.exit_box === p.exit_box, `L1不変: ${j.code} はプリセット非依存`);
+    }
+    // 言語化はプリセットで変わる（pilates＝スタジオ/体験レッスンの語彙）
+    const pf = inferCause({ box_engagement: { hero: 50, problem: 40, beforeafter: 70 } }, 'pilates');
+    ok(pf.explanation.includes('スタジオ') || pf.explanation.includes('インストラクター'), 'pilates: proof_gapの説明はスタジオ語彙');
+    eq(inferCause({ box_engagement: { hero: 50, cta: 30 } }, 'pilates').evidence.reached, '体験予約導線', 'pilates: 離脱点ラベルは体験予約導線');
+    // diagnose?preset=pilates：エンドポイント経由でも同様
+    await post('/api/attn/collect', { anon_id: 'PL1', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'hero', engagement: 50 }, { box_key: 'problem', engagement: 40 }, { box_key: 'pricing', engagement: 70 }] });
+    await post('/api/attn/merge', { anon_id: 'PL1', friend_id: 'f_pl1', consented: true });
+    const dgP = await (await get('/api/attn/diagnose?friend_id=f_pl1&preset=pilates')).json();
+    const dgJ = await (await get('/api/attn/diagnose?friend_id=f_pl1')).json();
+    eq(dgP.preset, 'pilates', 'diagnose: presetがレスポンスに載る');
+    eq(dgP.diagnoses[0].cause.code, dgJ.diagnoses[0].cause.code, 'diagnose: 因果コードはプリセット非依存');
+    ok(dgP.diagnoses[0].explanation !== dgJ.diagnoses[0].explanation, 'diagnose: 言語化はプリセットで変わる');
+    eq((await get('/api/attn/diagnose?friend_id=f_pl1&preset=nope')).status, 400, 'diagnose: 未知プリセット→400');
+  });
+
+  // 34) dispatch-plan×pilates：全下書きがfitness基準を通過（主張を作らない設計の担保）
+  await withServer(async ({ post }) => {
+    const pa = [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }];
+    await post('/api/attn/collect', { anon_id: 'PW', page_slug: 'seitai-lp-a', boxes: pa });
+    await post('/api/attn/merge', { anon_id: 'PW', friend_id: 'f_pw', consented: true });
+    for (const c of CAUSE_CODES) {
+      const p = await (await post('/api/attn/dispatch-plan', { cause_code: c, preset: 'pilates' })).json();
+      ok(!p.outreach.blocked, `dispatch(pilates): 「${c}」の下書きはfitness基準を通過`);
+    }
+    const plan = await (await post('/api/attn/dispatch-plan', { cause_code: 'price_anxiety', preset: 'pilates' })).json();
+    eq(plan.outreach.checked_industry, 'fitness', 'dispatch(pilates): 検査業種はプリセット既定のfitness');
+    eq(plan.preset, 'pilates', 'dispatch(pilates): presetがレスポンスに載る');
+    ok(plan.outreach.message.includes('体験'), 'dispatch(pilates): 一言は体験レッスンの語彙');
+    ok(plan.requires_approval && !plan.auto_sent, 'dispatch(pilates): 承認前提・自動送信しないは不変');
+    // 業種の明示指定はプリセット既定より優先（より厳しい基準での検査も可能）
+    const planJ = await (await post('/api/attn/dispatch-plan', { cause_code: 'price_anxiety', preset: 'pilates', industry: 'judo' })).json();
+    eq(planJ.outreach.checked_industry, 'judo', 'dispatch: industry明示指定はプリセット既定に優先');
+    eq((await post('/api/attn/dispatch-plan', { cause_code: 'price_anxiety', preset: 'nope' })).status, 400, 'dispatch: 未知プリセット→400');
+  });
+
+  // 35) 楔差替の回帰ガード：既定動作（judo）は差替前と完全に同じ
+  await withServer(async ({ post, get }) => {
+    // 純関数の既定はjudo＝明示judoと同一
+    const be = { hero: 50, beforeafter: 80, pricing: 70 };
+    eq(inferCause({ box_engagement: be }), inferCause({ box_engagement: be }, 'judo'), '回帰: inferCause既定=judo');
+    eq(suggestActions('price_anxiety'), suggestActions('price_anxiety', 'judo'), '回帰: suggestActions既定=judo');
+    eq(getPreset('unknown-key').key, DEFAULT_PRESET, '回帰: 未知キーはjudoへフォールバック（決定的）');
+    // 既定のdispatch-planは従来どおり接骨院基準
+    await post('/api/attn/collect', { anon_id: 'RG', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'hero', engagement: 50 }, { box_key: 'beforeafter', engagement: 80 }, { box_key: 'pricing', engagement: 70 }] });
+    await post('/api/attn/merge', { anon_id: 'RG', friend_id: 'f_rg', consented: true });
+    const plan = await (await post('/api/attn/dispatch-plan', { cause_code: 'price_anxiety' })).json();
+    eq(plan.outreach.checked_industry, 'judo', '回帰: preset未指定のdispatchは接骨院基準のまま');
+    ok(plan.outreach.message.includes('初回の流れ'), '回帰: preset未指定の一言は接骨院文面のまま');
+    // fitness辞書の追加が既存業種のクリーンコピーを誤爆させない
+    ok((await (await post('/api/attn/check-copy', { text: '駅前の整体院。初回¥5,500・完全予約制', industry: 'rikaku' })).json()).ok, '回帰: 整体の事実コピーは辞書追加後もクリーン');
+    ok((await (await post('/api/attn/check-copy', { text: '丁寧なカウンセリングと予約制', industry: 'judo' })).json()).ok, '回帰: 接骨院の正常コピーは辞書追加後もクリーン');
   });
 }
 

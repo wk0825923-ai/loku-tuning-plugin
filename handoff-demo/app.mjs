@@ -8,7 +8,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure, defaultSubprocessors, transferAssessment, assessBreach } from './compliance.mjs';
 import { ingestSearchConsole, searchSummary } from './search-console.mjs';
-import { deriveExit, inferCause, suggestActions, CAUSE_LABEL, CAUSE_CODES } from './causal.mjs';
+import { deriveExit, inferCause, suggestActions, CAUSE_LABEL, CAUSE_CODES, PRESETS, DEFAULT_PRESET, getPreset } from './causal.mjs';
 
 // ---- サンプルページ定義（本番は loku_attn_pages / _boxes 相当） ----
 function seedStore() {
@@ -647,15 +647,24 @@ function handle(store, req, res, body) {
     return send(200, { ok: true, retention_days: days, cutoff, ...res2 });
   }
 
-  // GET /api/attn/diagnose?friend_id= — ③因果診断（P1+P2）：離脱点→なぜ→次の一手
+  // GET /api/attn/presets — L2プリセット台帳（楔=wedge:true が現行の一次営業先）
+  if (req.method === 'GET' && url.pathname === '/api/attn/presets') {
+    const presets = Object.values(PRESETS).map(p => ({ key: p.key, label: p.label, industry: p.industry, wedge: p.wedge }));
+    return send(200, { default: DEFAULT_PRESET, presets });
+  }
+
+  // GET /api/attn/diagnose?friend_id=&preset= — ③因果診断（P1+P2）：離脱点→なぜ→次の一手
+  // preset=L2業種プリセット（既定 judo・後方互換）。因果コードはプリセット非依存＝言語化だけが変わる。
   if (req.method === 'GET' && url.pathname === '/api/attn/diagnose') {
     const fid = url.searchParams.get('friend_id');
     if (!fid) return send(400, { error: 'friend_id required' });
+    const presetKey = url.searchParams.get('preset') || DEFAULT_PRESET;
+    if (!PRESETS[presetKey]) return send(400, { error: 'unknown preset' });
     if (denyCrossTenant(tenantOfFriend(store, fid))) return send(403, { error: 'tenant scope violation' }); // RLS相当
     const booked = store.bookings.has(fid); // 成果（因果とは別軸）
     const diagnoses = friendJourneyRows(store, fid).map(r => {
-      const cause = inferCause(r);
-      const actions = suggestActions(cause.code);
+      const cause = inferCause(r, presetKey);
+      const actions = suggestActions(cause.code, presetKey);
       return {
         page_slug: r.page_slug, exit_box: cause.exit_box, exit_type: cause.exit_type,
         cause: { code: cause.code, label: cause.label, confidence: cause.confidence },
@@ -663,7 +672,7 @@ function handle(store, req, res, body) {
         evidence: cause.evidence, explanation: cause.explanation, actions,
       };
     });
-    return send(200, { friend_id: fid, diagnoses });
+    return send(200, { friend_id: fid, preset: presetKey, diagnoses });
   }
 
   // GET /api/attn/cause-segments — ③離脱理由でセグメント化（P3の入力・Loku受け渡しの材料）
@@ -687,7 +696,10 @@ function handle(store, req, res, body) {
     let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
     if (!d.cause_code) return send(400, { error: 'cause_code required' });
     if (!CAUSE_CODES.includes(d.cause_code)) return send(400, { error: 'unknown cause_code' });
-    const industry = d.industry || 'judo'; // 接骨院を既定（最も厳しい基準で検査）
+    const presetKey = d.preset || DEFAULT_PRESET; // L2プリセット（既定 judo・後方互換）
+    if (!PRESETS[presetKey]) return send(400, { error: 'unknown preset' });
+    // 検査業種：明示指定 > プリセット既定。judo既定＝最も厳しい基準（限定列挙）で検査
+    const industry = d.industry || getPreset(presetKey).industry;
     // セグメント抽出：同意済み・自テナント・配信可(opt_out除外)・プロファイリング拒否は除外
     const seen = new Set(); const segment = [];
     for (const [, id] of store.identity) {
@@ -701,11 +713,11 @@ function handle(store, req, res, body) {
       const cause = primaryCause(store, fid);
       if (cause && cause.code === d.cause_code) segment.push(fid);
     }
-    const actions = suggestActions(d.cause_code);
+    const actions = suggestActions(d.cause_code, presetKey);
     const msg = actions.outreach.message;
     const check = msg ? checkCopy(msg, industry) : { ok: true, blocked: false, violations: [] };
     return send(200, {
-      ok: true, cause_code: d.cause_code, cause_label: CAUSE_LABEL[d.cause_code],
+      ok: true, cause_code: d.cause_code, cause_label: CAUSE_LABEL[d.cause_code], preset: presetKey,
       segment, count: segment.length,
       funnel: actions.funnel, // 導線チューニング案（店主向け・構成の提案）
       outreach: {

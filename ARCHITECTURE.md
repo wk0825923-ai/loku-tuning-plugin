@@ -144,25 +144,26 @@ Lokuは単なるLINE配信ツールではなく、メッセージ配信＋コン
 ### D-1. 設計原則（移植時に絶対に崩さない）
 - **因果＝行動ベース**（`box_engagement` の到達深度だけで決まる）。**予約(booked)＝成果**は別軸。予約が離脱理由を上書きしない（`deriveExit` に booked を渡さない）。成果は `diagnose.booked` と `cause-outcomes` で測る。
 - **新テーブル不要**。exit/cause は既存 `box_stats`（＋予約は既存 `bookings` 相当）から**都度導出**する純ロジック。Supabaseへは「関数/ビュー」として移植し、永続化する新スキーマは足さない（本末転倒チェック）。
-- **主張を作らない**：outreach（離脱者への一言）は下書きのみ。送信経路の直前で必ず `checkCopy(text, 'judo')` を通す**安全弁**。NGなら下書きを渡さない。
+- **主張を作らない**：outreach（離脱者への一言）は下書きのみ。送信経路の直前で必ず `checkCopy(text, プリセット既定の業種)` を通す**安全弁**（pilates→`fitness`／judo→`judo`。明示 `industry` 指定が優先）。NGなら下書きを渡さない。
 - **送信は作り直さない**：撃つのは Loku本体のAI配信（`broadcasts_*_with_ai` / `scenarios` / `auto_responses`）。本エンジンは「因果＋セグメント＋下書き」を渡すだけ。
 
 ### D-2. L1/L2/L3（構造で作ってお任せ）
 - **L1 エンジン（汎用）**：`deriveExit`（離脱点5種→現状は form_abandon/bounce/dropoff/no_data）・`classify`（因果推定の順序＝優先度）。業種非依存。
-- **L2 接骨院プリセット（データ）**：`BOX_ORDER` / `BOX_DICTIONARY`（ボックス辞書）・因果カタログ（`CAUSE_LABEL/EXPLAIN/FUNNEL/OUTREACH`）。**横展開はここを差し替えるだけ**（コードを業種ごとに書かない）。※差し替え解禁は「③が接骨院で証明された後」＝GATE後。
+- **L2 業種プリセット（データ）**：`PRESETS`（`causal.mjs`）＝ `judo`（接骨院・温存＝回帰基準）と `pilates`（**現行の楔**・2026-07-12差替・`wedge:true`）。各プリセット＝ボックス辞書＋因果カタログ（EXPLAIN/FUNNEL/OUTREACH）＋checkCopy既定業種。**横展開はここに足すだけ**（コードを業種ごとに書かない）。エンジン既定は `judo`（後方互換）・API は `preset` パラメータで選択。`GET /api/attn/presets` で台帳を返す。※さらなる横展開の解禁は「③が楔業種で証明された後」＝GATE後。
 - **L3 自己最適化**：`cause-outcomes`（因果別の実測予約率）が入力。適応的な重み学習の本体は**実データの経時蓄積待ち**（現状は計測の土台まで）。
 
 ### D-3. エンドポイント（本番も同一契約で移植）
 | メソッド/パス | 役割 | 主なガード |
 |---|---|---|
-| `GET /api/attn/diagnose?friend_id=` | 離脱点＋因果＋説明＋打ち手＋`booked` | 同意ゲート・RLSテナント |
+| `GET /api/attn/presets` | L2プリセット台帳（`wedge:true`＝現行の楔） | — |
+| `GET /api/attn/diagnose?friend_id=&preset=` | 離脱点＋因果＋説明＋打ち手＋`booked`（言語化はプリセット・因果コードは非依存） | 同意ゲート・RLSテナント・未知preset→400 |
 | `GET /api/attn/cause-segments` | 離脱理由でセグメント化（P3入力） | 同意・自テナントのみ |
 | `POST /api/attn/dispatch-plan` | Loku配信"計画"を生成（**送信しない**） | `requires_approval:true`／opt_out・profiling_opt_out・**予約済み**・他テナントを除外／outreachは`checkCopy`通過 |
 | `GET /api/attn/cause-outcomes` | 因果別の実測予約率（P4基盤の答え合わせ） | 同意・自テナントのみ |
 | （既存）`GET /journey` | `exit_box`/`exit_type` を付与（P0） | 従来の同意・RLSを踏襲 |
 
 ### D-4. QA（移植後も担保）
-`handoff-demo/test.mjs` の群23–31＋セクション別計測（A元機能/B新機能/C回帰/D-P4基盤）。`node test.mjs 50` で **pass=30,050 / fail=0**。**セクションAの205項目/周は③追加の前後で完全一致＝元機能への回帰なし**。移植後も同じ契約・同じ不変条件（複合条件64通り総当り含む）を回すこと。
+`handoff-demo/test.mjs` の群23–35＋セクション別計測（A元機能/B新機能/C回帰/D-P4基盤/E楔差替）。`node test.mjs 50` で **pass=32,400 / fail=0**（2026-07-12・楔差替込み）。**セクションA〜Dは楔差替の前後で完全一致＝エンジン無傷の証拠**。セクションE＝fitness痩身NG辞書・pilatesプリセット・L1不変（因果コードはプリセット非依存）・judo既定の回帰ガード。移植後も同じ契約・同じ不変条件（複合条件64通り総当り含む）を回すこと。
 
 ---
 
