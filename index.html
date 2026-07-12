@@ -444,6 +444,37 @@
     document.getElementById('liveWrap').style.display='none';
     document.getElementById('profile').classList.add('on');
   }
+  // ==== 本番SDK(loku-attn.js)化の要点（目付還流 P0/P3）====
+  // P3: anon_idは「7日で失効しうる揮発ID」前提（Safari ITPがscript-writable storageを
+  //     最終操作から7日で全削除するため）。再訪の恒久キーはmerge後のfriend_id。
+  var ANON_TTL_DAYS=7;
+  function getAnonId(){
+    try{
+      var raw=localStorage.getItem('loku_anon');
+      if(raw){var o=JSON.parse(raw); if(o&&o.id&&(Date.now()-o.at)<ANON_TTL_DAYS*86400000){o.at=Date.now();localStorage.setItem('loku_anon',JSON.stringify(o));return o.id;}}
+    }catch(e){}
+    var id='anon_'+Math.random().toString(36).slice(2,10);
+    try{localStorage.setItem('loku_anon',JSON.stringify({id:id,at:Date.now()}));}catch(e){}
+    return id; // TTL超過は"別anon"と割り切る（無理な延命=CNAMEクローク等はしない・法規制は見廻り確認）
+  }
+  var anonId=getAnonId(), lastFlushAt=0;
+  // P0: 離脱時フラッシュ。visibilitychange(hidden)が主・pagehideがフォールバック
+  //     （MDN定石・実測で併用91%到達。beforeunload/unloadはモバイルで壊滅するため使わない）。
+  //     デモはスタンドアロンなので既定null＝送信しない。本番は '/api/attn/collect' を設定。
+  var FLUSH_ENDPOINT=null;
+  function flushPayload(){
+    return JSON.stringify({anon_id:anonId,page_slug:'seitai-lp-a',active_sec:Math.round(totalActive*10)/10,
+      boxes:boxes.map(function(b){return {box_key:b.id,active_view:Math.round(b.activeView*10)/10,engagement:Math.round(b.engagement),revisits:b.revisits};})});
+  }
+  function flush(){
+    if(!FLUSH_ENDPOINT)return;
+    var now=Date.now(); if(now-lastFlushAt<800)return; lastFlushAt=now; // 二段発火の連投を間引く
+    // 冪等前提：受け口(app.mjs)は単調増加マージ(P1)なので、途中スナップショットが何度飛んでも巻き戻らない
+    try{navigator.sendBeacon(FLUSH_ENDPOINT,new Blob([flushPayload()],{type:'application/json'}));}catch(e){}
+  }
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush();});
+  window.addEventListener('pagehide',flush);
+
   document.getElementById('mergeBtn').addEventListener('click',doMerge);
   document.getElementById('lineCta').addEventListener('click',function(){window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});setTimeout(doMerge,400);});
   document.getElementById('resetBtn').addEventListener('click',function(){

@@ -10,6 +10,11 @@ import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure, defaultS
 import { ingestSearchConsole, searchSummary } from './search-console.mjs';
 import { deriveExit, inferCause, suggestActions, CAUSE_LABEL, CAUSE_CODES, PRESETS, DEFAULT_PRESET, getPreset } from './causal.mjs';
 
+// 計測堅牢化（目付還流P2）：既知botのUAパターン。素直に名乗るbot＝GA4のIABリスト相当の最小版。
+// ※ヘッドレス偽装は捕まらない＝SDK側の挙動フラグ(suspect_bot)との二段構え。
+// 「Googlebot」のように前に語が付く形も捕まえるため、先頭側の語境界は付けない（後方のみ\b）
+const BOT_UA_RE = /(bot|crawler|spider|scrapy|headlesschrome|puppeteer|playwright|phantomjs|python-requests|selenium)\b|curl\/|wget\//i;
+
 // ---- サンプルページ定義（本番は loku_attn_pages / _boxes 相当） ----
 function seedStore() {
   const boxesDef = [
@@ -47,6 +52,7 @@ function seedStore() {
     product_events: [],       // 自分の画面(オンボ/管理)の利用イベント（自己改善サイクル）
     bookings: new Set(),      // 予約が入った friend_id（実測CVRの母数）
     opt_out: new Set(),       // 配信停止した friend_id（送らない）
+    bot_excluded: [],         // botとして計測から除外した記録（黙って消さず可視化する＝bot-report）
     audit_log: [],            // 機微操作の証跡（安全管理措置・従業者の監督）
     privacy_policy_urls: new Map(), // tenant_id -> 店舗が設定したプライバシーポリシーURL
     subprocessors: defaultSubprocessors(), // 委託先レジストリ（越境移転28条・委託先監督25条）
@@ -241,11 +247,22 @@ function handle(store, req, res, body) {
     // 外部送信規律：通知を出す前に計測データを取らない（取得タイミングの保証）。ポリシーON時のみ強制。
     if (store.require_notice && d.notice_shown !== true) return send(403, { error: '外部送信の通知が未提示（notice_shown required）' });
 
+    // 計測堅牢化P2（目付還流）：既知botは計測に入れない（滞在・因果・タグを歪ませない）。
+    // GA4は黙って消すが、うちは件数を可視化する（bot-report）＝店主への信頼の担保。
+    const ua = String(req.headers?.['user-agent'] || '');
+    if (BOT_UA_RE.test(ua)) {
+      store.bot_excluded.push({ reason: 'bot_ua', ua: ua.slice(0, 160), page_slug: d.page_slug, at: Date.now() });
+      return send(200, { ok: true, excluded: 'bot_ua' });
+    }
+
     // upsert session（同一 anon×page は1行）
     const sess = store.sessions.get(d.anon_id) || {
       anon_id: d.anon_id, tenant_id: page.tenant_id, page_id: page.id,
       entry_query: null, entry_pos: null, device: null, active_sec: 0, started_at: Date.now(),
     };
+    // 計測堅牢化P2（挙動ベースの二段目）：SDKが「人間離れした挙動」を検知したらフラグ。
+    // 隔離集計＝タグ発火・実名導線には乗せないが、データは監査用に残す（一度suspectになったら戻さない）
+    if (d.suspect_bot === true) sess.suspect_bot = true;
     if (d.entry) {
       sess.entry_query = d.entry.query ?? sess.entry_query;
       sess.entry_pos = d.entry.pos ?? sess.entry_pos;
@@ -253,25 +270,31 @@ function handle(store, req, res, body) {
       // 検索クエリの健康語＝要配慮個人情報の"推知"に配慮するフラグ
       sess.entry_health = detectHealthTerms(String(d.entry.query || '')).length > 0;
     }
-    if (typeof d.active_sec === 'number') sess.active_sec = d.active_sec;
+    // 計測堅牢化P1（目付還流）：単調増加マージ。離脱時フラッシュ(P0)で複数バッチが届く前提なので、
+    // 後着の途中スナップショット（小さい値）が確定値を巻き戻さないよう max を取る。
+    if (typeof d.active_sec === 'number' && Number.isFinite(d.active_sec)) {
+      sess.active_sec = Math.max(sess.active_sec || 0, d.active_sec);
+    }
     sess.last_seen_at = Date.now();
     store.sessions.set(d.anon_id, sess);
 
-    // upsert box_stats（型を防御：不正値でも落とさず安全化）
+    // upsert box_stats（型を防御：不正値でも落とさず安全化・P1単調増加マージ）
     const boxList = Array.isArray(d.boxes) ? d.boxes : [];
     for (const b of boxList) {
       if (!b || typeof b.box_key !== 'string') continue;
       const eng = Number(b.engagement), av = Number(b.active_view), rv = Number(b.revisits);
       const key = `${d.anon_id}::${b.box_key}`;
+      const prev = store.box_stats.get(key);
       store.box_stats.set(key, {
         anon_id: d.anon_id, box_key: b.box_key,
-        active_view: Number.isFinite(av) ? av : 0,
-        engagement: Number.isFinite(eng) ? Math.min(100, Math.max(0, eng)) : 0,
-        revisits: Number.isFinite(rv) ? rv : 0,
+        active_view: Math.max(prev?.active_view || 0, Number.isFinite(av) ? av : 0),
+        engagement: Math.max(prev?.engagement || 0, Number.isFinite(eng) ? Math.min(100, Math.max(0, eng)) : 0),
+        revisits: Math.max(prev?.revisits || 0, Number.isFinite(rv) ? rv : 0),
       });
     }
 
-    const fired = evalTags(store, d.anon_id, page);
+    // suspect_botセッションはタグ発火させない（実名導線・配信対象に乗せない＝隔離）
+    const fired = sess.suspect_bot ? [] : evalTags(store, d.anon_id, page);
     recordFires(store, d.anon_id, fired);
     // 既に結合済みなら即 friend_tags へ反映（後追いcollectでもタグが増える）
     const id = store.identity.get(d.anon_id);
@@ -645,6 +668,18 @@ function handle(store, req, res, body) {
     const res2 = purgeExpired(store, cutoff);
     store.audit_log.push({ action: 'purge', friend_id: `retention:${days}d`, purged: res2.purgedAnons.length, at: now });
     return send(200, { ok: true, retention_days: days, cutoff, ...res2 });
+  }
+
+  // GET /api/attn/bot-report — 計測から除外したbotの可視化（目付還流P2）。
+  // GA4は黙って消すが、うちは「何件弾いたか」を店主に見せる＝数字の信頼の担保。
+  if (req.method === 'GET' && url.pathname === '/api/attn/bot-report') {
+    const suspects = [...store.sessions.values()].filter(s => s.suspect_bot && !denyCrossTenant(s.tenant_id));
+    return send(200, {
+      excluded_count: store.bot_excluded.length,          // UAで入口除外した数
+      suspect_count: suspects.length,                     // 挙動フラグで隔離中の数
+      recent_excluded: store.bot_excluded.slice(-10),     // 直近の除外記録（監査用）
+      note: '除外・隔離は黙って消さず件数で可視化する（店主に見せる数字の信頼担保）',
+    });
   }
 
   // GET /api/attn/presets — L2プリセット台帳（楔=wedge:true が現行の一次営業先）

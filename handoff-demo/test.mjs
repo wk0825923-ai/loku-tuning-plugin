@@ -984,6 +984,73 @@ async function suite() {
     ok((await (await post('/api/attn/check-copy', { text: '駅前の整体院。初回¥5,500・完全予約制', industry: 'rikaku' })).json()).ok, '回帰: 整体の事実コピーは辞書追加後もクリーン');
     ok((await (await post('/api/attn/check-copy', { text: '丁寧なカウンセリングと予約制', industry: 'judo' })).json()).ok, '回帰: 接骨院の正常コピーは辞書追加後もクリーン');
   });
+
+  // ===== 計測堅牢化（目付還流 2026-07-13：P0離脱時フラッシュ前提のP1/P2）=====
+  section('F. 計測堅牢化（目付還流 P1/P2）');
+
+  // 36) P1 単調増加マージ：後着の途中スナップショットが確定値を巻き戻さない
+  await withServer(async ({ post, get }) => {
+    // フル値 → 小さい途中値 の順で届いても巻き戻らない
+    await post('/api/attn/collect', { anon_id: 'F1', page_slug: 'seitai-lp-a', active_sec: 40, boxes: [{ box_key: 'hero', engagement: 80, active_view: 12, revisits: 2 }, { box_key: 'pricing', engagement: 70, active_view: 5, revisits: 1 }] });
+    await post('/api/attn/collect', { anon_id: 'F1', page_slug: 'seitai-lp-a', active_sec: 12, boxes: [{ box_key: 'hero', engagement: 30, active_view: 4, revisits: 1 }] });
+    await post('/api/attn/merge', { anon_id: 'F1', friend_id: 'f_F1', consented: true });
+    const j1 = (await (await get('/api/attn/journey?friend_id=f_F1')).json()).journeys[0];
+    eq(j1.box_engagement.hero, 80, 'P1: 後着の小さいengagementで巻き戻らない');
+    eq(j1.box_engagement.pricing, 70, 'P1: 後着バッチに無いboxの値は残る');
+    // 増加方向は普通に更新される（P0の複数flushの正常系）
+    await post('/api/attn/collect', { anon_id: 'F2', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'hero', engagement: 30 }] });
+    await post('/api/attn/collect', { anon_id: 'F2', page_slug: 'seitai-lp-a', boxes: [{ box_key: 'hero', engagement: 65 }, { box_key: 'pricing', engagement: 70 }] });
+    await post('/api/attn/merge', { anon_id: 'F2', friend_id: 'f_F2', consented: true });
+    const j2 = (await (await get('/api/attn/journey?friend_id=f_F2')).json()).journeys[0];
+    eq(j2.box_engagement.hero, 65, 'P1: 増加方向は更新される');
+    eq((await (await get('/api/attn/journey?friend_id=f_F2')).json()).journeys.length, 1, 'P1: 複数flushでもjourneyは1行（upsert維持）');
+    // 因果エンジンへの波及：遅延した部分バッチが離脱点・因果を壊さない
+    const dg = (await (await get('/api/attn/diagnose?friend_id=f_F1')).json()).diagnoses[0];
+    eq(dg.exit_box, 'pricing', 'P1×因果: 巻き戻しバッチ後も離脱点は最深boxのまま');
+    eq(dg.cause.code, 'value_before_price', 'P1×因果: 因果コードも巻き戻らない');
+  });
+
+  // 37) P2 bot除外：UA一段目＋挙動フラグ二段目・黙って消さず可視化
+  await withServer(async ({ post, get, postH }) => {
+    const pa = [{ box_key: 'hero', engagement: 50 }, { box_key: 'pricing', engagement: 70 }];
+    // 一段目：既知bot UAは入口で除外（計測に入らない）
+    const r1 = await (await postH('/api/attn/collect', { anon_id: 'BOT1', page_slug: 'seitai-lp-a', boxes: pa }, { 'user-agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)' })).json();
+    ok(r1.ok && r1.excluded === 'bot_ua', 'P2: 既知bot UAは除外レスポンス');
+    await post('/api/attn/merge', { anon_id: 'BOT1', friend_id: 'f_bot1', consented: true });
+    eq((await (await get('/api/attn/journey?friend_id=f_bot1')).json()).journeys.length, 0, 'P2: botのデータは計測に存在しない');
+    ok((await (await postH('/api/attn/collect', { anon_id: 'BOT2', page_slug: 'seitai-lp-a', boxes: pa }, { 'user-agent': 'python-requests/2.31' })).json()).excluded === 'bot_ua', 'P2: python-requestsも除外');
+    ok((await (await postH('/api/attn/collect', { anon_id: 'BOT3', page_slug: 'seitai-lp-a', boxes: pa }, { 'user-agent': 'HeadlessChrome/120.0' })).json()).excluded === 'bot_ua', 'P2: HeadlessChromeも除外');
+    // 人間の普通のUAは除外されない
+    const rh = await (await postH('/api/attn/collect', { anon_id: 'HU1', page_slug: 'seitai-lp-a', boxes: pa }, { 'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Line/14.0' })).json();
+    ok(rh.ok && !rh.excluded && rh.fired.length > 0, 'P2: 人間UA（LINE内ブラウザ含む）は通常どおり計測・タグ発火');
+    // 二段目：挙動フラグ(suspect_bot)は隔離＝タグ発火しない・実名導線に乗らない
+    const rs = await (await post('/api/attn/collect', { anon_id: 'SUS1', page_slug: 'seitai-lp-a', suspect_bot: true, boxes: pa })).json();
+    ok(rs.ok && rs.fired.length === 0, 'P2: suspect_botはタグ発火しない（隔離）');
+    await post('/api/attn/merge', { anon_id: 'SUS1', friend_id: 'f_sus1', consented: true });
+    eq((await (await get('/api/attn/friend-tags?friend_id=f_sus1')).json()).tags.length, 0, 'P2: suspectはmerge後もタグが付かない');
+    // 可視化：黙って消さない（bot-report）
+    const br = await (await get('/api/attn/bot-report')).json();
+    eq(br.excluded_count, 3, 'P2: UA除外3件が可視化される');
+    eq(br.suspect_count, 1, 'P2: 挙動隔離1件が可視化される');
+    ok(br.recent_excluded.every(e => e.reason === 'bot_ua' && e.ua && e.at), 'P2: 除外記録に理由・UA・時刻が残る（監査）');
+  });
+
+  // 38) 回帰ガード：堅牢化が既存の計測フローを変えない
+  await withServer(async ({ post, get }) => {
+    // 通常UA（テストのfetch既定）での従来フローは無変化
+    const c = await (await post('/api/attn/collect', { anon_id: 'FR1', page_slug: 'seitai-lp-a', entry: { query: '肩こり 整体 世田谷', pos: 3, device: 'スマホ' }, active_sec: 42, boxes: HOT_BOXES })).json();
+    ok(c.ok && c.fired.includes('料金検討中') && c.fired.includes('効果重視'), 'F回帰: 従来のタグ発火は無変化');
+    await post('/api/attn/merge', { anon_id: 'FR1', friend_id: 'f_fr1', consented: true });
+    const j = (await (await get('/api/attn/journey?friend_id=f_fr1')).json()).journeys[0];
+    eq(j.box_engagement.pricing, 100, 'F回帰: journeyの値も従来どおり');
+    // forget後はbotフラグ経路含め何も残らない（削除カスケードとの相互作用）
+    await post('/api/attn/collect', { anon_id: 'FR2', page_slug: 'seitai-lp-a', suspect_bot: true, boxes: HOT_BOXES });
+    await post('/api/attn/merge', { anon_id: 'FR2', friend_id: 'f_fr2', consented: true });
+    await post('/api/attn/forget', { friend_id: 'f_fr2' });
+    eq((await (await get('/api/attn/journey?friend_id=f_fr2')).json()).journeys.length, 0, 'F回帰: suspectセッションもforgetで消える');
+    const br = await (await get('/api/attn/bot-report')).json();
+    eq(br.suspect_count, 0, 'F回帰: forget後はsuspect集計からも消える');
+  });
 }
 
 const LOOPS = Number(process.argv[2] || 5);

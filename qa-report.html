@@ -73,18 +73,18 @@
     <div class="kicker">Loku Tuning · QAレポート（蓄積・追記型）</div>
     <h1>回したQAを、ぜんぶ記録し続ける。</h1>
     <p class="lead">「追加機能のQA」と「追加による元機能への影響（回帰）」を分けて計測。高回数・高頻度・複数条件・複数場面・複合条件で実行。<b style="color:var(--grn)">本ドキュメントはQAを回すたびに追記される。</b></p>
-    <div class="meta">最終更新: 2026-07-12 ｜ ハーネス: <code>handoff-demo/test.mjs</code>（依存ゼロ・状態隔離・N周ループ）｜ noindex・社内資料</div>
+    <div class="meta">最終更新: 2026-07-13 ｜ ハーネス: <code>handoff-demo/test.mjs</code>（依存ゼロ・状態隔離・N周ループ）｜ noindex・社内資料</div>
   </header>
 
   <!-- 最新サマリ -->
   <section>
     <div class="sec-no">LATEST</div>
-    <h2>最新結果（50周・2026-07-12 楔差替＝ピラティスL2＋fitness法務まで）</h2>
+    <h2>最新結果（50周・2026-07-13 計測堅牢化＝目付還流まで）</h2>
     <div class="kpis">
-      <div class="kpi ok"><div class="n">32,800</div><div class="l">総 pass</div><div class="s">1周=656項目 ×50周</div></div>
+      <div class="kpi ok"><div class="n">33,800</div><div class="l">総 pass</div><div class="s">1周=676項目 ×50周</div></div>
       <div class="kpi ok"><div class="n">0</div><div class="l">総 fail</div><div class="s">全周回・全緑</div></div>
       <div class="kpi ok"><div class="n">205<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagA">A. 元機能（回帰）</div><div class="s">③追加前と<b style="color:var(--grn)">完全一致</b></div></div>
-      <div class="kpi ok"><div class="n">451<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagB">B〜E. ③＋楔差替</div><div class="s">B375 / C11 / D10 / E55</div></div>
+      <div class="kpi ok"><div class="n">471<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagB">B〜F. ③＋楔差替＋堅牢化</div><div class="s">B375 / C11 / D10 / E55 / F20</div></div>
     </div>
   </section>
 
@@ -100,7 +100,8 @@
         <tr><td class="tagC">C. 相互作用/回帰</td><td>③追加で元の法務ゲート・削除・保持・テナント・契約が壊れないか</td><td class="r passv">11</td><td class="r passv">550</td><td><span class="badge b-ok">PASS</span></td></tr>
         <tr><td class="tagB">D. ③P4基盤</td><td>因果別の実測予約率（成果の答え合わせ）・成果は因果と独立に集計</td><td class="r passv">10</td><td class="r passv">500</td><td><span class="badge b-ok">PASS</span></td></tr>
         <tr><td class="tagB">E. 楔差替（2026-07-12）</td><td>fitness痩身NG辞書（景表法/健康増進法） / pilates L2プリセット / L1不変（因果コード非依存） / dispatch×fitness基準 / judo既定の回帰ガード</td><td class="r passv">55</td><td class="r passv">2,750</td><td><span class="badge b-ok">PASS</span></td></tr>
-        <tr><td><b>合計</b></td><td>—</td><td class="r passv">656</td><td class="r passv">32,800</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td class="tagB">F. 計測堅牢化（2026-07-13）</td><td>目付還流：P1単調増加マージ（複数flushで巻き戻らない・因果への波及なし） / P2 bot除外（UA一段＋挙動隔離二段＋bot-report可視化） / 既存フロー・forgetカスケードの回帰ガード</td><td class="r passv">20</td><td class="r passv">1,000</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td><b>合計</b></td><td>—</td><td class="r passv">676</td><td class="r passv">33,800</td><td><span class="badge b-ok">PASS</span></td></tr>
       </tbody>
     </table>
     <div class="note"><b>回帰の決定的証拠</b> — セクションAは <b>205項目/周が③追加の前後で完全一致</b>し、50周で 10,250 全通過。つまり<b>元機能のコードは無改変・挙動不変</b>。さらにCで「新経路が既存の法務ゲート/削除/保持/テナント分離を迂回しない」ことも実データ経路で確認済み。</div>
@@ -124,6 +125,9 @@
       <div><span class="g">群33</span> <b>pilates L2プリセット</b> — presets台帳（wedge=pilates）・L1不変（因果コードはプリセット非依存）・言語化だけがスタジオ語彙に変わる・未知preset→400</div>
       <div><span class="g">群34</span> <b>dispatch×pilates</b> — 全因果の下書きがfitness基準（checkCopy）を通過・industry明示指定が優先・承認前提は不変</div>
       <div><span class="g">群35</span> <b>楔差替の回帰ガード</b> — preset未指定の既定動作（judo）は差替前と完全同一・辞書追加が既存業種のクリーンコピーを誤爆させない</div>
+      <div><span class="g">群36</span> <b>P1 単調増加マージ</b> — 離脱時フラッシュ(P0)の複数バッチで後着の途中値が確定値を巻き戻さない・因果診断(exit_box/コード)にも波及しない</div>
+      <div><span class="g">群37</span> <b>P2 bot除外</b> — 既知bot UA(Googlebot/python-requests/HeadlessChrome)を入口除外・LINE内ブラウザ等の人間UAは無影響・suspect_botは隔離(タグ発火なし)・bot-reportで黙って消さず可視化</div>
+      <div><span class="g">群38</span> <b>堅牢化の回帰ガード</b> — 従来のタグ発火/journey値が無変化・suspectセッションもforgetカスケードで完全に消える</div>
     </div>
     <div class="note" style="border-color:#3a3322;background:linear-gradient(180deg,#1c1a12,#12161d)"><b style="color:var(--amb)">⚑ 逐次QAが機能した例</b> — P4のテストを書く段階で「予約(成果)が離脱理由(行動)を上書きしてしまう」設計ミスを発見。<b>離脱理由＝行動ベース／予約＝成果の別軸</b>に分離する修正を入れ、再QAで全緑を確認。作りながら回すことで手戻りを最小化した。</div>
   </section>
@@ -147,7 +151,8 @@
     <table>
       <thead><tr><th>#</th><th>日時</th><th>対象</th><th class="r">周回</th><th class="r">pass</th><th class="r">fail</th><th>内訳/備考</th></tr></thead>
       <tbody>
-        <tr><td class="num">10</td><td class="num">07-12</td><td>楔差替（ピラティスL2プリセット＋fitness法務辞書・群32–35）</td><td class="r num">50</td><td class="r passv">32,800</td><td class="r passv">0</td><td>A10,250 / B18,750 / C550 / D500（全て差替前と完全一致＝エンジン無傷）＋ E2,350</td></tr>
+        <tr><td class="num">11</td><td class="num">07-13</td><td>計測堅牢化（目付還流P1/P2・群36–38）</td><td class="r num">50</td><td class="r passv">33,800</td><td class="r passv">0</td><td>A〜Eは前回と完全一致＋ F1,000（単調増加マージ / bot二段除外 / 回帰ガード）</td></tr>
+        <tr><td class="num">10</td><td class="num">07-12</td><td>楔差替（ピラティスL2プリセット＋fitness法務辞書・群32–35）</td><td class="r num">50</td><td class="r passv">32,800</td><td class="r passv">0</td><td>A10,250 / B18,750 / C550 / D500（全て差替前と完全一致＝エンジン無傷）＋ E2,750</td></tr>
         <tr><td class="num">9</td><td class="num">07-08</td><td>P4基盤 高頻度反復</td><td class="r num">30×2</td><td class="r passv">18,030×2</td><td class="r passv">0</td><td>2回とも完全同一＝決定的・flakinessなし</td></tr>
         <tr><td class="num">8</td><td class="num">07-08</td><td>P4基盤 高回数（群30–31＋成果分離）</td><td class="r num">50</td><td class="r passv">30,050</td><td class="r passv">0</td><td>A10,250 / B18,750 / C550 / D500</td></tr>
         <tr><td class="num">7</td><td class="num">07-08</td><td>P4基盤 追加後 検証（因果と成果を分離するリファクタ込み）</td><td class="r num">1</td><td class="r passv">601</td><td class="r passv">0</td><td>Aは205で不変・converted分離の設計修正を反映</td></tr>
@@ -163,7 +168,7 @@
   </section>
 
   <footer>
-    Loku Tuning QAレポート（蓄積） ／ 社内資料・noindex ／ 最終更新 2026-07-12 ／ 関連: roadmap.html・strategy.html・feature-inventory.html・legal-audit.html
+    Loku Tuning QAレポート（蓄積） ／ 社内資料・noindex ／ 最終更新 2026-07-13 ／ 関連: roadmap.html・strategy.html・feature-inventory.html・legal-audit.html
   </footer>
 
 </div>

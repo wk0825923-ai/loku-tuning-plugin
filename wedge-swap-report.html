@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Loku Tuning — 楔差替 作業レポート（2026-07-12）</title>
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#12161d; --panel2:#161b24; --line:#232a35;
+    --ink:#eef2f7; --mut:#8c97a6; --sub:#aab4c2;
+    --grn:#3ddc97; --red:#ff6b6b; --amb:#ffcf5c; --blu:#6cb6ff; --pur:#b592ff;
+    --num:"SF Mono",ui-monospace,"Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.75;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:56px 24px 96px}
+  .num{font-family:var(--num);font-variant-numeric:tabular-nums}
+  code{font-family:var(--num);font-size:.85em;color:var(--blu)}
+
+  header{border-bottom:1px solid var(--line);padding-bottom:24px;margin-bottom:36px}
+  .kicker{font-size:12px;letter-spacing:.18em;color:var(--grn);font-weight:700;text-transform:uppercase}
+  h1{font-size:30px;line-height:1.35;margin:14px 0 8px}
+  .lead{color:var(--sub);font-size:15.5px;margin:0}
+  .meta{color:var(--mut);font-size:12.5px;margin-top:12px}
+
+  section{margin:44px 0}
+  .sec-no{font-family:var(--num);color:var(--grn);font-size:13px;font-weight:700}
+  h2{font-size:21px;margin:6px 0 14px}
+  h3{font-size:15.5px;margin:20px 0 8px;color:var(--ink)}
+  p{margin:0 0 13px;color:var(--sub)} b{color:var(--ink)}
+  .em{color:var(--grn);font-weight:700}
+
+  .analogy{background:var(--panel2);border-left:3px solid var(--amb);border-radius:0 10px 10px 0;
+    padding:10px 16px;margin:12px 0;font-size:13.5px;color:var(--sub)}
+  .analogy b{color:var(--amb)}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}
+  @media(max-width:680px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  .kpi{background:var(--panel);border:1px solid #1e3a30;border-radius:12px;padding:16px}
+  .kpi .n{font-family:var(--num);font-size:24px;font-weight:700;color:var(--grn)}
+  .kpi .l{font-size:12px;color:var(--mut);margin-top:2px}
+  .kpi .s{font-size:11px;color:var(--sub);margin-top:6px}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:10px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{color:var(--mut);font-size:11.5px;font-weight:600}
+  td.r{text-align:right;font-family:var(--num)}
+  .ok{color:var(--grn);font-family:var(--num)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:12px 0}
+  .card h3{margin:0 0 6px}
+  .card.g{border-color:#1e3a30}.card.a{border-color:#3a3322}.card.r{border-color:#3a2226}
+
+  .flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0;font-size:13px}
+  .flow .s{padding:5px 12px;border-radius:20px;border:1px solid #1e3a30;color:var(--grn);background:#0f2a20}
+  .flow .a{color:var(--mut)}
+
+  ul{margin:0 0 13px;padding-left:20px;color:var(--sub)}
+  li{margin:5px 0}
+
+  footer{border-top:1px solid var(--line);margin-top:52px;padding-top:18px;color:var(--mut);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="kicker">Loku Tuning · 作業レポート</div>
+  <h1>楔差替：接骨院 → パーソナルジム/ピラティス<br>「L2だけ差し替え、エンジンは無傷」を数字で証明した</h1>
+  <p class="lead">Daiyaの GO（2026-07-12）を受けて、実装 → QA → 番人ノートとの答え合わせ → ドキュメント → push まで一気通貫で完了。</p>
+  <div class="meta">2026-07-12 ／ リポジトリ: loku-tuning-plugin（GitHub push済・社長にも見える状態）／ noindex・内部レポート</div>
+</header>
+
+<!-- 0 一言 -->
+<section>
+  <div class="sec-no">00</div>
+  <h2>30秒版</h2>
+  <p><b>何をしたか：</b>Loku Tuningの「第1の楔（最初に攻める業種）」を接骨院からパーソナルジム/ピラティスに差し替えた。変えたのは<b>L2（業種知識の設定データ）だけ</b>で、因果エンジン本体（L1）は1行も挙動を変えていない——それを<b>QA 32,800件全緑</b>、しかも<b>既存セクションA〜Dの数が差替前と1件違わず一致</b>という形で証明した。</p>
+  <div class="analogy"><b>例えると：</b>ゲーム機本体（エンジン）はそのままで、カセット（業種プリセット）を差し替えた。しかも古いカセット（接骨院）も捨てずに棚に残してあるので、いつでも動作確認に使えるし、将来また遊べる。</div>
+  <div class="kpis">
+    <div class="kpi"><div class="n">32,800</div><div class="l">QA総pass（50周）</div><div class="s">fail=0・全緑</div></div>
+    <div class="kpi"><div class="n">A〜D 完全一致</div><div class="l">回帰ゼロの証拠</div><div class="s">差替前と同数＝エンジン無傷</div></div>
+    <div class="kpi"><div class="n">3</div><div class="l">push済みコミット</div><div class="s">fd9e39c / 794fc8c / 45851ec</div></div>
+    <div class="kpi"><div class="n">7種</div><div class="l">番人ノートから還流</div><div class="s">取りこぼしを辞書へ吸収</div></div>
+  </div>
+</section>
+
+<!-- 1 なぜ -->
+<section>
+  <div class="sec-no">01</div>
+  <h2>なぜ差し替えたか（前提のおさらい）</h2>
+  <p>先週の検証（記憶⑱）でDaiyaの疑いが2つとも当たっていた：</p>
+  <ul>
+    <li><b>接骨院は法律面で主戦場が塞がれた</b> — 2025-02の厚労省広告ガイドラインで、広告経由のLPが規制対象化（限定列挙＝書いていいことがリスト化されていて、料金記載すら原則NG）。Loku Tuningの主戦場「広告→LP→LINE」だと、<b>うちが何もしなくても顧客のLP自体が違法圏</b>に入る。</li>
+    <li><b>接骨院はそもそもLP文化が薄い</b> — 集客主軸はGoogleビジネスプロフィール×口コミ。「母数最大＝反復最大」というエンジンを磨く論拠が半壊していた。</li>
+  </ul>
+  <p>対してパーソナルジム/ピラティスは「広告→LP→LINE」が業界の定石ど真ん中で、規制（景表法/健康増進法）は<b>「事実だけ・主張を触らない」という既存の防波堤がそのまま効く型</b>。今回のGOでこれを実行に移した。</p>
+</section>
+
+<!-- 2 何を変えたか -->
+<section>
+  <div class="sec-no">02</div>
+  <h2>コードで変えたもの（3ファイル・すべてL2）</h2>
+
+  <div class="card g">
+    <h3>① compliance.mjs — fitness業種＋痩身NG辞書を新設</h3>
+    <p>NGワードチェッカー（<code>checkCopy</code>）に <b>fitness業種プロファイル</b>を追加。景表法/健康増進法の直撃点を2段階で守る：</p>
+    <ul>
+      <li><b>high＝公開ブロック：</b>「必ず痩せ」「絶対痩せ」「◯kg減を保証」「リバウンドしない」「飲むだけで痩せ」「医学的に証明」等の<b>断定・保証・楽して痩身</b></li>
+      <li><b>medium＝要人承認（下書き止まり）：</b>「痩せる」「返金保証」「入会金無料」「骨盤矯正」等の<b>成果を想起させる語</b></li>
+      <li><b>ステマ検出（新設・共起型）：</b>「口コミ×特典」の組み合わせ（例：口コミ投稿で割引クーポン）＝2025年に実際に措置命令が出た型を<b>組み合わせで検出してブロック</b>。特典なしの任意のレビュー依頼は通す＝合法側の導線は塞がない</li>
+    </ul>
+    <div class="analogy"><b>例えると：</b>空港の手荷物検査。刃物（断定・保証）は即没収、液体（想起語）は係員のチェック行き、そして「単体では無害でも組み合わせると危険な薬品ペア」（口コミ×特典）は組み合わせで見つける。</div>
+  </div>
+
+  <div class="card g">
+    <h3>② causal.mjs — L2をプリセット方式に整理</h3>
+    <p>これまで接骨院の辞書がコードに直書きだったのを、<b><code>PRESETS</code>（プリセット台帳）</b>に整理。<b>pilates＝現行の楔（wedge:true）、judo＝温存</b>。各プリセットが持つのは：ボックス辞書（staff＝「院長」→「インストラクター紹介」等）・因果の説明文・導線チューニング案・離脱者への一言下書き・checkCopyの検査業種。</p>
+    <p><b>重要な設計判断：</b>エンジンの既定値は<b>judoのまま</b>にした。楔はpilatesなのに？——理由は既存QA 30,050件の回帰基準を1件も動かさないため。差し替えの正しさは「既定を変える」ことではなく「pilatesを指定すれば完全に動く＋既定は差替前と同一」の両方をテストで証明することで担保した。本番でpilatesを既定にするのは設定1行の話。</p>
+  </div>
+
+  <div class="card g">
+    <h3>③ app.mjs — APIにプリセットの入口を配線</h3>
+    <ul>
+      <li><code>GET /api/attn/diagnose?preset=pilates</code> — 因果診断の言語化がスタジオ語彙になる（<b>因果コード自体は業種非依存＝L1</b>）</li>
+      <li><code>POST /api/attn/dispatch-plan</code> に <code>preset</code> — pilates指定時、離脱者への一言下書きは自動で<b>fitness基準のcheckCopy</b>を通る（安全弁はプリセットに連動）</li>
+      <li><code>GET /api/attn/presets</code> — プリセット台帳（どれが楔かが機械可読）</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 3 QA -->
+<section>
+  <div class="sec-no">03</div>
+  <h2>QA — 「エンジン無傷」の証明のしかた</h2>
+  <p>新セクションE（テスト群32〜35）を増築して <code>node test.mjs 50</code>（50周）を実行：</p>
+  <table>
+    <thead><tr><th>セクション</th><th>中身</th><th class="r">50周</th><th>判定</th></tr></thead>
+    <tbody>
+      <tr><td>A. 元機能</td><td>計測/結合/タグ/法務18項目</td><td class="r ok">10,250</td><td class="ok">差替前と完全一致</td></tr>
+      <tr><td>B. ③因果エンジン</td><td>P0–P3（診断/セグメント/配信計画）</td><td class="r ok">18,750</td><td class="ok">差替前と完全一致</td></tr>
+      <tr><td>C. 相互作用/回帰</td><td>新経路が法務ゲートを迂回しないか</td><td class="r ok">550</td><td class="ok">差替前と完全一致</td></tr>
+      <tr><td>D. P4基盤</td><td>因果別の実測予約率</td><td class="r ok">500</td><td class="ok">差替前と完全一致</td></tr>
+      <tr><td><b>E. 楔差替（新設）</b></td><td>fitness辞書／pilatesプリセット／L1不変／judo既定の回帰ガード</td><td class="r ok">2,750</td><td class="ok">全緑</td></tr>
+      <tr><td><b>合計</b></td><td>—</td><td class="r ok"><b>32,800</b></td><td class="ok"><b>fail=0</b></td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:12px">Eで特に押さえた不変条件：<b>①同じ行動データなら因果コードはjudoでもpilatesでも同一</b>（変わるのは言語化だけ）②pilatesの一言下書き全8種がfitness基準を通過 ③preset未指定の挙動は差替前と完全同一 ④辞書追加が既存業種のクリーンコピーを誤爆させない。</p>
+  <div class="analogy"><b>例えると：</b>健康診断で「新しい薬を足した後も、去年と同じ検査項目の数値が小数点まで同じ」ことを確認した上で、新薬専用の検査も全部クリアした状態。</div>
+</section>
+
+<!-- 4 番人 -->
+<section>
+  <div class="sec-no">04</div>
+  <h2>番人（見廻りループ）との答え合わせ — 仕組みが実際に機能した</h2>
+  <p>Daiyaが仕込んでいた見廻り学習ループが、私の作業と<b>並走して</b>リポジトリに設計ノート（<code>l2-pilates-preset-notes.md</code>・サイクル1〜4）をコミットしていた。突き合わせた結果：</p>
+  <div class="flow">
+    <span class="s">見廻りが法規制を自走学習</span><span class="a">→</span>
+    <span class="s">設計ノートとして還流</span><span class="a">→</span>
+    <span class="s">私の実装と照合</span><span class="a">→</span>
+    <span class="s">取りこぼし7種を辞書へ吸収</span><span class="a">→</span>
+    <span class="s">照合表をノートに追記（次の見廻りが読む）</span>
+  </div>
+  <ul>
+    <li><b>還流できたもの（7種）：</b>「医学的に証明」「◯kg減を保証」（high）／矯正系5語＝無資格の医業類似行為の標榜リスク（medium・「骨盤調整」等への言い換え促し）／「入会金無料」（期限常態化＝有利誤認の芽）／口コミ×特典のステマ共起（high）／返金不可条項（消契法9条）／即決圧力「本日限り」等（medium）</li>
+    <li><b>意図的に見送ったもの（1件）：</b>サイクル4の「BOX_ORDER再構成案」（empathy/authority/method等の8ボックス組み替え）。これはL2ではなく<b>L1（エンジンのキー構造・QA30k件と1:1）に踏み込む</b>提案なので、1スタジオ目の実LPを計測する本番化のタイミングで、実物の構造に合わせて判断する方が正しい。<b>本末転倒チェック</b>：デモ層でエンジンを組み替えるのは「便利だけど1スタジオ目が遠のく」典型。</li>
+  </ul>
+</section>
+
+<!-- 5 ドキュメント -->
+<section>
+  <div class="sec-no">05</div>
+  <h2>ドキュメント更新とコミット</h2>
+  <ul>
+    <li><code>strategy.html</code> — 楔セクションを差し替え（pilates=第1の楔／接骨院=旧楔・温存の理由つき）</li>
+    <li><code>roadmap.html</code> — 冒頭に楔差替ブロック（以降の「接骨院」表記は差替前の記録＝読み替えルールを明記）</li>
+    <li><code>direction.html</code> — 楔差替「実施済み」に更新＋未決2を「1スタジオ目＝YUKIさん経路が最短候補」に書き換え。<b>今回初コミット</b></li>
+    <li><code>qa-report.html</code> — 実行履歴#10として追記（蓄積方針どおり）＋セクションE・群32〜35の説明</li>
+    <li><code>ARCHITECTURE.md</code> D章 — 社長向け移植仕様にプリセット機構と新エンドポイントを反映</li>
+    <li><code>l2-pilates-preset-notes.md</code> — 実装照合表を追記（見廻りが次サイクルで読める形）</li>
+  </ul>
+  <table>
+    <thead><tr><th>コミット</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr><td class="num">fd9e39c</td><td>楔差替の本体（fitness辞書・PRESETS化・preset API・QAセクションE・ドキュメント一式）</td></tr>
+      <tr><td class="num">794fc8c</td><td>見廻りノート（サイクル1-2）の取りこぼし還流＋QA追加</td></tr>
+      <tr><td class="num">45851ec</td><td>見廻りサイクル3-4の還流（ステマ共起検出ほか）＋実装照合表</td></tr>
+    </tbody>
+  </table>
+  <p style="margin-top:10px">3コミットとも <b>master へ push 済み</b>＝社長（奥村さん）のリポジトリビューにも反映されている。</p>
+</section>
+
+<!-- 6 次 -->
+<section>
+  <div class="sec-no">06</div>
+  <h2>残っているもの（コードの外）</h2>
+  <ul>
+    <li><b>未決1：社長判断の期限</b> — 「Loku Tuningは要るか／写経は誰がいつやるか」の返事期限。ここが全体の律速のまま。</li>
+    <li><b>未決2：1スタジオ目の経路確定</b> — 楔差替で<b>YUKIさん（demo-pilates-lp・2026-07-04商談）が最短候補</b>に浮上。行くなら「既存デモに計測タグ（loku-attn.js）を載せる提案1枚」が次に作る営業物。</li>
+    <li>P4（自己最適化の学習本体）は実データの蓄積待ち＝1スタジオ目が入って初めて前進する構図は不変。</li>
+  </ul>
+</section>
+
+<footer>
+  Loku Tuning 楔差替 作業レポート ／ 2026-07-12 ／ 詳細: qa-report.html（QA蓄積）・strategy.html（戦略）・roadmap.html（工程）・direction.html（未決）・l2-pilates-preset-notes.md（見廻り照合）
+</footer>
+
+</div>
+</body>
+</html>

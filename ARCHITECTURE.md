@@ -160,14 +160,20 @@ Lokuは単なるLINE配信ツールではなく、メッセージ配信＋コン
 | `GET /api/attn/cause-segments` | 離脱理由でセグメント化（P3入力） | 同意・自テナントのみ |
 | `POST /api/attn/dispatch-plan` | Loku配信"計画"を生成（**送信しない**） | `requires_approval:true`／opt_out・profiling_opt_out・**予約済み**・他テナントを除外／outreachは`checkCopy`通過 |
 | `GET /api/attn/cause-outcomes` | 因果別の実測予約率（P4基盤の答え合わせ） | 同意・自テナントのみ |
+| `GET /api/attn/bot-report` | bot除外の可視化（UA入口除外＋挙動隔離suspectの件数。黙って消さない） | suspectは自テナント集計 |
 | （既存）`GET /journey` | `exit_box`/`exit_type` を付与（P0） | 従来の同意・RLSを踏襲 |
 
 ### D-4. QA（移植後も担保）
-`handoff-demo/test.mjs` の群23–35＋セクション別計測（A元機能/B新機能/C回帰/D-P4基盤/E楔差替）。`node test.mjs 50` で **pass=32,800 / fail=0**（2026-07-12・楔差替込み）。**セクションA〜Dは楔差替の前後で完全一致＝エンジン無傷の証拠**。セクションE＝fitness痩身NG辞書・pilatesプリセット・L1不変（因果コードはプリセット非依存）・judo既定の回帰ガード。移植後も同じ契約・同じ不変条件（複合条件64通り総当り含む）を回すこと。
+`handoff-demo/test.mjs` の群23–38＋セクション別計測（A元機能/B新機能/C回帰/D-P4基盤/E楔差替/F計測堅牢化）。`node test.mjs 50` で **pass=33,800 / fail=0**（2026-07-13・計測堅牢化込み）。**セクションA〜Dは楔差替の前後で完全一致＝エンジン無傷の証拠**。セクションE＝fitness痩身NG辞書・pilatesプリセット・L1不変・judo既定の回帰ガード。セクションF＝P1単調増加マージ／P2 bot二段除外／回帰ガード。移植後も同じ契約・同じ不変条件（複合条件64通り総当り含む）を回すこと。
+
+### D-5. 計測堅牢化（目付還流・2026-07-13。詳細=`measurement-hardening-notes.md`）
+- **collect は複数バッチ前提**：SDKは離脱時フラッシュ（visibilitychange(hidden)主＋pagehideフォールバック＋sendBeacon）で何度でも送る。受け口は**単調増加マージ**（active_sec/box_statsをmax取り）＝後着の途中スナップショットで巻き戻らない。
+- **bot二段除外**：①UA入口除外（`BOT_UA_RE`）②SDK挙動フラグ`suspect_bot`→隔離（タグ発火・実名導線に乗せない）。除外は`bot-report`で可視化（黙って消さない）。
+- **anon_idは7日で失効しうる揮発ID**（Safari ITP）。再訪の恒久キーは merge後の`friend_id`。無理な延命（CNAMEクローク等）はしない。
 
 ---
 
 ## 移植メモ（実装者向け）
-- SDKの計測ロジックは `index.html` の `tick()` がそのまま雛形（絶対スコア＝読んだ秒÷目安・4ゲート）。
+- SDKの計測ロジックは `index.html` の `tick()` がそのまま雛形（絶対スコア＝読んだ秒÷目安・4ゲート）。**離脱時フラッシュ（flush/getAnonId）も同ファイル末尾に雛形あり**＝本番は`FLUSH_ENDPOINT`を`/api/attn/collect`に設定。
 - しきい値定数（`COVER_GATE / ZONE_LO/HI / VEL_STOP / IDLE_MS / HEAT_TH / READ_CPS`）は `page_boxes` か設定に外出しして店/ページ別に較正可能にする。
 - スキーマは `schema.sql` を参照（Supabase/Postgres）。
