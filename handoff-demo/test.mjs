@@ -909,6 +909,14 @@ async function suite() {
       ok(!r.ok && !r.blocked && r.violations.some(v => v.category === '医業類似行為の標榜'), 'fitness: 矯正系はmedium（無資格標榜リスク・言い換え促し）'); }
     { const r = await cc('今なら入会金無料');
       ok(!r.ok && !r.blocked, 'fitness: 「入会金無料」はmedium（期限常態化＝有利誤認の芽）'); }
+    // 見廻りサイクル3還流分（ステマ告示・消契法・即決圧力）
+    ok((await cc('口コミ投稿で割引クーポンをプレゼント')).blocked, 'fitness: 口コミ×特典の共起＝ステマ告示（口コミ買収型）をブロック');
+    { const r = await cc('ご満足いただけたら口コミもお願いします');
+      ok(!r.blocked, 'fitness: 特典なしの任意レビュー依頼はブロックしない（合法側の導線）'); }
+    { const r = await cc('ご入金後の返金不可となります');
+      ok(!r.ok && !r.blocked, 'fitness: 「返金不可」条項はmedium（消契法9条の芽）'); }
+    { const r = await cc('本日限りの特別価格');
+      ok(!r.ok && !r.blocked, 'fitness: 「本日限り」＝即決圧力はmedium'); }
   });
 
   // 33) L2プリセット機構：pilates辞書での言語化＋L1不変（因果コードはプリセット非依存）

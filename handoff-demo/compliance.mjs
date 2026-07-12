@@ -37,7 +37,23 @@ const RULES = [
   { cat: '景表法・健康増進法（痩身）', sev: 'medium', terms: ['痩せる', '痩せた', 'やせる', 'ヤセる', '痩身', 'ダイエット効果', 'ボディメイク効果', '体質改善', 'くびれ', '脚やせ', '全額返金', '返金保証', 'モニター価格', '入会金無料'] },
   // 矯正系＝無資格の医業類似行為の標榜リスク（見廻り学習ノート還流・「骨盤調整」等への言い換えを促す）
   { cat: '医業類似行為の標榜', sev: 'medium', terms: ['骨盤矯正', '猫背矯正', '小顔矯正', 'O脚矯正', '姿勢矯正'] },
+  // 消契法9条（返金不可条項）・即決圧力＝有利誤認の芽（見廻りサイクル3還流）
+  { cat: '消契法・契約条項', sev: 'medium', terms: ['返金不可', 'いかなる場合も返金', 'キャンセル不可', '解約不可'] },
+  { cat: '即決圧力', sev: 'medium', terms: ['本日限り', '当日入会で', '今日入会で', '今すぐ入会で'] },
 ];
+
+// ステマ告示（口コミ買収型）：口コミ/レビュー依頼 × 見返り特典 の共起＝high（2025-03措置命令の執行型）。
+// 特典なし・任意のレビュー依頼は合法＝口コミ語の単独は既存カテゴリのmedium止まり。
+const REVIEW_TERMS = ['口コミ', 'クチコミ', 'レビュー', '★5', '星5'];
+const INCENTIVE_TERMS = ['特典', 'プレゼント', '割引', 'クーポン', 'キャッシュバック', '謝礼', '無料に'];
+/** 口コミ依頼×見返り特典の共起を検出（ステマ告示・口コミ買収型） */
+export function detectReviewIncentive(text = '') {
+  const norm = normalizeForCheck(text);
+  const reviews = REVIEW_TERMS.filter(t => norm.includes(normalizeForCheck(t)));
+  if (reviews.length === 0) return { detected: false, reviews: [], incentives: [] };
+  const incentives = INCENTIVE_TERMS.filter(t => norm.includes(normalizeForCheck(t)));
+  return { detected: incentives.length > 0, reviews, incentives };
+}
 
 /**
  * 検査用の正規化。全角/半角・大小文字・文字間スペースでの回避を潰す。
@@ -66,6 +82,12 @@ export function checkCopy(text = '', industry = 'rikaku') {
           reason: sev === 'high' ? '公開不可（違反リスク＝業務停止/罰金の芽）' : '要人承認（下書き止まり）' });
       }
     }
+  }
+  // ステマ告示（口コミ買収型）：口コミ依頼×見返り特典の共起は業種を問わずhigh＝公開ブロック
+  const ri = detectReviewIncentive(text);
+  if (ri.detected) {
+    violations.push({ term: `${ri.reviews.join('/')}×${ri.incentives.join('/')}`, category: 'ステマ告示（口コミ買収）', severity: 'high',
+      reason: '公開不可（口コミ依頼×見返り特典の共起＝ステマ告示の執行型・2025-03措置命令と同型）' });
   }
   // 要配慮の推知：症状名×効能想起語の共起（enumerated業種はhigh＝適応症標榜リスク）
   const inf = detectSensitiveInference(text);
