@@ -902,6 +902,13 @@ async function suite() {
     // fitnessでも薬機法・景表法の共通NGは効く
     ok((await cc('日本一のピラティススタジオ')).blocked, 'fitness: 「日本一」（景表法）は共通でブロック');
     ok((await cc('腰痛が治るピラティス')).blocked, 'fitness: 「治る」（薬機法）は共通でブロック');
+    // 見廻り学習ノート還流分（l2-pilates-preset-notes.md）
+    ok((await cc('医学的に証明されたメソッド')).blocked, 'fitness: 「医学的に証明」＝医療標榜をブロック');
+    ok((await cc('3ヶ月で5kg減を保証')).blocked, 'fitness: 「◯kg減を保証」＝成果保証をブロック');
+    { const r = await cc('猫背矯正で美しい姿勢に');
+      ok(!r.ok && !r.blocked && r.violations.some(v => v.category === '医業類似行為の標榜'), 'fitness: 矯正系はmedium（無資格標榜リスク・言い換え促し）'); }
+    { const r = await cc('今なら入会金無料');
+      ok(!r.ok && !r.blocked, 'fitness: 「入会金無料」はmedium（期限常態化＝有利誤認の芽）'); }
   });
 
   // 33) L2プリセット機構：pilates辞書での言語化＋L1不変（因果コードはプリセット非依存）
