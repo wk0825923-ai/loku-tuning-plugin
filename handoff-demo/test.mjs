@@ -1051,6 +1051,31 @@ async function suite() {
     const br = await (await get('/api/attn/bot-report')).json();
     eq(br.suspect_count, 0, 'F回帰: forget後はsuspect集計からも消える');
   });
+
+  section('G 効果測定台帳連携（change_id）');
+  // 36) 匿名target/change帰属→変更前後の予約率。個人情報は使わずID形式を固定。
+  await withServer(async ({ post, get }) => {
+    const change = 'C-20260713-loku-tuning-001';
+    const mk = async (anon, friend, phase, booked, change_id = null) => {
+      const body = { anon_id: anon, page_slug: 'seitai-lp-a', target_id: 'studio-001', measurement_phase: phase, boxes: HOT_BOXES };
+      if (change_id) body.change_id = change_id;
+      eq((await post('/api/attn/collect', body)).status, 200, `効果測定: ${phase} collect`);
+      await post('/api/attn/merge', { anon_id: anon, friend_id: friend, consented: true });
+      if (booked) await post('/api/attn/booking', { friend_id: friend });
+    };
+    await mk('EB1', 'f_eb1', 'baseline', false);
+    await mk('EB2', 'f_eb2', 'baseline', true);
+    await mk('ET1', 'f_et1', 'treatment', true, change);
+    await mk('ET2', 'f_et2', 'treatment', true, change);
+    const out = await (await get(`/api/attn/change-outcomes?target_id=studio-001&change_id=${change}`)).json();
+    eq(out.baseline, { visitors: 2, booked: 1, booking_completed_rate: 50 }, '効果測定: baseline集計');
+    eq(out.treatment, { visitors: 2, booked: 2, booking_completed_rate: 100 }, '効果測定: treatment集計');
+    eq(out.delta_pp, 50, '効果測定: 予約率差分pp');
+    eq(out.result, 'pending_review', '効果測定: 自動で勝ち断定しない');
+    eq((await post('/api/attn/collect', { anon_id: 'BAD1', page_slug: 'seitai-lp-a', target_id: '個人名', measurement_phase: 'baseline' })).status, 400, '効果測定: 匿名ID形式を強制');
+    eq((await post('/api/attn/collect', { anon_id: 'BAD2', page_slug: 'seitai-lp-a', target_id: 'studio-001', measurement_phase: 'treatment' })).status, 400, '効果測定: treatmentはchange_id必須');
+    eq((await get('/api/attn/change-outcomes?target_id=studio-001')).status, 400, '効果測定: 集計ID欠落を拒否');
+  });
 }
 
 const LOOPS = Number(process.argv[2] || 5);

@@ -210,7 +210,12 @@ function friendJourneyRows(store, fid) {
       const st = store.box_stats.get(`${anon}::${b.box_key}`);
       box_engagement[b.box_key] = st ? Math.round(st.engagement) : 0;
     }
-    rows.push({ page_slug: page.slug, box_engagement, booked });
+    rows.push({
+      page_slug: page.slug, box_engagement, booked,
+      target_id: sess.target_id || null,
+      change_id: sess.change_id || null,
+      measurement_phase: sess.measurement_phase || null,
+    });
   }
   return rows;
 }
@@ -244,6 +249,14 @@ function handle(store, req, res, body) {
     if (!d.anon_id || !d.page_slug) return send(400, { error: 'anon_id, page_slug required' });
     const page = pageBySlug(store, d.page_slug);
     if (!page) return send(404, { error: 'unknown page' });
+    // 効果測定の帰属ID。個人情報を入れさせず、共通台帳の匿名ID規則だけを受け付ける。
+    const targetId = d.target_id == null ? null : String(d.target_id);
+    const changeId = d.change_id == null ? null : String(d.change_id);
+    const phase = d.measurement_phase == null ? null : String(d.measurement_phase);
+    if (targetId && !/^[a-z0-9][a-z0-9_-]{1,63}$/i.test(targetId)) return send(400, { error: 'invalid target_id' });
+    if (changeId && !/^C-\d{8}-[a-z0-9][a-z0-9-]*-\d{3}$/i.test(changeId)) return send(400, { error: 'invalid change_id' });
+    if (phase && !['baseline', 'treatment', 'holdout'].includes(phase)) return send(400, { error: 'invalid measurement_phase' });
+    if (phase === 'treatment' && !changeId) return send(400, { error: 'change_id required for treatment' });
     // 外部送信規律：通知を出す前に計測データを取らない（取得タイミングの保証）。ポリシーON時のみ強制。
     if (store.require_notice && d.notice_shown !== true) return send(403, { error: '外部送信の通知が未提示（notice_shown required）' });
 
@@ -263,6 +276,10 @@ function handle(store, req, res, body) {
     // 計測堅牢化P2（挙動ベースの二段目）：SDKが「人間離れした挙動」を検知したらフラグ。
     // 隔離集計＝タグ発火・実名導線には乗せないが、データは監査用に残す（一度suspectになったら戻さない）
     if (d.suspect_bot === true) sess.suspect_bot = true;
+    // 最初に付いた帰属を固定する。同一セッション途中で施策群を差し替えて結果を汚さない。
+    if (sess.target_id == null && targetId) sess.target_id = targetId;
+    if (sess.change_id == null && changeId) sess.change_id = changeId;
+    if (sess.measurement_phase == null && phase) sess.measurement_phase = phase;
     if (d.entry) {
       sess.entry_query = d.entry.query ?? sess.entry_query;
       sess.entry_pos = d.entry.pos ?? sess.entry_pos;
@@ -375,6 +392,8 @@ function handle(store, req, res, body) {
         entry_query: sess.entry_query, entry_pos: sess.entry_pos, device: sess.device,
         entry_health: !!sess.entry_health, // 健康関連検索（要配慮推知に配慮）
         active_sec: sess.active_sec, box_engagement,
+        target_id: sess.target_id || null, change_id: sess.change_id || null,
+        measurement_phase: sess.measurement_phase || null,
         exit_box: exit.exit_box, exit_type: exit.exit_type, // P0:離脱ポイント
         search: searchSummary(store, sess.page_id), // 来る前（サチコAPI取込・無ければnull）
       });
@@ -786,6 +805,41 @@ function handle(store, req, res, body) {
       .map(r => ({ ...r, booked_rate: r.n ? Math.round(r.booked / r.n * 100) : 0 }))
       .sort((a, b) => b.n - a.n); // 母数が多い順（着手優先度の目安）
     return send(200, { outcomes });
+  }
+
+  // GET /api/attn/change-outcomes?target_id=&change_id=
+  // 共通効果台帳の答え合わせ：変更前(baseline)と対象変更(treatment)の予約率を匿名集計する。
+  if (req.method === 'GET' && url.pathname === '/api/attn/change-outcomes') {
+    const targetId = url.searchParams.get('target_id');
+    const changeId = url.searchParams.get('change_id');
+    if (!targetId || !changeId) return send(400, { error: 'target_id, change_id required' });
+    if (!/^[a-z0-9][a-z0-9_-]{1,63}$/i.test(targetId) || !/^C-\d{8}-[a-z0-9][a-z0-9-]*-\d{3}$/i.test(changeId)) {
+      return send(400, { error: 'invalid tracking id' });
+    }
+    const groups = { baseline: new Set(), treatment: new Set() };
+    for (const [anon, id] of store.identity) {
+      if (!id.consented) continue;
+      const sess = store.sessions.get(anon);
+      if (!sess || sess.target_id !== targetId) continue;
+      if (denyCrossTenant(sess.tenant_id)) continue;
+      if (sess.measurement_phase === 'baseline' && !sess.change_id) groups.baseline.add(id.friend_id);
+      if (sess.measurement_phase === 'treatment' && sess.change_id === changeId) groups.treatment.add(id.friend_id);
+    }
+    const summarize = set => {
+      const visitors = set.size;
+      const booked = [...set].filter(fid => store.bookings.has(fid)).length;
+      return { visitors, booked, booking_completed_rate: visitors ? Math.round(booked / visitors * 10000) / 100 : null };
+    };
+    const baseline = summarize(groups.baseline);
+    const treatment = summarize(groups.treatment);
+    const delta_pp = baseline.booking_completed_rate == null || treatment.booking_completed_rate == null
+      ? null : Math.round((treatment.booking_completed_rate - baseline.booking_completed_rate) * 100) / 100;
+    return send(200, {
+      target_id: targetId, change_id: changeId, primary_metric: 'booking_completed_rate',
+      baseline, treatment, delta_pp,
+      result: baseline.visitors === 0 || treatment.visitors === 0 ? 'unknown' : 'pending_review',
+      note: '母数・流入条件・期間を確認してからwin/neutral/lossを判定する。前後差だけで因果を断定しない。',
+    });
   }
 
   // デモ専用：graceful shutdown（allowShutdown時のみ有効。本番には載せない）

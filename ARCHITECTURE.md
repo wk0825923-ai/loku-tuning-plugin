@@ -160,11 +160,18 @@ Lokuは単なるLINE配信ツールではなく、メッセージ配信＋コン
 | `GET /api/attn/cause-segments` | 離脱理由でセグメント化（P3入力） | 同意・自テナントのみ |
 | `POST /api/attn/dispatch-plan` | Loku配信"計画"を生成（**送信しない**） | `requires_approval:true`／opt_out・profiling_opt_out・**予約済み**・他テナントを除外／outreachは`checkCopy`通過 |
 | `GET /api/attn/cause-outcomes` | 因果別の実測予約率（P4基盤の答え合わせ） | 同意・自テナントのみ |
+| `GET /api/attn/change-outcomes?target_id=&change_id=` | 匿名店舗×変更IDでbaseline/treatmentの実測予約率を比較 | ID形式固定・同意・自テナントのみ・自動で勝敗断定しない |
 | `GET /api/attn/bot-report` | bot除外の可視化（UA入口除外＋挙動隔離suspectの件数。黙って消さない） | suspectは自テナント集計 |
 | （既存）`GET /journey` | `exit_box`/`exit_type` を付与（P0） | 従来の同意・RLSを踏襲 |
 
 ### D-4. QA（移植後も担保）
-`handoff-demo/test.mjs` の群23–38＋セクション別計測（A元機能/B新機能/C回帰/D-P4基盤/E楔差替/F計測堅牢化）。`node test.mjs 50` で **pass=33,800 / fail=0**（2026-07-13・計測堅牢化込み）。**セクションA〜Dは楔差替の前後で完全一致＝エンジン無傷の証拠**。セクションE＝fitness痩身NG辞書・pilatesプリセット・L1不変・judo既定の回帰ガード。セクションF＝P1単調増加マージ／P2 bot二段除外／回帰ガード。移植後も同じ契約・同じ不変条件（複合条件64通り総当り含む）を回すこと。
+`handoff-demo/test.mjs` の群23–38＋効果測定群＋セクション別計測（A元機能/B新機能/C回帰/D-P4基盤/E楔差替/F計測堅牢化/G効果測定台帳連携）。`node test.mjs 50` で **pass=34,350 / fail=0**（2026-07-13）。**セクションA〜Fは変更前と完全一致＝既存機能無傷の証拠**。セクションG＝匿名ID形式・treatmentのchange_id必須・baseline/treatment予約率・勝敗自動断定禁止。移植後も同じ契約・同じ不変条件（複合条件64通り総当り含む）を回すこと。
+
+### D-6. 共通効果台帳との接続（2026-07-13）
+- SDKの`collect`へ匿名`target_id`、共通台帳の`change_id`、`measurement_phase`（baseline/treatment/holdout）を渡す。treatmentはchange_id必須。
+- 帰属はセッション初回値で固定し、途中の施策差替えで結果を混ぜない。
+- 正本=`C:\Users\Daiya\EFFECT_MEASUREMENT_SHARED.md`、追記台帳=`C:\Users\Daiya\effect-measurement\ledger.jsonl`。
+- `change-outcomes`の差分は観測値。母数・期間・流入条件の確認前にwin/lossを自動判定しない。
 
 ### D-5. 計測堅牢化（目付還流・2026-07-13。詳細=`measurement-hardening-notes.md`）
 - **collect は複数バッチ前提**：SDKは離脱時フラッシュ（visibilitychange(hidden)主＋pagehideフォールバック＋sendBeacon）で何度でも送る。受け口は**単調増加マージ**（active_sec/box_statsをmax取り）＝後着の途中スナップショットで巻き戻らない。

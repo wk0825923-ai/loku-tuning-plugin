@@ -79,12 +79,12 @@
   <!-- 最新サマリ -->
   <section>
     <div class="sec-no">LATEST</div>
-    <h2>最新結果（50周・2026-07-13 計測堅牢化＝目付還流まで）</h2>
+    <h2>最新結果（50周・2026-07-13 効果測定台帳連携まで）</h2>
     <div class="kpis">
-      <div class="kpi ok"><div class="n">33,800</div><div class="l">総 pass</div><div class="s">1周=676項目 ×50周</div></div>
+      <div class="kpi ok"><div class="n">34,350</div><div class="l">総 pass</div><div class="s">1周=687項目 ×50周</div></div>
       <div class="kpi ok"><div class="n">0</div><div class="l">総 fail</div><div class="s">全周回・全緑</div></div>
       <div class="kpi ok"><div class="n">205<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagA">A. 元機能（回帰）</div><div class="s">③追加前と<b style="color:var(--grn)">完全一致</b></div></div>
-      <div class="kpi ok"><div class="n">471<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagB">B〜F. ③＋楔差替＋堅牢化</div><div class="s">B375 / C11 / D10 / E55 / F20</div></div>
+      <div class="kpi ok"><div class="n">482<span style="font-size:14px;color:var(--mut)">/loop</span></div><div class="l tagB">B〜G. ③＋楔差替＋堅牢化＋効果測定</div><div class="s">B375 / C11 / D10 / E55 / F20 / G11</div></div>
     </div>
   </section>
 
@@ -101,7 +101,8 @@
         <tr><td class="tagB">D. ③P4基盤</td><td>因果別の実測予約率（成果の答え合わせ）・成果は因果と独立に集計</td><td class="r passv">10</td><td class="r passv">500</td><td><span class="badge b-ok">PASS</span></td></tr>
         <tr><td class="tagB">E. 楔差替（2026-07-12）</td><td>fitness痩身NG辞書（景表法/健康増進法） / pilates L2プリセット / L1不変（因果コード非依存） / dispatch×fitness基準 / judo既定の回帰ガード</td><td class="r passv">55</td><td class="r passv">2,750</td><td><span class="badge b-ok">PASS</span></td></tr>
         <tr><td class="tagB">F. 計測堅牢化（2026-07-13）</td><td>目付還流：P1単調増加マージ（複数flushで巻き戻らない・因果への波及なし） / P2 bot除外（UA一段＋挙動隔離二段＋bot-report可視化） / 既存フロー・forgetカスケードの回帰ガード</td><td class="r passv">20</td><td class="r passv">1,000</td><td><span class="badge b-ok">PASS</span></td></tr>
-        <tr><td><b>合計</b></td><td>—</td><td class="r passv">676</td><td class="r passv">33,800</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td class="tagB">G. 効果測定台帳連携（2026-07-13）</td><td>target_id/change_id/measurement_phaseの匿名ID形式強制 / 帰属はセッション初回値で固定 / change-outcomes（baseline vs treatment予約率） / 勝敗を自動断定しない（pending_review）</td><td class="r passv">11</td><td class="r passv">550</td><td><span class="badge b-ok">PASS</span></td></tr>
+        <tr><td><b>合計</b></td><td>—</td><td class="r passv">687</td><td class="r passv">34,350</td><td><span class="badge b-ok">PASS</span></td></tr>
       </tbody>
     </table>
     <div class="note"><b>回帰の決定的証拠</b> — セクションAは <b>205項目/周が③追加の前後で完全一致</b>し、50周で 10,250 全通過。つまり<b>元機能のコードは無改変・挙動不変</b>。さらにCで「新経路が既存の法務ゲート/削除/保持/テナント分離を迂回しない」ことも実データ経路で確認済み。</div>
@@ -151,6 +152,7 @@
     <table>
       <thead><tr><th>#</th><th>日時</th><th>対象</th><th class="r">周回</th><th class="r">pass</th><th class="r">fail</th><th>内訳/備考</th></tr></thead>
       <tbody>
+        <tr><td class="num">12</td><td class="num">07-13</td><td>共通効果台帳連携（target_id/change_id・変更前後予約率）</td><td class="r num">50</td><td class="r passv">34,350</td><td class="r passv">0</td><td>A〜Fは前回と完全一致＋ G550（匿名ID / 帰属固定 / baseline-treatment集計 / 勝敗自動断定禁止）</td></tr>
         <tr><td class="num">11</td><td class="num">07-13</td><td>計測堅牢化（目付還流P1/P2・群36–38）</td><td class="r num">50</td><td class="r passv">33,800</td><td class="r passv">0</td><td>A〜Eは前回と完全一致＋ F1,000（単調増加マージ / bot二段除外 / 回帰ガード）</td></tr>
         <tr><td class="num">10</td><td class="num">07-12</td><td>楔差替（ピラティスL2プリセット＋fitness法務辞書・群32–35）</td><td class="r num">50</td><td class="r passv">32,800</td><td class="r passv">0</td><td>A10,250 / B18,750 / C550 / D500（全て差替前と完全一致＝エンジン無傷）＋ E2,750</td></tr>
         <tr><td class="num">9</td><td class="num">07-08</td><td>P4基盤 高頻度反復</td><td class="r num">30×2</td><td class="r passv">18,030×2</td><td class="r passv">0</td><td>2回とも完全同一＝決定的・flakinessなし</td></tr>
