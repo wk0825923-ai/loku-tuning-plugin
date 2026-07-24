@@ -251,3 +251,30 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **検証方法**：同一人物を模した**2つの匿名ID×1人**を作り、①**直近1個だけを merge** → 旧 anon のセッション/タグが孤児化しジャーニーが過少になることを確認、②**`anon_ids` 配列で一括後埋め** → 両方が friend_id に付き、かつ**P1のmaxマージで二重計上・値の巻き戻しが起きない**ことを確認、③**同意ゲート（consented）／プロファイリング拒否／テナント越境RLS相当**を全匿名IDで踏襲するかを確認（E2E＝メインターミナル領分・1スタジオ目本番化時。P7/P8実機テストと同じ群で）。
 - **優先度**：**P9（中）**——「実名×視線×因果」の**因果＝検討期間・検討回数の正確さ**に直結（高単価・比較検討型のパーソナル/ピラティスほど過少計上が判断を誤らせる）。ただし積極的 stitching はITPが天井なので、**まず(b)の“正直に見せる”を確実に**、(a)は7日窓内の取りこぼし低減として。判断はDaiya。
 - **位置づけ**：ITP→P3・LTP→P5 が「**何を測るか**」、bfcache→P7・prerender→P8 が「**いつ数えるか**」の起源だったのに対し、**identity fragmentation→P9 は「誰の来訪として貼り合わせるか（Who）」の起源**。計測の三つ目の軸。
+
+---
+
+## 追加の種（2026-07-24・目付第9回巡回からの還流）
+
+**前提**：以下は実装照合表（P0-P3済）・P5（起源クリックID非依存）・P3補遺(AFP)・P6（max_scroll_pct）・P7（bfcache復帰）・P8（先読み）・P9（複数匿名IDの束ね）とは**重複しない新規種P10**。テーマは What（何を測るか=P3/P5）・When（いつ数えるか=P7/P8）・Who（誰の来訪か=P9）に続く**未踏の第4軸＝How-much（その成果はどれだけの価値か）**。起源地図の4軸目を埋めるべく、ビート2（広告界の value-based bidding／enhanced conversions）を物差しに現物 app.mjs の**成果(booking)層**をgrepして当たった。**コードは触っていない。**
+
+### 【P10・新規種】成果（booking）を1ビット（予約の有無）から“粗い価値ティア”へ広げ、効果台帳・原因別成果をティア構成でも見せる
+- **現象**：成果を「起きた回数」でなく「その成果がいくらの価値か」で測るのが value-based measurement（例えると：レジで「今日30件売れた」とだけ記録する店と、「500円ドリンク28件＋3万円コース2件」まで記録する店の違い。件数だけ見ると前者が繁盛に見えるが売上は後者が上）。広告界は自動入札AIに「件数」だけ教えると**「$50のガイドDL」と「$15,000の相談」を“同じ1件”**として扱い、AIが合理的に“最も安い成果”を狩る＝junk leads（安いだけの見込み客）が氾濫する、と繰り返し報告し、成果に金額(value)を持たせる value-based bidding／value optimization へ移行を促している。
+  - **現物確認①（目付がgrep）＝Lokuの成果は“予約したか否か”の1ビット**：`POST /api/attn/booking`（app.mjs 429-435行）は `{friend_id}` だけを受け `store.bookings.add(d.friend_id)`（433行）＝**金額も種別も持たない `Set`**（53行 `bookings: new Set()`）。
+  - **現物確認②（当たり＝過剰批判はしない）**：Lokuは**因果の判定を“行動ベース”に保ち、予約(成果)とは意図的に切り離している**（causal.mjs 25行「box_engagementだけで決める＝行動であって成果(予約)とは独立」・app.mjs 224行「因果は行動ベース＝予約(成果)には依存しない」）＝設計の当たり。また**生の金額・決済データを引き込んでいないのは privacy/特商法の観点で正しい慎重さ**。P10は「Lokuが壊れている」話ではなく、**“成果”の解像度が今1ビットで、そこに“粗い価値の重み”を1段だけ足すと効果台帳の判定が正しくなる**という話。
+  - **残る本物の抜け（＝P10）**：Lokuが「打ち手が効いたか」を答え合わせする共通効果台帳 `GET /api/attn/change-outcomes` の主指標は **`booking_completed_rate`（予約人数÷来訪人数・838行）**、原因別成果 `cause-outcomes` も **`booked_rate`（予約人数÷母数・805行）**＝**どちらも“予約の有無”だけを数え、すべての予約を等価に扱う**。よって、ある打ち手が**“体験予約（低単価・気軽）”ばかりを増やし“本契約・継続（高単価）”をむしろ減らしても、件数ベースの台帳は「改善」と誤判定**する＝広告界の junk leads 問題と同型の穴が、Lokuの「効いたか」判定（因果の出口＝成果）に空いている。
+- **根拠URL（機構＝S・実装解説A・数字＝ベンダー自己申告B・現物＝目付grep）**：
+  - Google Ads Help「About conversion values」（S／成果に金額を持たせると“件数”でなく“事業価値”を最適化できる・公式一次）https://support.google.com/google-ads/answer/13064207
+  - Google Ads Help「Value-based bidding for Search and Shopping」（S）https://support.google.com/google-ads/answer/15099424
+  - Google Ads Help「About enhanced conversions for leads」（S／offline import の後継・ファーストパーティ顧客データで成約を後追い結合・CRMを握らないのが普及障壁）https://support.google.com/google-ads/answer/15713840
+  - Sarah Stemen「Small Business Guide to Value-Based Bidding」（B／“$50のDLと$15,000の相談を同額に見せると安い成果を狩る”）https://www.thesarahstemen.com/blog/small-business-guide-value-based-bidding
+  - hopskipmedia「Google Ads Value-Based Bidding: Fix Junk Leads」（B）https://hopskipmedia.com/google-ads-value-based-bidding-fix-junk-leads/
+  - easyinsights「What is Meta Value Optimization」（B／価値最適化でROAS平均+12%＝ベンダー数字）https://easyinsights.ai/blog/what-is-meta-value-optimization/
+  - 現物: loku-tuning-plugin/handoff-demo/app.mjs（booking 429-435行・store.bookings 53行・cause-outcomes 805行・change-outcomes 838行）／ causal.mjs 25行（因果は予約と独立＝当たり）
+- **対策案（コード無変更・設計材料）**：
+  - **(a) 成果に粗いティアを持たせる**：`POST /api/attn/booking` を `{friend_id, tier}` に拡張し、**「予約の粗いティア（例：体験／本契約／継続）」を任意フィールドで受ける**。ティアは**店主が既に手元で区別している区分＝新たな数字を作らない**（生の金額でなく“区分”）。`store.bookings` を `Set` から `Map(friend_id → {tier})` 相当へ（tierなし＝従来どおり件数集計＝後方互換）。**実名結合(friend_id)が恒久アンカーなので、成約が確定した“後”に friend_id へティアを書き足すだけで成立**（＝広告界が enhanced conversions でハッシュemail経由でやりたい後追い結合を、Lokuは friend_id で最初から持っている）。
+  - **(b) 効果台帳・原因別成果をティア構成でも出す**：`cause-outcomes`／`change-outcomes` を**件数（従来）＋“ティア構成”**で返す（例：この打ち手で体験は増えたが本契約は横ばい、を並べて見せる）。件数だけの改善判定に、価値の偏りの注意書きを添えられる。
+  - **(c) ティア→価値の重み付けは店主が決める**（目付は数字を作らない）。**生の金額・決済連携・LTV結合は同意/特商法論点＝見廻り(lp-mimawari)へ申し送り**（目付は採否判断しない）。P1の単調増加マージには影響しない（成果は因果とは別軸）。
+- **検証方法**：同一の打ち手で「**体験だけ増え・本契約は横ばい**」の来訪群を作り、①`tier`なしの既存bookingが後方互換で壊れず従来の件数集計に一致するか、②**件数台帳は「改善」・ティア台帳は「横ばい」と出し分けられるか**、③テナント越境RLS・同意ゲートをティア集計でも踏襲するかをE2Eで確認（メインターミナル領分・1スタジオ目本番化時。P7/P8/P9実機テストと同じ群で。friend_idにティアを書き足す形＝実装は軽い）。
+- **優先度**：**P10（中）**——「実名×視線×因果」の**因果の答え合わせ（効果台帳）の正しさ**に直結。件数は増えても売上が伸びない“取り違え”を防ぐ。**高単価・比較検討型（パーソナル/ピラティス）ほど体験と本契約の価値差が大きく被害大**。実名結合が恒久アンカーで後埋めが軽い＝実装コスト小。判断はDaiya。
+- **位置づけ**：ITP→P3・LTP→P5 が「**何を測るか（What）**」、bfcache→P7・prerender→P8 が「**いつ数えるか（When）**」、identity fragmentation→P9 が「**誰の来訪か（Who）**」の起源だったのに対し、**value-based measurement→P10 は「その成果はどれだけの価値か（How-much）」の起源**。計測土台の第4の軸。起源地図が What/When/Who/How-much の4軸で揃った。
