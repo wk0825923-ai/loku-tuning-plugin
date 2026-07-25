@@ -278,3 +278,31 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **検証方法**：同一の打ち手で「**体験だけ増え・本契約は横ばい**」の来訪群を作り、①`tier`なしの既存bookingが後方互換で壊れず従来の件数集計に一致するか、②**件数台帳は「改善」・ティア台帳は「横ばい」と出し分けられるか**、③テナント越境RLS・同意ゲートをティア集計でも踏襲するかをE2Eで確認（メインターミナル領分・1スタジオ目本番化時。P7/P8/P9実機テストと同じ群で。friend_idにティアを書き足す形＝実装は軽い）。
 - **優先度**：**P10（中）**——「実名×視線×因果」の**因果の答え合わせ（効果台帳）の正しさ**に直結。件数は増えても売上が伸びない“取り違え”を防ぐ。**高単価・比較検討型（パーソナル/ピラティス）ほど体験と本契約の価値差が大きく被害大**。実名結合が恒久アンカーで後埋めが軽い＝実装コスト小。判断はDaiya。
 - **位置づけ**：ITP→P3・LTP→P5 が「**何を測るか（What）**」、bfcache→P7・prerender→P8 が「**いつ数えるか（When）**」、identity fragmentation→P9 が「**誰の来訪か（Who）**」の起源だったのに対し、**value-based measurement→P10 は「その成果はどれだけの価値か（How-much）」の起源**。計測土台の第4の軸。起源地図が What/When/Who/How-much の4軸で揃った。
+
+---
+
+## 追加の種（2026-07-25・目付第10回巡回からの還流）
+
+**前提**：以下は実装照合表（P0-P3済）・P5（起源クリックID非依存）・P3補遺(AFP)・P6（max_scroll_pct）・P7（bfcache復帰）・P8（先読み）・P9（複数匿名IDの束ね）・P10（成果の価値ティア）とは**重複しない新規種P11**。テーマは What(P3/P5)・When(P7/P8)・Who(P9)・How-much(P10) に続く**未踏の第5軸＝Where（決断＝予約/問い合わせが“どの面”で起きたか）**。起源地図の最後の軸を埋めるべく、ビート3（決断面の移動＝GBPがチャット/電話を畳み、LINEはリッチメニュー/ミニアプリ内へ、Instagramはプロフィール/DMへ決断面を寄せる潮流）を入口に、現物 app.mjs の**成果(booking)層と流入(entry)層**をgrepして当たった。**コードは触っていない。**
+
+### 【P11・新規種】成果（booking）に「決断面（どの面で予約/問い合わせが起きたか）」の粗いタグを持たせ、決断面が移っても“どこで決まったか”を測れるようにする
+- **現象**：Loku Tuningの戦略は「**実名来訪者が決断する面を、面がどこに移っても測る**」。ところが2026年、主戦場3プラットフォームで**決断面（意思決定UI）がこぞって“プラットフォームの内側・会話寄り”へ移動**している（例えると：昔は店の前の看板を見て店内で注文を決めていた客が、今は店に入らずSNSのDMや予約ボタンの中で決めてしまう＝決断の現場が店の外＝自分たちの計測範囲の外へ散っていく）。
+  - **GBP**：会話系決断面を畳む一貫傾向——Business Messages（チャット）は終了（Google公式リリースノートS仮／完全停止の実施時期は媒体により2024/7と2026の記述が混在＝**日付は確定させず“撤去済み”のみ採用**）、2026年の地図パックでは**「電話ボタン」がワンタップ位置から“プロフィールを開いた奥”へ格下げ**（Google公式ヘルプ「chat and call history」S仮＋複数エージェンシーB）。決断は電話/ウェブサイト/予約へ回帰。
+  - **LINE（主戦場・一次あり）**：**リッチメニュー（チャット下部の固定面）＋LINEミニアプリが“チャットの中の決断面”**として拡張（LINE Developers docs／LINEヤフー媒体資料S）。リッチメニューに予約/ECの外部リンクを載せ、公式アカウント→ミニアプリで予約・決済まで**LINEの中で完結**。ミニアプリのアプリ内課金手数料が**2026年7月から適用開始**（6/30まで無料）＝プラットフォームが“中の決断面”を収益化に組み込む段階に入った裏付け。
+  - **Instagram**：2026年のプロフィール/bioが「**ルーティング層**（feedで関心→bioが follow/予約/電話/DM のレーンへ振り分け）」化し、**bioリンクが“ページで終わる”から“会話（DM/チャット）を開く”へ**寄る（複数媒体B）。プロフィールのアクションボタン（Book Now/Reserve/Contact）で**Instagram内で予約が完結**。
+  - **業界の物差し（ゼロクリック/ウォールドガーデン）**：検索の**58%超がクリックなしで終わる**（Similarweb 2026）＝決断がSERP/AI回答/プラットフォーム内で完結し外に出ない。ウォールドガーデンは「**成果（コンバージョン）は返すが“道のり（どこで決まったか）”は返さない**」（Improvado/AI Digital B）＝プラットフォーム横断計測への注力が2026年72%へ上昇（B）。決断面がプラットフォームの内側へ移るほど、外側の計測者は「どこで決まったか」を失う。
+  - **現物確認①（目付がgrep）＝Lokuの成果は“決断面ブラインド”**：`POST /api/attn/booking`（app.mjs 429-435行）は `{friend_id}` だけを受け `store.bookings.add(d.friend_id)`（433行）＝**予約が“起きた”ことは記録するが“どの面で決まったか”（LP内CTA／電話／LINEリッチメニュー・ミニアプリ／Instagram DM／GBP予約 等）を一切持たない**。効果台帳(change-outcomes 838行)も原因別成果(cause-outcomes 805行)もこの面ブラインドの booking を母数にする。
+  - **現物確認②（当たり＝過剰批判はしない・現物読みで“既に堅い部分”を切り分け・6回連続）**：(1) 流入(entry)は `entry_query`/`entry_pos`/`device`（app.mjs 283-288行）を保持＝**来訪の文脈は一部取れている**。(2) merge(323-)は**同意の由来 `obtained_by`/`method`（334-335行）を記録**＝“誰が/どの方法で名乗ったか”は当たり。(3) 起源(流入元/referrer/UTM)の紐付けは**既にP5（起源クリックID非依存化）が受け持つ種**＝ここでは二重計上しない。よってP11の射程は「**来た面(entry=P5)でも成果の価値(P10)でもなく、“決断が起きた面”という別レイヤーが booking に無い**」1点に絞る。※現物の機能棚卸し表（index.html 249-250行）は「流入元/UTM＝積む」「コンバージョン経路＝LP→LINE追加→予約を接続」と**掲げている**が、booking受け口に“決断面”フィールドが無い＝**掲示と受け口の粒度差**が本物の抜け。
+- **根拠URL（機構・潮流＝S/A＋B、数字＝B、現物＝目付grep）**：
+  - LINE Developers「LINEミニアプリ×公式アカウント」（S・チャット内決断面の一次）https://developers.line.biz/ja/docs/line-mini-app/service/line-mini-app-oa/ ／ LINEヤフー for Business「リッチメニュー」（S）https://www.lycbiz.com/jp/column/line-official-account/technique/20180731-01/ ／ LINEミニアプリ アプリ内課金2026年7月適用・チャネル同意簡略化（socialplus B→traced）https://blog.socialplus.jp/news/summary-202604/
+  - Google Business Profile Help「Changes to chat and call history」（S仮・決断面の撤去/格下げ一次／403は検索経由）https://support.google.com/business/answer/14919056 ／ Google for Developers「Update on GBM」（S仮）https://developers.google.com/business-communications/business-messages/resources/release-notes/update-on-gbm
+  - Similarweb「Zero-Click Marketing 2026」（A／58%超がノークリック）https://www.similarweb.com/blog/marketing/geo/zero-click-marketing/ ／ Improvado「Walled Garden in Advertising 2026」（B／“成果は返すが道のりは返さない”）https://improvado.io/blog/walled-garden-in-advertising ／ AI Digital「Alternatives to Walled Garden Reporting」（B）https://www.aidigital.com/blog/alternatives-to-walled-garden
+  - Instagram bio＝ルーティング層（TrueFuture Media／CommonNinja B）https://www.truefuturemedia.com/articles/instagram-bio-optimization-2026
+  - 現物: loku-tuning-plugin/handoff-demo/app.mjs（booking 429-435行・store.bookings 53行・entry 283-288行・merge 334-335行・cause-outcomes 805行・change-outcomes 838行）／ index.html 249-250行（機能棚卸し表の掲示）
+- **対策案（コード無変更・設計材料）**：
+  - **(a) 成果に“決断面”の粗いタグを持たせる**：`POST /api/attn/booking` を `{friend_id, surface}` に拡張し、**「予約/問い合わせが起きた面の粗い区分（例：lp_cta／phone／line_richmenu／line_miniapp／line_chat／instagram_dm／gbp／other）」を任意フィールドで受ける**。区分は**店主/導線側が既に知っている“どのボタン/どの面から来た予約か”＝新たな数字を作らない**（面の名札を1個付けるだけ）。`store.bookings` を `Set` から `Map(friend_id → {surface, ...})` 相当へ（surfaceなし＝従来どおり件数集計＝**後方互換**）。P10のtierと同じ器（Map化）に相乗りできる＝実装は軽い。
+  - **(b) 効果台帳・原因別成果を“決断面構成”でも出す**：`cause-outcomes`／`change-outcomes` を件数（従来）＋**“決断面の内訳”**でも返す（例：この打ち手の後、LP内CTA予約は減ったが LINEリッチメニュー予約が増えた＝**決断が減ったのでなく“面が移った”**を並べて見せる）。決断面が移った時に「LP改善が効かなくなった」という誤読を防ぐ注意書きを添えられる。
+  - **(c) “決断面が計測範囲の外”のものは正直に other/unknown で見せる**（P9(b)と同じ“正直な過少”の思想）。GBP予約ボタンや電話や外部予約サイトでの決断は、面の名札が取れないなら**推測で埋めず unknown**にする＝数字を作らない鉄則の安全側。生の外部プラットフォーム連携（GBP/IG API結合・電話計測）の採否は**同意/特商法論点＝見廻り(lp-mimawari)へ申し送り**。
+- **検証方法**：同一の打ち手で「**LP内CTA予約が減り・LINEリッチメニュー予約が増える（＝決断面の移動）**」来訪群を作り、①`surface`なしの既存bookingが後方互換で壊れず従来の件数集計に一致するか、②**件数台帳は「横ばい」・決断面台帳は「LPからLINEへ移動」と出し分けられるか**、③テナント越境RLS・同意ゲートを面別集計でも踏襲するか、④P10のtierと同居させても衝突しないか（同じMap器）をE2Eで確認（メインターミナル領分・1スタジオ目本番化時。P7/P8/P9/P10実機テストと同じ群で。friend_idの成果に名札を1個足す形＝実装は軽い）。
+- **優先度**：**P11（中）**——「面がどこに移っても測る」という Loku Tuning の**定義そのもの**に直結。2026年は主戦場3面（GBP/LINE/Instagram）で決断面が同時に“プラットフォーム内側・会話寄り”へ動いており、面ブラインドのままだと**「決断が減った」と「決断面が移った」を店主が区別できない**＝改善判断を誤らせる。実名結合(friend_id)が恒久アンカーで名札の後埋めが軽い＝実装コスト小。判断はDaiya。
+- **位置づけ**：ITP→P3・LTP→P5 が「**何を測るか（What）**」、bfcache→P7・prerender→P8 が「**いつ数えるか（When）**」、identity fragmentation→P9 が「**誰の来訪か（Who）**」、value-based→P10 が「**どれだけの価値か（How-much）**」の起源だったのに対し、**決断面の移動（zero-click/walled garden）→P11 は「その決断は“どの面”で起きたか（Where）」の起源**。計測土台の第5の軸。**起源地図が What/When/Who/How-much/Where の5軸で揃った回**。
