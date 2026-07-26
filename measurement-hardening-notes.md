@@ -306,3 +306,25 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **検証方法**：同一の打ち手で「**LP内CTA予約が減り・LINEリッチメニュー予約が増える（＝決断面の移動）**」来訪群を作り、①`surface`なしの既存bookingが後方互換で壊れず従来の件数集計に一致するか、②**件数台帳は「横ばい」・決断面台帳は「LPからLINEへ移動」と出し分けられるか**、③テナント越境RLS・同意ゲートを面別集計でも踏襲するか、④P10のtierと同居させても衝突しないか（同じMap器）をE2Eで確認（メインターミナル領分・1スタジオ目本番化時。P7/P8/P9/P10実機テストと同じ群で。friend_idの成果に名札を1個足す形＝実装は軽い）。
 - **優先度**：**P11（中）**——「面がどこに移っても測る」という Loku Tuning の**定義そのもの**に直結。2026年は主戦場3面（GBP/LINE/Instagram）で決断面が同時に“プラットフォーム内側・会話寄り”へ動いており、面ブラインドのままだと**「決断が減った」と「決断面が移った」を店主が区別できない**＝改善判断を誤らせる。実名結合(friend_id)が恒久アンカーで名札の後埋めが軽い＝実装コスト小。判断はDaiya。
 - **位置づけ**：ITP→P3・LTP→P5 が「**何を測るか（What）**」、bfcache→P7・prerender→P8 が「**いつ数えるか（When）**」、identity fragmentation→P9 が「**誰の来訪か（Who）**」、value-based→P10 が「**どれだけの価値か（How-much）**」の起源だったのに対し、**決断面の移動（zero-click/walled garden）→P11 は「その決断は“どの面”で起きたか（Where）」の起源**。計測土台の第5の軸。**起源地図が What/When/Who/How-much/Where の5軸で揃った回**。
+
+## 追加の種（2026-07-26・目付第11回巡回からの還流）
+
+**前提**：以下は実装照合表（P0-P3済）・P5（起源クリックID非依存）・P3補遺(AFP)・P6（max_scroll_pct）・P7（bfcache復帰）・P8（先読み）・P9（複数匿名IDの束ね）・P10（成果の価値ティア）・P11（決断面surface）とは**重複しない新規種P12**。起源地図5軸(What/When/Who/How-much/Where)が一巡したので、鉄則どおり新軸を無理に増やさず**ビート2/engaged-time堅牢化の深掘り**（＝carried-over宿題「visibilitychange多重発火・タブ復帰時のengagementリセット扱い」）へ舵。ライフサイクル3点(P0離脱/P7bfcache/P8先読み)の**残る一角＝“ページ遷移を伴わないタブ/アプリ切替（可視トグル）の時計”**に当たった。**コードは触っていない。**
+
+### 【P12・新規種】タブ/アプリを短く離れて戻った時に「隠れていた秒」が滞在秒(active_sec)に混入するのを塞ぐ（可視復帰時に lastTick をリセット／dt をクランプ）
+- **現象**：`tick()`（index.html 342-349行）は毎回 `dt=(now-lastTick)/1000; lastTick=now;` で経過秒を出し、`activeGate=(可視&&前面&&25秒以内に操作)` なら `totalActive+=dt`。ところが **`lastTick` はタブ/アプリを離れて戻る境目でリセットされない**。主戦場のLINE内ブラウザ(iOS)は**裏に回るとJS（時計刻み）が数秒の猶予後に凍る**（実測A：約20秒バックグラウンド→戻すとカウンタは戻ってから再開）。→ ユーザーが通知を**15秒**チラ見して戻ると、復帰直後の刻みが `dt≈15秒`（凍結中の経過）を持ち、離脱直前に操作していれば無操作ゲート(25秒=IDLE_MS)を通り抜け、**その15秒が「読んでいた時間」に加算**されうる（例えると：店員が別室に呼ばれている間、滞在ストップウォッチを止め忘れ、戻った瞬間に居なかった数秒を読了時間に足してしまう）。
+- **現物確認（当たり＝過剰批判はしない・現物読みで“既に堅い部分”を切り分け・7回連続）**：(1) 裏に居る間に刻みが発火しても**可視ゲート(`document.visibilityState==='visible'&&hasFocus`・346行)で秒は積まれない**＝“裏で数え続ける”水増しは既に防御済み。(2) **25秒以上の離席は無操作ゲート(`now-lastActivity<IDLE_MS`・347行)が弾く**＝長時間離席は安全。よって漏れは「**25秒未満の往復1回ごとの、凍結中の数秒**」に限定＝**大穴ではなく“塵積”の防御種**。ただし主戦場LINE内は通知/アプリ切替の短い往復が頻繁ゆえ、塵積が効く。
+- **他種との非重複（実装照合の要）**：P0（離脱時flush＝出口の“送信”）・P7（bfcache復帰＝“戻る操作での再読込”時の新ビュー計上/per-viewカウンタリセット）・P8（先読み活性化ゲート）とは別レイヤー。**P7の `pageshow`/`event.persisted` はタブ/アプリ切替では発火しない**（ページ遷移を伴わないため）。P12は“同一ページのままの可視トグル”の**時計(dt)**だけを対象＝別経路。実装時は「P7のbfcache復帰リセット」と「P12の可視復帰リセット」が同一往復で二重に走らないことだけ確認すればよい。
+- **根拠URL（機構=S、実測=A、物差し=A/B、現物=目付grep）**：
+  - Chrome for Developers「Heavy throttling of chained JS timers（Chrome 88〜）」（S・背景タブで setTimeout を強く間引く/5分以上隠れると毎分1回・403は検索経由）https://developer.chrome.com/blog/timer-throttling-in-chrome-88
+  - MDN「Window: setTimeout()」背景タブのクランプ規定（S）https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout
+  - Apple Developer Forums「Preventing JavaScript from Stopping in Safari When It Goes into the Background」（A・実測：iOSはバックグラウンドでJS停止・戻ると再開）https://developer.apple.com/forums/thread/777860
+  - 物差し：Parse.ly「Engaged Time」heartbeatで“アクティブに関与中の時間だけ”集計（A）https://www.parse.ly/glossary/engaged-time/ ／ Chartbeat 同旨 https://help.chartbeat.com/hc/en-us/articles/360045890913-User-Engagement-Tracking-Methodology ／ GA4 engagement time＝“アクティブ前面タブの時間・背景タブ除外・止めたら一時停止”（Analytify B）https://analytify.io/track-user-engagement-time-in-google-analytics/
+  - 現物: loku-tuning-plugin/index.html tick() 342-349行（`dt=(now-lastTick)/1000; lastTick=now; if(activeGate) totalActive+=dt`）・可視/無操作ゲート 346-348行・visibilitychange は hidden時のflushのみ 475行（可視復帰のハンドラなし）
+- **対策案（コード無変更・設計材料）**：
+  - **(a) 可視復帰時に時計を取り直す（業界標準の“pause/resume”に合わせる）**：`document.addEventListener('visibilitychange', …)` の**可視化(visible)側**で `lastTick=Date.now();`（必要なら `vel`/`velSmooth` も0に）＝**隠れていた間を dt に入れない**。GA4/Parse.ly/Chartbeat/Riveted/Marfeel が全て採る「隠れたら止め、戻ったら再開」の現物版。既存の hidden時flush(475行)に visible時reset を1行足す形＝軽い。
+  - **(b) もしくは dt を刻み間隔でクランプ（頭打ち）**：`var dt=Math.min((now-lastTick)/1000, TICK/1000*2)` のように**1刻みで乗る秒に上限**を設ける＝凍結明けの巨大 dt を機械的に頭打ち。(a)より雑だが取りこぼしにくい保険。(a)と併用可。
+  - **(c) `focus`/`blur`(327-328行 hasFocus)との整合**：PC等でタブは可視のままウィンドウ非フォーカスの場合も、focus復帰時に同様に `lastTick` を取り直すと二重の穴を塞げる（活性判定は既に hasFocus を見ているので、時計リセットだけ足りない）。
+- **検証方法**：実機E2E（メイン領分・1スタジオ目本番化時。P7/P8/P9/P10/P11のライフサイクル/結合/価値/面 境界テストと同じ群で）。①**LINE内WKWebViewで「15秒アプリ切替→戻る」を往復**させ、active_sec と各box engagement が凍結中の秒を**拾わない**こと。②**25秒境界の前後（24秒 vs 26秒離席）**で挙動が正しく分かれること（24秒＝リセットで加算なし・26秒＝従来どおり無操作ゲートで停止済み）。③**P7のbfcache復帰テストと同じ往復群**で、可視復帰リセット(P12)とbfcache復帰リセット(P7)が二重に走らないこと。④P1(単調増加マージ)と衝突せず、途中flushが飛んでも巻き戻らないこと。
+- **優先度**：**P12（低〜中）**——防御的リファイン。既存の可視ゲート＋25秒無操作ゲートで“最悪の水増し”は防げており、漏れは「25秒未満の往復ごとの数秒」に限定。ただし主戦場LINE内(iOS)は短い往復が頻繁で塵積が効き、engagement(読了率)＝タグ発火の閾値判定の分子を押し上げるため、**素通り客を「検討度が高い」と誤タグ付け→店主の初回メッセージ空振り**につながる。旧Universal Analyticsの“放置タブ込み滞在の水増し”と同型の穴。実装1〜数行で軽い。判断はDaiya。
+- **位置づけ**：起源地図5軸(What=P3/P5・When=P7/P8・Who=P9・How-much=P10・Where=P11)が一巡した後、**新軸ではなく「When軸(いつ数えるか)の深掘り／ライフサイクルの残る一角」**として着地。P0(離脱=出口)・P7(bfcache=戻る入口)・P8(先読み=正面入口)が“ページの一生の入退場”を塞ぐのに対し、**P12は“滞在中に一瞬席を外して戻る”という往復の時計**を塞ぐ＝ライフサイクル4点目。「ブラウザの省電力最適化（背景タブ凍結）が、皮肉にも“戻った瞬間の水増し”という計測の穴を生む」＝bfcache(P7)・先読み(P8)と同じ“最適化が定義を揺らす”構図の3例目。
