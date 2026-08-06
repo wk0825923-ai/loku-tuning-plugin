@@ -515,3 +515,26 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **検証方法**：P15 の検証群（「同一人物が日を分けて3回来てから予約」）に、①**30分超の空き**を挟んで戻った時／**日をまたいで**戻った時に別エピソードとして `visit_count` が増えるか（閾値が店主設定値で動くか）、②**負のテスト＝「30秒読み→一息→再読」で1来訪が複数エピソードに割れないか**（`IDLE_MS`=25秒を境界に誤流用していないことの確認）、③merge(P9)跨ぎでエピソードが割れない、④P12の可視復帰リセット(秒)とP15のエピソード境界(分)が同一往復で二重に走らない、を追加（メイン領分・1スタジオ目本番化時・P7〜P19と同じ群で）。
 - **優先度**：**P15 と同じ中**（データ破損防御でなく“新しく測れる価値”の enrichment＋実装時の取り違え防止）。実装・QA・採否・優先度はメイン領分／Daiya。
 - **位置づけ（テーマ転換・ビート2 指標定義 単軸）**：前回（P19・ビート1 離脱時送信）からローテーションし、ビート2＝計測ツールの**指標の“定義”**（session/visit の区切り）を一次で深掘り。engaged-time(P6)→visits(P15)→retention cohort(P16)→**session の区切り定義(今回)**とビート2「指標設計」鉱脈を継続。P15 の“交差フロンティア”本体には戻らず、その閾値の外部根拠づけに限定した。
+
+---
+
+## 追加の種（2026-08-06・目付第20回巡回からの還流）
+
+**前提**：以下は**新規P番号を起こさない**。ビート3（決断面の移動＝GBP/LINE/Instagram の意思決定UIの変化）を久々に主役にした偵察の還流で、既存の **P11（決断面surface＝bookingの着地面）** と **P5（起源クリックID非依存化＝流入の紐付け）** への**追加観点（enrichment＋入口ブラインドの拡大への対処）**。実装照合表（P0-P3済）・P5・P6・P7〜P19 とは重複させない。**コードは触っていない。**
+
+### 【P11 への追加観点＋P5 への波及（新種ではない）】LINE「ミニアプリタブ」新設で生まれた“LP非経由の到達路”を、決断面タグ(P11)と流入タグ(P5)の両方で正直に扱えるようにする
+
+- **現象（ビート3・一次/準一次）**：LINEヤフーが **「ウォレットタブ」を「ミニアプリタブ」へ刷新**（2026年2月頃開始・3月から順次リリース）＝予約/会員証/EC等の“決断面”が、LINEアプリの**一級タブ（常設のディスカバリ棚）へ格上げ**。お気に入り登録・人気/カテゴリ別おすすめ・キャンペーンバナーから、**自店LP（1枚ページ）やリッチメニューを踏まずに、タブから直接ミニアプリ（予約面）へ着地する新経路**が生まれた。同時に、認証済ミニアプリのビジネスマネージャー組織連携／チャネル同意の簡略化が 2026-01-08 以降の日本の新規ミニアプリチャネルで必須化＝プラットフォームが“中の決断面”の入り口と同意を整流。
+  - **3ビート横断で同方向**：GBP＝Business Messages完全終了（2024-07-31確定）＋2026年ローカルパックからワンタップ電話ボタン撤去（決断面がプロフィール奥へ後退）／Instagram＝bio最大5リンク＋comment-to-DM自動送信がMeta公式Graph APIで常態化（決断がbioからDM会話へ）。3プラットフォームがそろって「決断面を自分の内側・会話寄り・自前タブへ引き込む」。
+- **現物確認（目付がgrep・過剰批判はしない）**：(1) `POST /api/attn/booking`（app.mjs 429-435行）は `{friend_id}` のみを受け `store.bookings.add(d.friend_id)`＝**“どの面で決めたか”を持たない**のは P11 で既特定（＝決断面ブラインド）。(2) 今回の新論点は**その一段手前＝「その面へ“どの到達路(reach path)”で来たか（LP経由/リッチメニュー経由/ミニアプリタブ発見経由）」を持たない**こと。(3) 流入 `entry_query/entry_pos/entry_health`（app.mjs 283-288行・P5が受け持つ）は、**タブ経由だと `entry_query/referrer` が空になりやすい**＝LP非経由のLINE内流入が増えるほど**入口ブラインドが拡大**。(4) ⚠️既存の `surface`（app.mjs 478-493行＝`/api/attn/product-events` / `product-funnel`＝**自己改善画面のステップ計測**）とは**別名前空間**（P14で確認済み）＝流用しない。
+- **根拠URL（潮流＝S/一次寄り＋B、現物＝目付grep）**：
+  - LINEヤフー株式会社（公式リリース S一次・本文403だが公式ドメインでタイトル/存在確定）「LINE、『ウォレットタブ』を『ミニアプリタブ』へ刷新」 https://www.lycorp.co.jp/ja/news/release/019865/ ／ ECのミカタ（B→traced・公式引用）https://ecnomikata.com/ecnews/ec_site_operation/48786/ ／ LINEヤフー for Business ミニアプリ4-6月まとめ（S公式column）https://www.lycbiz.com/jp/column/line-mini-app/service-information/mini_matome_202607/
+  - Google for Developers「Update on Google Business Messages」（S仮）https://developers.google.com/business-communications/business-messages/resources/release-notes/update-on-gbm ／ GBP電話ボタン撤去2026（B）https://www.gosite.com/blog/google-business-profile-updates-removal-of-chat-and-call-history
+  - Instagram Graph API comment-to-DM / bio最大5リンク（S寄り・機能／CV率はB）https://setsmart.io/blog/instagram-link-in-bio ／ https://www.truefuturemedia.com/articles/instagram-bio-optimization-2026
+- **対策案（射程を絞る・2択を提示・採否はDaiya/メイン判断）**：新種P番号は起こさない。
+  - **(a)** P11 の面 enum に `line_miniapp` の**到達路サブ属性**を任意で足す（例：`reach_path: lp / richmenu / miniapp_tab / unknown`）＝「面はどこで決めたか」と「その面へどう来たか」を二軸で分離。件数率は後方互換（reach_path なし＝従来集計に一致）。
+  - **(b)** P5 側で「LP非経由のLINE内流入」を `entry_health` と同型の**入口フラグで正直にラベリング**（`entry_query/referrer` 空＝タブ発見経由の可能性を unknown で明示・推測で埋めない）。
+  - いずれも **off-LP外部面（Instagram DM/GBP内予約）は推測で埋めず unknown**＝天井を正直に（P11の設計思想を踏襲）。**生金額/決済/同意設計は見廻り申し送り**。
+- **検証方法**：実機E2E（メイン領分・1スタジオ目本番化時・P7〜P19と同じ群で）。①ミニアプリタブ→ミニアプリ→予約が `reach_path=miniapp_tab` で記録され unknown に落ちないか ②LP経由予約の後方互換（reach_path なしが従来集計に一致）③P11/P17の面別台帳でタブ経由予約が「面=line_miniapp・到達路=tab」の二軸で出るか ④product-funnel の `surface`（別名前空間）と混線しないか。
+- **優先度**：**中**（データ破損防御でなく“新しく測れる価値”の enrichment＋入口ブラインド拡大への対処。ただし2026の決断面インナー化潮流に対する土台防御）。実装・QA・採否・優先度はメイン領分／Daiya。
+- **位置づけ（テーマ転換・ビート3 決断面 単軸）**：前回（P19→P15追加観点＝ビート1/ビート2）からローテーションし、**久しく主役にしていなかったビート3＝決断面の移動**を偵察。P11（決断面タグ）の“実装すべき歴史的必然”を、ミニアプリタブ格上げという2026の具体的な面移動で一段強めた。新種は起こさず、既存P11/P5への追加観点に留める（seed-sprawl回避）。
