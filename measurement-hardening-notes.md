@@ -569,3 +569,38 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **検証方法**：実機E2E（メイン領分・1スタジオ目本番化時・P7〜P19と同じ境界テスト群で）。①**「3秒流し見で偶然1箱だけ中央ゾーンに止まり読了率60%超」**の負のテストで、active_sec下限ゲートありならホットタグが**抑止**され、なしでは誤点火する、の出し分け ②真に10秒超関与した訪問は従来どおりタグ点火（後方互換）③下限値を店主設定で動かせるか（HEAT_THと独立に）④P12の可視復帰リセットと二重に働かないか。
 - **優先度**：**低〜中**（データ破損防御でなく防御的refine＝P12の姉妹。既存の読了率門番で“質”は測れているので破損はしないが、“素通り客の偶発1箱ホット化”をセッション側から塞ぐ backstop）。実装・QA・採否・優先度はメイン領分／Daiya。
 - **位置づけ（テーマ転換・ビート2 指標定義 単軸）**：前回（P20・ビート3 決断面）からローテーションし、“決断面/ミニアプリの連続”を避けて**ビート2＝指標の“定義”（engaged session/engagement rate）**を一次で深掘り。交差フロンティア(P13〜P18)には戻らず。engaged-time(P6/P12)→session区切り30分(P15追加観点)→今回engaged-session下限10秒、とビート2“指標定義”鉱脈を継続。起源掘りは“閾値で見られたかを数える”思想の始祖＝MRC/IABビューアビリティ(50%×1秒・2014)を選び、現物 `COVER_GATE=0.5` の歴史的根拠づけとした。
+
+---
+
+## 追加の種（2026-08-08・目付第22回巡回からの還流）
+
+**前提**：以下は**新規P番号を起こさない**。既実装 **P2（bot除外・UA＋挙動＝実装照合表で✅済み）** への**追加観点 第2弾**。第18回（2026-08-04）の「P2への追加観点（クラウドIP・アクション上限を"抽象"で提示）」を、今回**同業OSSの実数つき既定値で"一次具体化"**し、さらに**2枚の新観点（第1層UAリストの鮮度・第3層エージェンティックブラウザ指紋）**を足した。**第18回P2追加観点・実装照合表（P0-P3済）とは重複させない（第18回は"手法名の列挙"どまり／今回は"実数つき既定値＋新脅威の名指し"）。コードは触っていない。** テーマ転換＝前回まで2回入っていたビート2（指標定義）を離れ、鉄則「ビート2の3連続を避け・次はビート1へ明確に舵」に従いビート1（計測精度の敵＝bot除外の現行定石）単軸。
+
+### 【P2への追加観点 第2弾（新種ではない）】bot除外の"現行の当たり前3層"を一次で具体化＝(1)UAリストの鮮度 (2)クラウドIP帯遮断の実数 (3)アクション上限の実数 ＋2026新脅威エージェンティックブラウザは第3層(suspect_bot)が最後の砦
+
+- **現象（ビート1・一次）＝現行定石は3層**：同業のオープンソース計測ツールが"既定で"持つbot除外は3層に整理できる。
+  - **第1層＝UA(名札)で弾く／本家＝IAB/ABC国際スパイダー&ボットリスト（S・業界標準）**：GA4が既定使用。**2006年ABC(英)+IAB(米)発足・毎月更新・許可リスト+拒否リストの3ステップUA照合**。ただし**"素直に名乗る良性bot(検索クローラ/監視ツール)しか捕まえない"**（名札を偽る相手には無力）。
+  - **第2層＝IP(来る場所)で弾く／Plausible（A・OSS一次）**：**データセンター/クラウドIP帯を約32,000帯"既定で"除外**。2023年2月以降で**偽ページビュー約14億件ブロック**を公表。層構成＝①UA照合 ②リファラースパム除外 ③データセンターIP遮断(≒32,000帯) ④不自然挙動検知の4段。
+  - **第2/第3層の実装例＝Matomo（A・OSS一次）TrackingSpamPrevention**：(a)クラウドIP遮断(AWS/Azure/DigitalOcean/GoogleCloud/Oracle・「人間はVPN経由でない限りクラウドから計測要求を出さない」と明記) (b)ヘッドレス検知(**UAをカスタム偽装されると検知不能**) (c)1来訪あたりアクション上限(**通常約100〜300で頭打ち・超過は記録停止＋IPを最大24時間遮断＋管理者へメール通知**)。加えて「JSトラッカーはJS実行ブラウザの活動しか記録しない＝伝統的botは自動除外／高度bot・ヘッドレスはJSを実行し人間に見える」と一次明言。
+- **現物確認（目付がgrep・過剰批判はしない＝当たりを認める）**：
+  - Loku の P2 は**二段実装＝UA入口除外（`BOT_UA_RE`・handoff-demo/app.mjs 13-16行）＋挙動フラグ `suspect_bot`（277行・タグ発火させず実名導線に乗せない隔離）＋`GET /api/attn/bot-report`（692-699行）で除外件数を可視化**（GA4は黙って消すが、うちは"消した件数"を店主に見せる＝信頼の担保）。**3層のうち第1層(UA)と第3層(挙動)を既に持ち、"黙って消さない"点は同業より一段誠実＝当たり。**
+  - **抜けは第2層＝クラウド/データセンターIP帯の遮断を1本も持たない**（P2はUA＋挙動のみ・IP層なし）。
+  - 第1層の `BOT_UA_RE` は**固定約10語のリスト**（`/(bot|crawler|spider|scrapy|headlesschrome|puppeteer|playwright|phantomjs|python-requests|selenium)\b|curl\/|wget\//i`）＝コメントで自称する「IABリスト相当の最小版」だが、**IAB/ABCが"毎月"更新するのに対し書いた時点で凍結**＝新規の名乗りbotを取りこぼす"鮮度ギャップ"がある。
+- **根拠URL（S/A一次・egress遮断のため検索経由でtraced）**：
+  - IAB Tech Lab「IAB/ABC International Spiders and Bots List」（S）https://iabtechlab.com/software/iababc-international-spiders-and-bots-list/ ／ IAB Europe Q&A https://iabeurope.eu/international-iababc-spiders-and-bots-list/
+  - Plausible「Google Analytics counts bots as real traffic」（A）https://plausible.io/blog/testing-bot-traffic-filtering-google-analytics ／ 約32,000帯・14億件＝同社X告知 https://x.com/PlausibleHQ/status/1816447266208485510
+  - Matomo「Tracking Spam Prevention」（A）https://matomo.org/faq/how-to/block-spam-and-bot-traffic-with-tracking-spam-prevention/
+  - Google Analytics Help「Known bot-traffic exclusion」（S・GA4がIABリスト既定使用）https://support.google.com/analytics/answer/9888366
+  - 現物: loku-tuning-plugin/handoff-demo/app.mjs 13-16/263-268/277/692-699行
+- **対策案（射程を絞る・新種P番号は起こさない・採否はDaiya/メイン判断）**：
+  - **① 第2層＝クラウドIP帯の隔離**：`app.mjs` collect で送信元IPがクラウド帯（AWS/Azure/GCP/DO/Oracle）なら `suspect_bot` 相当で隔離。主戦場（LINE→LP・モバイル実機）の正規客はモバイルキャリア/家庭回線＝**データセンターIPからの collect はほぼ確実に自動化**。**全弾きでなく `bot-report` に載せて可視化**（現状 `suspect_bot` 思想を踏襲）。
+  - **② 第3層＝アクション上限**：1匿名IDが短時間に不自然回数 collect を叩いたら隔離（Matomo＝約100〜300が目安）。
+  - **③【新】第1層＝UAリストの鮮度**：`BOT_UA_RE`（固定約10語）を、維持されているリストの参照 or 定期更新に寄せ、新規の名乗りbotの取りこぼしを減らす。
+  - **④【新】第3層＝エージェンティックブラウザ指紋**（下記の2026新脅威対策）。
+- **【2026新シグナル＝エージェンティックブラウザ（A→traced）】**：AIが代わりにページを操作するブラウザが一般化。**Perplexity Comet＝エージェント経由トラフィックの48.12%（前年比+7,851%）・ChatGPT Atlas＝21.33%・2製品で約70%**（Human Security・2026年4月）。両者とも**Chromiumベース＝"普通のブラウザ"の名札／CometはユーザーPC上のChromiumセッションで動く＝住宅回線IP＋普通のUA＋JS実行**で来て人間の来訪と見分けがつかない（PerplexityはIP/ASNを広くローテーション）。＝**第1層(UA)も第2層(IP帯)も素通りし、第3層＝挙動（Lokuの `suspect_bot`）だけが最後の砦**。第18回が「JS実行ヘッドレスAIエージェント」と抽象で呼んだ脅威が、名前と実測シェアを持つ製品になった到達点。
+  - **対策案④**：`suspect_bot` ヒューリスティクスに**「高アクション密度＋滞在ほぼ0（active_sec≒0）＋スクロール深度0 の同時成立」**を明示条件として追加。**Lokuが既に持つ `active_sec`／箱ごと読了率／スクロール深度（=人間らしい関与のムラ）がそのままこの挙動検知の入力になる**＝UA/IPを欺く相手を"やったこと"で捕まえる。素のピクセル計測(PVだけ)よりこの波に構造的に強い。
+  - 根拠URL：Human Security「ChatGPT Atlas vs Perplexity Comet」https://www.humansecurity.com/learn/blog/chatgpt-atlas-vs-perplexity-comet-agentic-browsers/ ／ Vouched「Perplexity Agent Detection Guide」https://www.vouched.id/learn/blog/perplexity-agent-detection-guide ／ Seresa「...Already in Your Analytics」https://seresa.io/blog/ai-bot-filtering/chatgpt-atlas-and-perplexity-comet-are-already-in-your-analytics
+- **検証方法**：実機E2E（メイン領分・1スタジオ目本番化時・P7〜P19と同じ境界テスト群で）。①クラウドIP帯の collect が `suspect_bot` として隔離され `bot-report` に残るか ②アクション上限超の匿名IDが本番集計から外れ監査には残るか ③**負のテスト＝企業VPN/商用VPN経由の"本物客"がクラウドIP判定で誤隔離されないか／正規のヘビー閲覧客がアクション上限で誤って切られないか**（データセンター遮断リスト＋VPN許可リストCIDRの併用が2026定石＝全弾きは危険）④エージェンティックブラウザ指紋（高密度＋滞在0＋スクロール0）で AI来訪が隔離され、迷い/止まり/ムラのある本物客は素通りするか。
+- **優先度**：**中〜低（P2のenrichment）**。UA偽装ヘッドレス＋エージェンティックブラウザという"UA/IPを欺く相手"が急増中（+7,851% YoY）＝挙動層の質が数字の信頼度を左右するため、①②③は"データ破損防御"寄りで中、③④は"精度refine"で低〜中。実装・QA・採否・優先度はメイン領分／Daiya。
+- **⚠️見廻り（lp-mimawari）へ申し送り**：第2層（クラウドIP判定）は**送信元IPアドレスを条件に使う**＝個人情報/プライバシー（IPの扱い・保存期間）の論点があり得る。可否・保存設計の線引きは法規制領分＝見廻りの判断を仰ぐべき点（第18回申し送りの再掲・継続）。
+- **位置づけ（テーマ転換・ビート1 bot除外 単軸）**：前回P21（ビート2 engaged-session定義）からローテーションし、"ビート2の3連続"を避けてビート1（計測精度の敵）へ明確に舵。交差フロンティア(P13〜P18)には戻らず。テーマ履歴＝bot(第18)→session区切り(第19)→決断面(第20)→engaged-session(第21)→bot除外現行定石(第22)。起源掘りは"botの自己申告(robots.txt/UA honor system・1994 Koster→RFC9309 2022)"を選び、"なぜ第3層(挙動)が最後の砦になるのか"の歴史的根拠（名乗りに頼る第1層の前提=正直な相手、がエージェンティックブラウザで完全に崩れた）とした。
