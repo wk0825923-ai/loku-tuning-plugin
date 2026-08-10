@@ -80,6 +80,16 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **検証方法**：次回巡回で日本モバイルの遮断率実測レポートを継続捜索（現状S/Aの数字は未取得＝watchlist継続）。
 - **更新（2026-07-14・目付第3回）**：日本モバイル限定の公開実数は**存在しない**ことを確定（全体21%＝Insider Intelligence／GWI「利用率20%未満の3か国」が最新到達点）。本項目はwatchlistをクローズ・優先度を下げる。主戦場LINE内WKWebViewでは影響小の結論は不変。
 
+- **【2026-08-10 追記＝第24回巡回・持ち越し宿題を決着／新種P番号は起こさない・この参考節への追加観点＝“維持すべき現行の良い設計”のガード】ファーストパーティ耐性という“第2レイヤー”を確定＝広告ブロッカーの影響は主戦場で三重に減衰**：
+  - **現象①（ドメイン照合が土台）**：EasyList/EasyPrivacy は `google-analytics.com`／`googletagmanager.com`／`connect.facebook.net` 等の**既知トラッカーの“ドメイン／URLパターン”を列挙してページ描画前にキャンセル**する仕組み（EasyList公式リポジトリ＝S一次）。＝**弾く対象は“識別できる第三者ドメイン”**。
+  - **現象②（ファーストパーティは網外・公式が裏書き）**：Plausible公式Docs＝素の（第三者）設定で取りこぼしは「audienceにより概ね**5〜25%**」、自ドメイン経由（＝ファーストパーティ）にすると「**自サイトからの要求と見分けがつかず大半のブロッカーを回避**」。Umami公式も同型（自ドメインでプロキシしスクリプト名/場所を隠す）。＝**2大OSS計測がS一次で“ファーストパーティ配信が広告ブロッカー対策の本丸”と明記**。
+  - **現物との突き合わせ**：Lokuの計測は `index.html` の**インライン `<script>`（本番は同一オリジン配信の loku-attn.js）＋送信先は同一オリジンの `FLUSH_ENDPOINT='/api/attn/collect'`**（現物 464・469-473行）＝**外部トラッカードメインを一切呼ばない＝EasyListのドメイン照合に構造的に非該当**。つまり**Plausible/Umamiが“プロキシ対策後”に到達する状態を最初から満たしている**＝公式の「素で5〜25%取りこぼし」の天井は**サードパーティ前提でありLokuには当たらない**。上の対策案（線79「1st party相当に寄せる」）は**既に達成済み**と確定＝第18回以来の持ち越し宿題を「率でなく3層減衰の構造結論」で決着（①ドメイン網外②ファーストパーティで大半回避③WKWebView無効＋日本21%）。
+  - **根拠URL（S/A）**：EasyList公式リポジトリ（フィルタ構文＝ドメイン/URL/要素ルール・S一次） https://github.com/easylist/easylist ／ Plausible公式Docs「Bypass adblockers with a proxy」 https://plausible.io/docs/proxy/introduction ・「Do ad blockers block Plausible?」 https://plausible.io/blog/do-ad-blockers-block-plausible-analytics ／ Umami公式Docs「Bypass ad blockers」 https://docs.umami.is/docs/bypass-ad-blockers ／ 補強：cometly https://www.cometly.com/post/ad-blockers-affecting-tracking （A/B→traced）。
+  - **残る唯一の穴＝“パス／ペイロード形状／挙動”での照合**：ブロッカーはドメインだけでなく**リクエストの“パス”やスクリプトの“中身”（見覚えのあるエンドポイント形・グローバル名）**でも弾け、さらに**ヒューリスティック検知**が最前線（cometly＝A/B→traced）。＝`/api/attn/collect` は今は網外だが、EasyListは**4人の有志＋フォーラムのcommunity運営でルール追加が予測しづらい**（digiday/EasyList公式）＝将来リスト化されれば刺さりうる。
+  - **対策案＝“維持すべき現行設計”のガード観点（コードは触らない・採否と実装はDaiya／メイン領分・新種P番号は起こさない）**：(a) 本番の loku-attn.js は**必ず自オリジン配信を維持**しサードパーティCDNから配らない（＝ドメイン網外の維持）。(b) collectの**パス名とペイロードのキー名を“いかにもトラッカー”な形**（`/track`・`/collect?tid=`・`ga`/`pixel`/`gtag` 等）に寄せない（現状 `/api/attn/collect`＋`anon_id`/`box_key` は比較的無難だが“attn/collect”は目立つ語＝将来フィルタ化の監視対象）。(c) **“自店のcollectパスがフィルタリストに載っていないか”を常時監視**の対象に置く。※**CNAMEクローク等の無理な延命はしない（法規制は見廻り確認・線79のCNAMEとは別問題）**。
+  - **検証方法**：本番のLoku実データで「特定ブラウザ/UAの客だけ来訪が薄い」偏りが出たら**パス/形状のフィルタ化を疑う**切り分け（メイン領分）。日本全体21%（GWI/WARC・B→traced＝2026再確認）はモバイル限定の精密値が取れずとも**①②③で結論（影響小）が率の高低に依存しない**ため、精密化の優先度は下げてよい＝広告ブロッカーwatchlistは実質クローズ・パスのフィルタ化を常時監視へ移行。
+  - **優先度**：低（現状ノーアクションでよい＝“既に本丸を満たしている”を確定できたのが今回の収穫）。ただし(a)(b)(c)は**新種を起こさず“維持すべき現行の良い設計”として記録**＝将来の本番実装で崩さないためのガード観点。
+
 ---
 
 ## 追加の種（2026-07-14・目付第3回巡回からの還流）
