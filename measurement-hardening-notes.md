@@ -632,3 +632,30 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **優先度**：**中**（データ破損防御でなく“新しく測れる価値”の enrichment＋入口ブラインド拡大／構造的天井の正直な明示。2026の「決断面がLPの前＝AI回答面へ移る」潮流に対する土台防御）。実装・QA・採否・優先度はメイン領分／Daiya。
 - **⚠️見廻り（lp-mimawari）へ申し送り**：AIが本人に代わって予約・電話を代行＝「誰が申し込んだか（本人同意・なりすまし）」「AI経由予約でもLP上の予約導線・特商法/景表法表示の射程は変わるか」の法規制論点。可否・表示設計の線引きは法規制領分＝見廻りの判断を仰ぐ点。
 - **位置づけ（テーマ転換・ビート3 決断面 単軸・久々に主役復帰）**：前回P22（ビート1 bot除外）からローテーションし、"bot/ビート1の連続"を避けて**3回ぶりにビート3＝決断面の移動**へ。テーマ履歴＝session区切り(第19)→決断面(第20)→engaged-session(第21)→bot除外(第22)→決断面/AI回答面(第23)。交差フロンティア(P13〜P18)には戻らず。**第20回のreach_path(LINEミニアプリタブ)に続く“第2弾”＝前回が「LP非経由の到達路」で残した所を、今回「そもそもLP来訪が発生しないAI回答面/AI予約代行」で一段深めた**（第22回の"追加観点 第2弾＝前回が抽象/構造で残した所を新シグナルで埋める"還流の型を、ビート3でも適用）。起源掘りは Duplex(2018)→Reserve with Google→agentic booking(2026) の系譜を選び、07-25「決断面が移動する“方向”」の到達点＝“決断の主体が客からAIへ交代した瞬間”の歴史的必然を根拠づけた。**新種は起こさず既存P11/P5への追加観点に留める（seed-sprawl回避）。**
+
+## 追加の種（2026-08-11・目付第25回巡回からの還流）
+
+**前提**：以下は**新規P番号を起こさない**。既存の **効果台帳＝cause-outcomes / change-outcomes（app.mjs 788-841行）＋その上に載るクロス立方体 P14（面×価値）・P16（頻度×価値）・P17（面×来訪回）・P15（来訪エピソード）・P18（価値×結合の厚み）** への**「最小セル閾値ガード」追加観点**。ビート2（計測ツールの“指標定義以外”の定石）を単軸にし、第24回の締めが名指しした「ビート1/広告ブロッカーの連続を避け・ビート2の指標定義以外 or ビート3の決断面以外へ」の（a）を選択。**P14〜P18は“クロス集計を出す”種／今回は“出したマスを門番する”ガード＝非重複。実装照合表（P0-P3済）とも重複させない。コードは触っていない。**
+
+### 【効果台帳（P14〜P18クロス集計 / cause-outcomes / change-outcomes）への追加観点＝「最小セル閾値ガード」（新種ではない）】少人数の1マスで出した“率”を、そのまま断定値として出さない（伏せる／注記／“その他(サンプル不足)”へ丸める）
+
+- **現象（ビート2・一次/準一次で3方向が同一結論へ収束）**：計測ツール界は「少人数のマスで出した率を信じるな／見せるな」を、**別々の力から同じ結論**として標準装備している——
+  - **(1) 性能/コスト＝高基数の(other)丸め**：GA4は1日500種超の値を持つ列を「高基数」と呼び、1レポート1日50,000行で頭打ち→あふれを `(other)` に丸める（**S一次** support.google.com/analytics/answer/12226705）。PostHogも内訳は上位25値＋最大3プロパティに初期制限（**A一次** posthog.com/docs/product-analytics/trends/breakdowns）。
+  - **(2) プライバシー/再識別＝小セル秘匿（thresholding）**：GA4は「レポート閲覧者が個々のユーザーの身元を推測できないよう閾値を適用」＝**人数が少なすぎるマス（目安50人未満・Google Signals併用時＝閾値はB→traced）を丸ごと伏せる**（Google公式記述＝**S一次**／数値は kissmetrics/analytify **B→traced**）。源流は k-anonymity（Sweeney 2002・**学術S**・米国民87%がZIP+生年月日+性別で一意）。
+  - **(3) 統計＝最小サンプル/「率は幅」**：A/Bは「1条件あたり成約おおむね100件以上で率がやっと安定」「50人3成約=6%は統計的に無意味」「率はひとつの数字でなく幅」（AB Tasty/Invesp/Kaushik/Sophisticated Cloud＝**A/B→traced**）。
+- **現物確認（目付がgrep・過剰批判はしない・現物読みで“既に堅い部分”を切り分け・19回連続）**：
+  - **`change-outcomes`（app.mjs 810-841行）＝半分堅い＝当たり**：(a) 母数 `visitors`/`booked` を**生で返す**（分母を隠さない＝「率は幅」の前提を満たす）／(b) **勝敗を自動宣言しない**＝`result: (baseline.visitors===0 || treatment.visitors===0) ? 'unknown' : 'pending_review'`＝**ゼロセルは抑制・それ以外は“人（番人）の判断待ち”**＝A/Bの「少人数で勝ちと言うな」と一致。
+  - **穴は1点＝“ゼロ以外の薄いマス”に最小サンプルの床が無い**：`change-outcomes` は n=1/n=2 でも `booking_completed_rate` と `delta_pp` を計算して出す（ゼロだけ 'unknown'）。`cause-outcomes`（788-807行）は**最小母数の門番が無く** `booked_rate = Math.round(r.booked/r.n*100)`＝離脱理由 n=1 が偶然1件予約すると `booked_rate:100`。しかも `cause-outcomes` は自己最適化（打ち手優先度学習）の**入力**（コメント「母数が多い順=着手優先度の目安」＝n重要は認識済だが率自体は素で出す）。
+  - **クロス立方体（P14〜P18）は“最も痩せる位置”**：surface×tier×visit_count の3軸クロスは、**1スタジオ目の小母数で各マスが客1〜3人**になりやすい＝薄いマスが最も量産される。
+  - **非該当を正直に切り分け**：Lokuは**店内メモリの単一テナント台帳**（列指向巨大DBでない）＝(other)の“コスト崩壊”は非該当／クロス軸は**店主区分の低基数enum名札**（surface/tier/visit_count）＝高基数(other)問題の主因にも非該当。**＝効く力は(2)小セル秘匿＋(3)最小サンプルの2つに絞れる**（(1)コストは非該当）。⚠️既存 `surface`（app.mjs 478-493行＝product-events/product-funnel＝自己改善画面ステップ・別名前空間・P14で確認済）とは無関係＝流用しない。
+- **対策案（コードは触らない・採否と閾値kはDaiya／プライバシー面は見廻り）**：
+  - **(a) 最小セル床を“ゼロ”から“k”へ一般化**：`change-outcomes` の `visitors===0 → 'unknown'` を `visitors < MIN_CELL → 'insufficient_sample'（率=null＋n併記）` へ引き上げ。`cause-outcomes` の `booked_rate` も `n < MIN_CELL` のとき率を出さず「n少・参考値」注記 or 別バケツへ。**既存ゼロガードの一般化＝新機構でない**。
+  - **(b) クロス立方体は“その他(サンプル不足)”へ丸める**：P14〜P18の各マスで `n < MIN_CELL` のマスを個別の率で出さず `(サンプル不足)` バケツへ集約（GA4の(other)・PostHogの上位N＝“薄いマスは並べない”の移植）。
+  - **(c) 率は必ず母数(n)同伴**：どの台帳の率も `{rate, n}` セットで返し、率だけの独り歩きを構造的に禁じる（`change-outcomes` は既にこれ＝台帳全体へ横展開）。
+  - **(d) 断定でなく“保留/幅”を既定に**：`result:'pending_review'` の思想（自動で勝ちと言わない）を cause-outcomes/クロス立方体にも敷衍。閾値 k の既定値・匿名集計としての可否は**見廻り（k-anonymity=再識別防止の法規制論点）**の判断を仰ぐ。
+- **根拠URL**：GA4 Cardinality（S一次）https://support.google.com/analytics/answer/12226705 ／ GA4 Data Thresholds（Google記述=S一次・数値=B→traced）https://kissmetrics.io/blog/ga4-data-thresholds-fix ・ https://analytify.io/ga4-data-thresholding/ ／ PostHog breakdowns（A一次）https://posthog.com/docs/product-analytics/trends/breakdowns ／ A/B最小サンプル（A/B→traced）https://www.invespcro.com/blog/calculating-sample-size-for-an-ab-test/ ／「率は幅」https://www.sophisticatedcloud.com/all-blogs/your-websites-conversion-rate-is-a-range-not-a-number ・ https://www.kaushik.net/avinash/excellent-analytics-tip5-conversion-rate-basics-best-practices/ ／ k-anonymity（学術S）https://epic.org/wp-content/uploads/privacy/reidentification/Sweeney_Article.pdf ／ 現物: handoff-demo/app.mjs（cause-outcomes 788-807／change-outcomes 810-841）
+- **検証方法**：実機E2E（メイン領分・1スタジオ目本番化時・P7〜P19と同じ境界テスト群で）。①n=1の離脱理由/クロスマスで `booked_rate:100` でなく「参考値(n=1)」or “サンプル不足”バケツで出るか（負のテスト＝偶然の1件を必勝面と誤学習しない）②`change-outcomes` の n=1/2 が 'insufficient_sample' で保留され、'pending_review' の自動誤宣言を招かないか ③MIN_CELL 未満のマスを丸めても、母数が閾値を超えたら従来どおり率が出る（後方互換）④率が必ず n 同伴で返る ⑤テナント越境RLS・同意ゲートを小セル集計でも踏襲。
+- **優先度**：**中**（データ破損防御でなく“数字の誠実さ”＝小母数の偽陽性で自己最適化の打ち手優先度を誤学習させない防御＋再識別の副次防御。1スタジオ目=小母数=クロス立方体が最も痩せる本番タイミングに直結）。実装・QA・採否・閾値k・優先度はメイン領分／Daiya。プライバシー面（kの根拠・匿名集計の可否）は見廻り。
+- **⚠️見廻り（lp-mimawari）へ申し送り**：最小セル閾値は統計の誠実さであると同時に**再識別防止（k-anonymity）**の顔を持つ。1スタジオ目の小母数で「来訪回×価値×決断面」の1マスに該当1名＝**匿名集計でも実名の1人が透ける**可能性。閾値 k の値・匿名集計としての可否・保存設計は法規制領分＝見廻りの判断を仰ぐ（第22回のクラウドIP判定申し送りに続く“集計×プライバシー”の論点）。
+- **⚠️番人(qa-auditor)へ申し送り**：`change-outcomes` の `result:'pending_review'`（少人数で勝ちと言わない）は当たり＝この保留を人が握る運用を維持。QA境界テスト＝台帳の各マスに**母数nを必ず併記**し、n=1で率が“注記付き参考値”として出ること・MIN_CELL丸めの後方互換を確認。
+- **位置づけ（テーマ転換・ビート2 指標定義以外 単軸）**：第24回（ビート1 広告ブロッカー）からローテーションし「ビート1の連続を避け・ビート2の指標定義以外へ」の指示どおりビート2へ。ただし**session/engaged/bounce の“指標定義”鉱脈（第18/19/21）とは別サブ＝“データモデリング/標本の規律（小セル・基数・最小サンプル）”**＝“指標定義以外”を満たす。テーマ履歴＝決断面/AI(23)→広告ブロッカー(24)→**小セル/最小サンプル(25)**。交差フロンティア(P13〜P18)には戻らず、**その上に載る“ガード”**として非重複。第24回の還流型「新種ゼロで実り多い＝良い設計(change-outcomesの母数開示/pending_review)を明文化して守る＋残る穴(最小サンプル床)を1点に絞る」を継承。起源掘りは統計局のセル秘匿→Sweeney k-anonymity(1998/2002)の系譜で「集計すれば匿名/安心」という前提が壊れた瞬間を根拠づけた。
