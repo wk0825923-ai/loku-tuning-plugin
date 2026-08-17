@@ -782,3 +782,37 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **⚠️番人(qa-auditor)へ申し送り**：上の検証方法①〜④を境界テストに追加。特に②の負のテスト（推測で `lp` に丸めない）と③（母数縮みを障害と誤検知しない）を重視。P1マージ・P11面別・reach_path 第2/3弾との二重処理でも冪等。
 - **⚠️物見(intel-scout)へ申し送り**：Reserve with Google の採用動向・AI Mode 予約の日本展開時期／エージェンティックブラウザのシェア勢力図（HUMAN Security Jun 2026＝Claude Chrome が20.8%で2位浮上・Comet 47.6%・Atlas 16.5%）は業界動向の本流。決断面の内側化＝一次のプラットフォーム発表は目付が計測影響として拾い、純ニュース面は物見へ。
 - **位置づけ（テーマローテーション13手目＝第29回名指し宿題「(a)ビート3 決断面＝主役復帰圏・手薄」の消化）**：第29回(ビート1/consent mode P21)からローテーションし、宿題「(a)ビート3の決断面（第27から3回離れ・手薄・主役復帰圏。GBP/LINE/Instagram の意思決定UIの新動き）」を消化。テーマ履歴＝イベント設計/box_key(28)→consent/分母(29)→**決断面/AI Mode・RwG(30)**＝直近3回でビート2×1/ビート1×1/ビート3×1＝均等化を維持。reach_path・決断面は第27から2回空けた第30ゆえOK（3連続=第20/23/27の再来は回避）。**新種を無闇に増やさず既存 reach_path enum の精緻化（第4弾）に収めた**＝seed-sprawl回避の規律を継続（第22〜27の追加観点方式へ回帰）。
+
+## 追加の種（2026-08-17・目付第31回巡回からの還流）
+
+**前提**：以下は実装照合表（P0-P3済）・P5・P3補遺(AFP)・P6〜P21・reach_path追加観点第2〜4弾とは**重複しない新規種P22**。テーマは「ビート2＝計測ツールの新機能を一次で深掘り」。GA4/PostHog/Clarity が2026に揃って**「自分の計測が黙って壊れていないか」を測る機能（instrumentation health／data observability）**を実装したのを入口に、現物 index.html の `flush()` と app.mjs の `collect` をgrepして**「計測が黙って止まったことを誰も知れない」メタ層の穴**に当たった。着手前に P0〜P21 を grep し、既存種はいずれも「データは来る」前提＝**メタ層＝装置そのものの死活**は未踏と確認して新種P22とした。**コードは触っていない。** 採否・実装・QAはDaiya／メイン領分。
+
+### 【P22・新規種／ビート2 計測ツール新機能＝計測の死活監視】計測パイプラインの"死活"を店主/実装者に見せる — (a)ページ別"最終受信ヒートビート"で「計測停止の疑い」を「客が減った」と取り違えない (b)collectの拒否(400/404/403)を黙って捨てず件数化する
+
+- **現象（ビート2・A×2＋B＝3社が別動機で同結論へ収束）**：計測ツール業界が2026に「自分の計測の健全性を測る」機能を揃って実装。
+  - **PostHog「Health Checks（Beta）」（A）**＝**「No live events（プロジェクトがイベントを受信しなくなった＝計測が沈黙）」「古いSDK」「ingestion warnings（`null`のような不正IDでの送信等）」「壊れたデータモデル」**を検知し **Self-driving Inbox** へ Signal 化（リポ接続でエージェントが原因特定～修正PRまで）。＝"送られてくる数字が正しいか"の手前で"そもそも送られてきているか"を見張る層。
+  - **Microsoft Clarity（A）**＝Copilotがセッション録画を自動要約し**異常（rage click＝苛立ちの連打／dead click＝空クリック）**を報告＋**AI bot activity reporting**（どの自動化システムが自サイトに来て何に触れたか可視化）。＝「計測を歪めうる異常・非人間の来訪」自体を一級レポート化。
+  - **GA4（B→traced）**＝**データストリームが不活性/誤設定になると通知する診断**・**閾値を店側が決める異常検知**（モデル予測と実データの乖離で急落/急増を旗立て）。
+  - ＝**3社・別々の動機（開発者/UX/マーケ計測）で同じ「自分の計測の健全性を測れ」へ合流**＝一本崩れても結論が残る多重根拠（第25回“異分野合流”と同型）。背景思想＝**data observability（Barr Moses/Monte Carlo 2019・“silent data downtime＝データが黙って壊れる期間”）**＝「エラーを出さずに間違った値を出し続ける」最悪の失敗モードを監視対象へ格上げ。
+- **現物確認（目付がgrep・過剰批判はしない・現物読みで"既に堅い部分"を切り分け）**：Lokuの受け口は既に堅い（P0-P21＝JSON検証/要配慮剥がし/型防御/engagementクランプ/P1単調増加マージ/box_key allowlist/consent分母）が、**その堅い受け口が「黙って止まった」ことを誰も知れない**のが最後の穴。
+  - (1) **client `flush()`（index.html 469-476行）は `navigator.sendBeacon` を `try/catch` で包み失敗を握り潰す（473行 `catch(e){}`）**＝送信不達を誰も知らない。※P19（返り値false→fetchフォールバック）は"1発の送信"の信頼性で別レイヤー。
+  - (2) **server `collect`（app.mjs 244-311行）は `sess.last_seen_at = Date.now()` を刻む（295行）が、これは purge用（66-72行）**で、**ページ別に"最後にデータが来た時刻／沈黙したか"を集計する店主向けビューは無い**。
+  - (3) **拒否パス（bad json 400=246行・anon/slug無 400=249行・unknown page 404=251行・notice未提示 403=262行）は全て件数を残さず `return`＝黙って消える**（P21が require_notice 403 で指摘した"黙って消える"の一般形＝**unknown page 404 スパイク＝スラッグ古い/スニペット貼り間違いが不可視**）。
+  - (4) 既存の店主向けレポは bot-report（P2・692行）/diagnose/conversion-by-tag/product-funnel＝**"計測が生きているか"のレポは無い**。
+- **対策案（射程を絞る・採否はDaiya/メイン判断・コードは触らない）**：
+  - **① ページ別"最終受信ヒートビート＋期待cadence"**：`page_id` 別に `last_collect_at` を持ち、"直近Nの窓でゼロ＝沈黙"を store owner レポに**「計測停止の疑い」**として出す（drop-to-zero を"客が減った"に丸めない）。bot-report/拒否率(P21)と同じ「黙って消さず可視化」思想。
+  - **② collect拒否の件数化**：400/404/403 を**理由別カウンタ**に残す（unknown page 404 スパイク＝スラッグ不整合／400スパイク＝SDK破損 を実装者が発見）。弾く判断は変えず件数だけ足す（P21③「弾いた件数の可視化」の一般化）。
+  - **③【隣接・任意】client 側 flush の失敗**（sendBeacon false／try/catch 捕捉）を"次バッチにピギーバック"で1カウントだけ運ぶ＝不達の可視化（P19の返り値チェックと同居可能・別目的）。
+- **根拠URL（機構＝A/S、業界＝B、起源＝B、現物＝目付grep）**：
+  - PostHog Docs「Health Checks (Beta)」＝**No live events／古いSDK／ingestion warnings／壊れたデータモデルを Signal 化**（A・posthog.com公式docs・egress遮断のため検索経由で内容確認） https://posthog.com/docs/health-checks ／ https://posthog.com/docs/health-checks/no-live-events ／ https://posthog.com/docs/data/ingestion-warnings
+  - Microsoft Clarity（A・2026 AI機能＝Copilotセッション異常サマリ＋AI bot activity reporting） https://clarity.microsoft.com/blog/ ／ https://learn.microsoft.com/en-us/clarity/faq
+  - GA4 ストリーム診断/異常検知（B→traced・support.google.comコミュニティ「No stream data detected」/「Data stream not flowing」・tatvic/whistlerbillboards）
+  - data observability＝Barr Moses/Monte Carlo 2019「silent data downtime」（B・起源） https://www.accel.com/spotlight-on/episodes/montecarlo-barr-moses
+  - 現物: loku-tuning-plugin/index.html（flush 469-476行＝sendBeacon try/catch握り潰し）・handoff-demo/app.mjs（collect 244-311行＝last_seen_at 295行=purge用66-72行・拒否 246/249/251/262行が件数残さず return・bot-report 692行のみで死活レポ無し）
+- **検証方法**：実機/ユニットE2E（メイン領分・1スタジオ目本番化時・P7〜P21と同じ境界テスト群で）。①あるページの collect を止めた時、店主レポに**「計測停止の疑い」**が出るか（負のテスト＝"客ゼロ"に丸めない）②stale slug で 404 が出た時、拒否カウンタが増え原因が辿れるか③ヒートビート/カウンタを足しても P0離脱二段・P1マージ・P20 allowlist・P21分母と冪等か④正常時に誤検知（生きてるのに"停止"）しないか⑤死活ログ/拒否カウンタに個人情報が紛れない（page_slug・時刻・件数のみ）か。
+- **優先度**：**中**——サイレント計測障害は"率"でなく**"母集団の存在自体"を偽り**、店主が「効く施策を殺す／死んだ計測を信じる」に直結。効くのは(1)沈黙を"客減"と取り違えない(2)拒否スパイクで実装ミス（スラッグ/SDK）を早期発見(3)Lokuの"黙って消さず可視化"思想（bot-report/拒否率）を計測装置自身にも適用。実装は"page別last_collect_at＋拒否カウンタ＋レポ1画面"＝中規模。**採否・しきい値・実装・QAはDaiya／メイン領分。コードは触っていない。**
+- **非重複（4象限＋メタ層＝新種判断の要）**：**P20=分子の汚染（汚いキーが来る）／P21=分母の欠落（拒否した人間が消える）／P3=縦の連続性（ITPキーが7日で失効）／P2=非人間（botの除外）**＝いずれも**「データは来る」前提**。**P22＝メタ層＝計測装置そのものの死活（データが来ない／丸ごと拒否される＝"黙って止まった"を検知）＝4象限のどれとも直交**。P0（1セッションの離脱送信）/P19（1発beaconのfalse→fallback）とも別＝**スニペットが外れたページは `flush()` すら呼ばれない＝per-send ガードでは原理的に見えない"集計の沈黙"**。
+- **⚠️見廻り(lp-mimawari)へ申し送り**：計測死活ログ／拒否カウンタに**個人情報を紛れさせない設計**（page_slug・時刻・件数のみで来訪者個人が復元されない）の確認を。"黙って消さず記録"は監視に有用だが、記録内容の匿名性の線引きは見廻り/Daiya領分。
+- **⚠️番人(qa-auditor)へ申し送り**：上の検証方法①〜⑤を境界テストに追加。特に①の負のテスト（計測停止を"客ゼロ"に丸めない）と④（正常時の誤検知なし）を重視。P0離脱二段・P1マージ・P20 allowlist・P21分母との二重処理でも冪等。
+- **⚠️物見(intel-scout)へ申し送り**：data observability（Monte Carlo等）／計測監視の専業製品（Trackingplan等）の市場拡大と、PostHog Self-driving Inbox のような「計測障害をエージェントが自動修復」する潮流は2026の計測ガバナンスの本流＝業界動向として継続鉱脈。LIFF v2.30.0「複数OA連携」（9月日本先行）は決断面/導線ニュースとして純ニュース面は物見へ。
+- **位置づけ（テーマローテーション14手目＝第30回名指し宿題「(a)ビート2の計測ツール新機能一次深掘り＝最有力」の消化）**：第30回(ビート3/決断面RwG)からローテーションし、宿題「(a)ビート2の計測ツール新機能一次深掘り（Clarity/PostHog/GA4 の未消化一次）」を消化。テーマ履歴＝consent/分母(29)→決断面/RwG(30)→**計測の死活監視(31)**＝決断面/reach_path(第30直近)の連続を回避・交差フロンティア(P13〜P18)に戻らず。ビート2でも指標定義(18/19/21)/小セル(25)/イベント設計(28)と別サブ＝「計測ツールが"自分の計測"を監視する新機能」は未踏サブ。**新種は第28 P20/第29 P21以来3回目だが、P0〜P21のどれとも機構が直交（メタ層＝装置の死活）と grep 確認した上で起こした＝「害の型が既存4象限の"外側"にあれば新種・内側なら追加観点」の判断を機械化。**
