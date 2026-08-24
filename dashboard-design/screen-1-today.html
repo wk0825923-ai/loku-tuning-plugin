@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>今日の1枚 | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52;
+    --primary-soft:#ECFDF5;
+    --text:#111827;
+    --sub:#64748B;
+    --border:#D8E0DA;
+    --radius-sm:4px;
+    --radius-md:6px;
+    --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309;
+    --coral:#C2410C;
+    --sapphire:#1D4ED8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#FFFFFF;
+    color:var(--text);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .material-symbols-outlined{
+    font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    font-size:20px;
+    vertical-align:middle;
+    line-height:1;
+  }
+  .tabular{font-variant-numeric:tabular-nums}
+
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+  /* ===== ヘッダー ===== */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  header .title{font-size:15px;font-weight:700;letter-spacing:.02em}
+  header .date{font-size:12px;color:var(--sub);margin-top:2px}
+  #dev-toggle{
+    display:flex;align-items:center;gap:4px;
+    font-size:11px;color:var(--sub);
+    background:#F7F9F7;border:1px solid var(--border);border-radius:20px;
+    padding:5px 10px;cursor:pointer;user-select:none;
+  }
+  #dev-toggle .material-symbols-outlined{font-size:15px}
+  #dev-toggle:active{background:#EEF2EE}
+
+  main{flex:1;padding:18px 16px 90px}
+
+  /* ===== 心臓部：昨日の取りこぼし ===== */
+  .hero-card{
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-flat);
+    padding:22px 18px;
+    text-align:center;
+  }
+  .hero-label{font-size:13px;color:var(--sub);font-weight:500}
+  .hero-number{
+    font-size:56px;font-weight:700;color:var(--primary);
+    line-height:1.1;margin:8px 0 2px;
+  }
+  .hero-unit{font-size:16px;font-weight:600;color:var(--primary)}
+  .hero-sub{font-size:12px;color:var(--sub);margin-top:6px}
+
+  .micro-funnel{
+    display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;
+    margin-top:12px;font-size:12px;color:var(--sub);
+  }
+  .micro-funnel .material-symbols-outlined{font-size:14px;color:var(--sub)}
+  .micro-funnel b{color:var(--text);font-weight:700}
+
+  .booked-line{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+    font-size:12px;color:var(--sub);
+  }
+  .booked-line .material-symbols-outlined{font-size:16px;color:var(--primary)}
+  .booked-line b{color:var(--text);font-weight:700}
+
+  /* ===== 内訳セクション ===== */
+  .section-label{
+    font-size:12px;font-weight:600;color:var(--sub);
+    margin:22px 0 10px;letter-spacing:.03em;
+  }
+  .reason-card{
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);
+    padding:14px 14px;
+    margin-bottom:10px;
+  }
+  .reason-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .reason-meta{display:flex;gap:10px;align-items:flex-start}
+  .reason-icon{
+    width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .reason-icon .material-symbols-outlined{font-size:18px}
+  .reason-text .name{font-size:13.5px;font-weight:600;color:var(--text)}
+  .reason-text .desc{font-size:11.5px;color:var(--sub);margin-top:2px;line-height:1.5}
+  .reason-count{
+    font-size:22px;font-weight:700;flex-shrink:0;
+    display:flex;align-items:baseline;gap:2px;
+  }
+  .reason-count .u{font-size:11px;font-weight:600;color:var(--sub)}
+
+  .reason-action{
+    margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+    display:flex;justify-content:flex-end;
+  }
+  .btn-send{
+    display:inline-flex;align-items:center;gap:5px;
+    background:var(--primary-soft);color:var(--primary);
+    border:1px solid #B7E4CF;
+    border-radius:var(--radius-sm);
+    padding:8px 14px;font-size:12.5px;font-weight:600;
+    cursor:pointer;transition:background .15s;
+  }
+  .btn-send .material-symbols-outlined{font-size:16px}
+  .btn-send:active{background:#D9F5E6}
+  .btn-send:disabled{opacity:.5;cursor:default}
+
+  /* ===== 空状態 ===== */
+  .empty-state{
+    text-align:center;padding:50px 20px;color:var(--sub);
+  }
+  .empty-state .material-symbols-outlined{font-size:40px;color:#B7C4BA;margin-bottom:10px}
+  .empty-state .t{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+  .empty-state .d{font-size:12px;line-height:1.6}
+
+  /* ===== トースト ===== */
+  #toast{
+    position:fixed;left:50%;bottom:96px;transform:translate(-50%,12px);
+    background:var(--text);color:#fff;
+    padding:11px 18px;border-radius:var(--radius-md);
+    font-size:13px;font-weight:600;
+    display:flex;align-items:center;gap:7px;
+    box-shadow:0 6px 20px rgba(17,24,39,.25);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    max-width:calc(480px - 32px);
+    z-index:50;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast .material-symbols-outlined{font-size:17px;color:#6EE7B7}
+
+  /* ===== 下部ナビ ===== */
+  nav{
+    position:fixed;left:0;right:0;bottom:0;
+    max-width:480px;margin:0 auto;
+    background:#FFFFFF;border-top:1px solid var(--border);
+    display:flex;
+    padding:6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  nav a{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:6px 0;color:var(--sub);text-decoration:none;font-size:10px;font-weight:500;
+  }
+  nav a .material-symbols-outlined{font-size:22px}
+  nav a.active{color:var(--primary);font-weight:700}
+  nav a.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div>
+      <div class="title">今日の1枚</div>
+      <div class="date">2026年8月24日（月）・昨日分の診断</div>
+    </div>
+    <div id="dev-toggle" onclick="toggleState()">
+      <span class="material-symbols-outlined">science</span>
+      <span id="dev-toggle-label">データなし確認</span>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ===== データあり状態 ===== -->
+    <div id="state-data">
+
+      <div class="hero-card">
+        <div class="hero-label">昨日の取りこぼし</div>
+        <div class="hero-number tabular">7<span class="hero-unit">人</span></div>
+        <div class="micro-funnel tabular">
+          LP訪問 <b>52</b>人 <span class="material-symbols-outlined">arrow_right_alt</span> LINE到達 <b>12</b>人 <span class="material-symbols-outlined">arrow_right_alt</span> 予約 <b>4</b>人
+        </div>
+        <div class="hero-sub">取りこぼし7人＝訪問52人のうち興味を示したのに決めきれず離脱した人</div>
+      </div>
+
+      <div class="section-label">理由の内訳</div>
+
+      <!-- proof_gap -->
+      <div class="reason-card">
+        <div class="reason-top">
+          <div class="reason-meta">
+            <div class="reason-icon" style="background:#FEF3E7;color:var(--amber)">
+              <span class="material-symbols-outlined">psychology_alt</span>
+            </div>
+            <div class="reason-text">
+              <div class="name">料金の手前で不安未解消</div>
+              <div class="desc">料金に到達する前、信頼を形成する区間で離脱しています。スタジオやインストラクターの信頼が伝わり切る前に離れた可能性があります。</div>
+            </div>
+          </div>
+          <div class="reason-count tabular">3<span class="u">人</span></div>
+        </div>
+        <div class="reason-action">
+          <button class="btn-send" onclick="sendToApproval(this,'proof_gap')">
+            <span class="material-symbols-outlined">forward_to_inbox</span>
+            一言を送る（承認へ）
+          </button>
+        </div>
+      </div>
+
+      <!-- price_anxiety -->
+      <div class="reason-card">
+        <div class="reason-top">
+          <div class="reason-meta">
+            <div class="reason-icon" style="background:#FDECEA;color:var(--coral)">
+              <span class="material-symbols-outlined">sell</span>
+            </div>
+            <div class="reason-text">
+              <div class="name">料金で迷い</div>
+              <div class="desc">料金プランのセクションで離脱しています。価格に対する納得感が不足している可能性があります。</div>
+            </div>
+          </div>
+          <div class="reason-count tabular">2<span class="u">人</span></div>
+        </div>
+        <div class="reason-action">
+          <button class="btn-send" onclick="sendToApproval(this,'price_anxiety')">
+            <span class="material-symbols-outlined">forward_to_inbox</span>
+            一言を送る（承認へ）
+          </button>
+        </div>
+      </div>
+
+      <!-- cta_friction -->
+      <div class="reason-card">
+        <div class="reason-top">
+          <div class="reason-meta">
+            <div class="reason-icon" style="background:#EAF1FD;color:var(--sapphire)">
+              <span class="material-symbols-outlined">touch_app</span>
+            </div>
+            <div class="reason-text">
+              <div class="name">CTAで摩擦</div>
+              <div class="desc">体験予約の導線まで到達しましたが予約に至っていません。フォームや導線の摩擦が最後の一歩を止めている可能性があります。</div>
+            </div>
+          </div>
+          <div class="reason-count tabular">2<span class="u">人</span></div>
+        </div>
+        <div class="reason-action">
+          <button class="btn-send" onclick="sendToApproval(this,'cta_friction')">
+            <span class="material-symbols-outlined">forward_to_inbox</span>
+            一言を送る（承認へ）
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===== データなし状態（開発トグルで切替） ===== -->
+    <div id="state-empty" style="display:none">
+      <div class="empty-state">
+        <span class="material-symbols-outlined">query_stats</span>
+        <div class="t">昨日は計測データがありません</div>
+        <div class="d">アクセスが少なかった日、または計測タグ未設置の可能性があります。<br>「設定」からタグの設置状況を確認できます。</div>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="toast">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span id="toast-text">承認箱に入りました</span>
+  </div>
+
+  <nav>
+    <a href="#" class="active"><span class="material-symbols-outlined">today</span>今日</a>
+    <a href="screen-2-map.html"><span class="material-symbols-outlined">map</span>注目マップ</a>
+    <a href="screen-3-approve.html"><span class="material-symbols-outlined">inbox</span>承認箱<span class="nav-badge">3</span></a>
+    <a href="screen-4-report.html"><span class="material-symbols-outlined">monitoring</span>レポート</a>
+    <a href="screen-5-setup.html"><span class="material-symbols-outlined">settings</span>設定</a>
+  </nav>
+
+</div>
+
+<script>
+  const REASON_LABEL = {
+    proof_gap: '料金の手前で不安未解消',
+    price_anxiety: '料金で迷い',
+    cta_friction: 'CTAで摩擦'
+  };
+
+  function sendToApproval(btn, code){
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined">check</span>承認へ送付済み';
+    showToast(REASON_LABEL[code] + ' の一言が承認箱に入りました');
+  }
+
+  let toastTimer = null;
+  function showToast(text){
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+
+  let isEmpty = false;
+  function toggleState(){
+    isEmpty = !isEmpty;
+    document.getElementById('state-data').style.display = isEmpty ? 'none' : 'block';
+    document.getElementById('state-empty').style.display = isEmpty ? 'block' : 'none';
+    document.getElementById('dev-toggle-label').textContent = isEmpty ? '通常表示に戻す' : 'データなし確認';
+  }
+</script>
+
+</body>
+</html>

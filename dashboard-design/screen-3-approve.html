@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>送る承認箱 | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52;
+    --primary-soft:#ECFDF5;
+    --text:#111827;
+    --sub:#64748B;
+    --border:#D8E0DA;
+    --radius-sm:4px;
+    --radius-md:6px;
+    --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309;
+    --coral:#C2410C;
+    --sapphire:#1D4ED8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#FFFFFF;
+    color:var(--text);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .material-symbols-outlined{
+    font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    font-size:20px;
+    vertical-align:middle;
+    line-height:1;
+  }
+  .tabular{font-variant-numeric:tabular-nums}
+
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+  header{
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  header .title{font-size:15px;font-weight:700;letter-spacing:.02em}
+  header .date{font-size:12px;color:var(--sub);margin-top:2px}
+
+  .principle-line{
+    display:flex;align-items:center;gap:6px;
+    background:var(--primary-soft);border:1px solid #B7E4CF;color:#065F46;
+    font-size:11.5px;font-weight:600;
+    padding:8px 12px;margin:12px 16px 0;border-radius:var(--radius-sm);
+  }
+  .principle-line .material-symbols-outlined{font-size:15px}
+
+  .tabs{display:flex;gap:6px;padding:14px 16px 0}
+  .tab{
+    flex:1;text-align:center;font-size:12px;font-weight:700;color:var(--sub);
+    border:1px solid var(--border);border-radius:20px;padding:8px 4px;
+    cursor:pointer;background:#FFFFFF;display:flex;align-items:center;justify-content:center;gap:4px;
+  }
+  .tab.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .tab .badge{
+    background:rgba(255,255,255,.3);border-radius:20px;padding:0 6px;font-size:10.5px;
+  }
+  .tab:not(.active) .badge{background:#F2F5F2;color:var(--sub)}
+
+  main{flex:1;padding:16px 16px 90px}
+
+  .draft-card{
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);
+    padding:14px;
+    margin-bottom:12px;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .draft-card.leaving{opacity:0;transform:translateX(30px)}
+  .draft-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+  .draft-icon{
+    width:32px;height:32px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .draft-icon .material-symbols-outlined{font-size:18px}
+  .draft-meta{min-width:0}
+  .draft-reason{font-size:13px;font-weight:700}
+  .draft-target{font-size:11.5px;color:var(--sub);margin-top:2px}
+
+  .draft-body{
+    background:#FAFBFA;border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:11px 12px;font-size:12.5px;color:var(--text);line-height:1.7;margin-bottom:10px;
+  }
+  .draft-body[contenteditable="true"]{
+    background:#FFFFFF;outline:2px solid var(--primary-soft);border-color:var(--primary);
+  }
+
+  .draft-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .btn{
+    display:inline-flex;align-items:center;gap:5px;
+    border-radius:var(--radius-sm);
+    padding:8px 13px;font-size:12px;font-weight:600;
+    cursor:pointer;border:1px solid transparent;transition:background .15s;
+  }
+  .btn .material-symbols-outlined{font-size:15px}
+  .btn-reject{background:#FFFFFF;color:var(--coral);border-color:#F3D2C8}
+  .btn-reject:active{background:#FDECEA}
+  .btn-edit{background:#FFFFFF;color:var(--text);border-color:var(--border)}
+  .btn-edit:active{background:#F7F9F7}
+  .btn-approve{background:var(--primary-soft);color:var(--primary);border-color:#B7E4CF}
+  .btn-approve:active{background:#D9F5E6}
+
+  .queue-tag{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:11px;font-weight:600;color:var(--primary);
+    background:var(--primary-soft);border-radius:20px;padding:3px 9px;margin-top:2px;
+  }
+  .queue-tag .material-symbols-outlined{font-size:13px}
+
+  .rejected-tag{
+    display:inline-flex;align-items:center;gap:4px;
+    font-size:11px;font-weight:600;color:var(--coral);
+    background:#FDECEA;border-radius:20px;padding:3px 9px;margin-top:2px;
+  }
+
+  .empty-tab{text-align:center;padding:50px 20px;color:var(--sub)}
+  .empty-tab .material-symbols-outlined{font-size:36px;color:#B7C4BA;margin-bottom:8px}
+  .empty-tab .t{font-size:13px;font-weight:600;color:var(--text)}
+
+  #toast{
+    position:fixed;left:50%;bottom:96px;transform:translate(-50%,12px);
+    background:var(--text);color:#fff;
+    padding:11px 18px;border-radius:var(--radius-md);
+    font-size:13px;font-weight:600;
+    display:flex;align-items:center;gap:7px;
+    box-shadow:0 6px 20px rgba(17,24,39,.25);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    max-width:calc(480px - 32px);
+    z-index:50;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast .material-symbols-outlined{font-size:17px;color:#6EE7B7}
+
+  nav{
+    position:fixed;left:0;right:0;bottom:0;
+    max-width:480px;margin:0 auto;
+    background:#FFFFFF;border-top:1px solid var(--border);
+    display:flex;
+    padding:6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  nav a{
+    position:relative;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:6px 0;color:var(--sub);text-decoration:none;font-size:10px;font-weight:500;
+  }
+  nav a .material-symbols-outlined{font-size:22px}
+  nav a.active{color:var(--primary);font-weight:700}
+  nav a.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+  .nav-badge{
+    position:absolute;top:2px;right:calc(50% - 18px);
+    background:var(--coral);color:#fff;font-size:9px;font-weight:700;
+    min-width:14px;height:14px;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="title">送る承認箱</div>
+    <div class="date">AIの下書きは、あなたが承認するまで送信されません</div>
+  </header>
+
+  <div class="principle-line"><span class="material-symbols-outlined">verified_user</span>勝手に送らない：承認したものだけが翌朝の送信キューに乗ります</div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-pending" onclick="switchTab('pending')">未承認<span class="badge" id="badge-pending">3</span></div>
+    <div class="tab" id="tab-queued" onclick="switchTab('queued')">送信キュー<span class="badge" id="badge-queued">0</span></div>
+    <div class="tab" id="tab-rejected" onclick="switchTab('rejected')">却下<span class="badge" id="badge-rejected">1</span></div>
+  </div>
+
+  <main>
+
+    <div id="pane-pending">
+      <!-- 下書きカードはJSで描画 -->
+    </div>
+
+    <div id="pane-queued" style="display:none">
+      <div id="queued-list"></div>
+    </div>
+
+    <div id="pane-rejected" style="display:none">
+      <div class="draft-card">
+        <div class="draft-top">
+          <div class="draft-icon" style="background:#EAF1FD;color:var(--sapphire)">
+            <span class="material-symbols-outlined">touch_app</span>
+          </div>
+          <div class="draft-meta">
+            <div class="draft-reason">CTAで摩擦の方へ</div>
+            <div class="draft-target">対象：8/20 離脱 1名</div>
+            <div class="rejected-tag"><span class="material-symbols-outlined">block</span>却下済み</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="toast">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span id="toast-text">送信キューに入りました</span>
+  </div>
+
+  <nav>
+    <a href="screen-1-today.html"><span class="material-symbols-outlined">today</span>今日</a>
+    <a href="screen-2-map.html"><span class="material-symbols-outlined">map</span>注目マップ</a>
+    <a href="#" class="active"><span class="material-symbols-outlined">inbox</span>承認箱<span class="nav-badge" id="nav-badge">3</span></a>
+    <a href="screen-4-report.html"><span class="material-symbols-outlined">monitoring</span>レポート</a>
+    <a href="screen-5-setup.html"><span class="material-symbols-outlined">settings</span>設定</a>
+  </nav>
+
+</div>
+
+<script>
+  const DRAFTS = [
+    {
+      id:'d1', code:'proof_gap', reason:'料金の手前で不安未解消の方へ', target:'対象：8/23 離脱 3名（proof_gap）',
+      icon:'psychology_alt', bg:'#FEF3E7', color:'#B45309',
+      body:'こんにちは。先日はページをご覧いただきありがとうございます。スタジオやインストラクターについてご不安な点があれば、体験レッスンで直接お確かめいただけます。ご質問だけでもお気軽にどうぞ。'
+    },
+    {
+      id:'d2', code:'price_anxiety', reason:'料金で迷いの方へ', target:'対象：8/23 離脱 2名（price_anxiety）',
+      icon:'sell', bg:'#FDECEA', color:'#C2410C',
+      body:'料金プランでお悩みでしたら、まずは体験レッスンで内容をご確認いただけます。無理な勧誘は一切ございませんので、比較のためだけでもご利用ください。'
+    },
+    {
+      id:'d3', code:'cta_friction', reason:'CTAで摩擦の方へ', target:'対象：8/23 離脱 2名（cta_friction）',
+      icon:'touch_app', bg:'#EAF1FD', color:'#1D4ED8',
+      body:'ご予約ページまでお進みいただきありがとうございます。入力項目でお困りの点があれば、LINEでのご返信だけでも仮予約として承ります。お気軽にご連絡ください。'
+    }
+  ];
+
+  function renderPending(){
+    const pane = document.getElementById('pane-pending');
+    if(DRAFTS.length === 0){
+      pane.innerHTML = `<div class="empty-tab"><span class="material-symbols-outlined">inbox</span><div class="t">承認待ちの下書きはありません</div></div>`;
+      return;
+    }
+    pane.innerHTML = DRAFTS.map(d => `
+      <div class="draft-card" id="card-${d.id}">
+        <div class="draft-top">
+          <div class="draft-icon" style="background:${d.bg};color:${d.color}">
+            <span class="material-symbols-outlined">${d.icon}</span>
+          </div>
+          <div class="draft-meta">
+            <div class="draft-reason">${d.reason}</div>
+            <div class="draft-target">${d.target}</div>
+          </div>
+        </div>
+        <div class="draft-body" id="body-${d.id}">${d.body}</div>
+        <div class="draft-actions">
+          <button class="btn btn-reject" onclick="reject('${d.id}')"><span class="material-symbols-outlined">close</span>却下</button>
+          <button class="btn btn-edit" onclick="toggleEdit('${d.id}', this)"><span class="material-symbols-outlined">edit</span>編集</button>
+          <button class="btn btn-approve" onclick="approve('${d.id}')"><span class="material-symbols-outlined">check</span>承認して送信キューへ</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleEdit(id, btn){
+    const body = document.getElementById('body-' + id);
+    const editing = body.getAttribute('contenteditable') === 'true';
+    body.setAttribute('contenteditable', editing ? 'false' : 'true');
+    if(!editing){ body.focus(); btn.innerHTML = '<span class="material-symbols-outlined">check</span>編集完了'; }
+    else { btn.innerHTML = '<span class="material-symbols-outlined">edit</span>編集'; showToast('本文を更新しました'); }
+  }
+
+  const queued = [];
+  const rejectedCount = { n: 1 };
+
+  function approve(id){
+    const idx = DRAFTS.findIndex(d => d.id === id);
+    if(idx === -1) return;
+    const d = DRAFTS[idx];
+    const card = document.getElementById('card-' + id);
+    card.classList.add('leaving');
+    setTimeout(() => {
+      DRAFTS.splice(idx, 1);
+      queued.unshift(d);
+      renderPending();
+      renderQueued();
+      updateBadges();
+      showToast(d.reason + ' を送信キューへ移動しました');
+    }, 300);
+  }
+
+  function reject(id){
+    const idx = DRAFTS.findIndex(d => d.id === id);
+    if(idx === -1) return;
+    const d = DRAFTS[idx];
+    const card = document.getElementById('card-' + id);
+    card.classList.add('leaving');
+    setTimeout(() => {
+      DRAFTS.splice(idx, 1);
+      rejectedCount.n++;
+      renderPending();
+      updateBadges();
+      showToast(d.reason + ' を却下しました');
+    }, 300);
+  }
+
+  function renderQueued(){
+    const list = document.getElementById('queued-list');
+    if(queued.length === 0){
+      list.innerHTML = `<div class="empty-tab"><span class="material-symbols-outlined">schedule</span><div class="t">送信キューは空です</div></div>`;
+      return;
+    }
+    list.innerHTML = queued.map(d => `
+      <div class="draft-card">
+        <div class="draft-top">
+          <div class="draft-icon" style="background:${d.bg};color:${d.color}">
+            <span class="material-symbols-outlined">${d.icon}</span>
+          </div>
+          <div class="draft-meta">
+            <div class="draft-reason">${d.reason}</div>
+            <div class="draft-target">${d.target}</div>
+            <div class="queue-tag"><span class="material-symbols-outlined">schedule</span>翌朝配信予定</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateBadges(){
+    document.getElementById('badge-pending').textContent = DRAFTS.length;
+    document.getElementById('badge-queued').textContent = queued.length;
+    document.getElementById('badge-rejected').textContent = rejectedCount.n;
+    document.getElementById('nav-badge').textContent = DRAFTS.length;
+    document.getElementById('nav-badge').style.display = DRAFTS.length > 0 ? 'flex' : 'none';
+  }
+
+  function switchTab(name){
+    ['pending','queued','rejected'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === name);
+      document.getElementById('pane-' + t).style.display = t === name ? 'block' : 'none';
+    });
+  }
+
+  let toastTimer = null;
+  function showToast(text){
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+
+  renderPending();
+  renderQueued();
+</script>
+
+</body>
+</html>

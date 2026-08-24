@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>月次レポートA | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52;
+    --primary-soft:#ECFDF5;
+    --text:#111827;
+    --sub:#64748B;
+    --border:#D8E0DA;
+    --radius-sm:4px;
+    --radius-md:6px;
+    --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309;
+    --coral:#C2410C;
+    --sapphire:#1D4ED8;
+    --amethyst:#6D28D9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#FFFFFF;
+    color:var(--text);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .material-symbols-outlined{
+    font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    font-size:20px;
+    vertical-align:middle;
+    line-height:1;
+  }
+  .tabular{font-variant-numeric:tabular-nums}
+
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  header .title{font-size:15px;font-weight:700;letter-spacing:.02em}
+  .month-switch{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub)}
+  .month-switch .material-symbols-outlined{font-size:18px;cursor:pointer}
+  .month-switch .m{font-weight:700;color:var(--text)}
+
+  main{flex:1;padding:18px 16px 90px}
+
+  .section-label{
+    font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;text-transform:uppercase;
+    margin:26px 0 10px;
+  }
+  .section-label:first-child{margin-top:0}
+
+  /* ファネル */
+  .funnel-step{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);padding:14px;margin-bottom:6px;position:relative;
+  }
+  .funnel-step.hero{background:var(--primary-soft);border-color:#B7E4CF;text-align:center}
+  .funnel-step .fn-label{font-size:12px;color:var(--sub);font-weight:600}
+  .funnel-step .fn-num{font-size:26px;font-weight:700;color:var(--primary);margin-top:2px}
+  .funnel-step.hero .fn-num{font-size:36px}
+  .funnel-step .fn-rate{font-size:11px;color:var(--sub);margin-top:2px}
+  .funnel-arrow{text-align:center;color:var(--sub);font-size:12px;padding:2px 0}
+  .funnel-arrow .material-symbols-outlined{font-size:18px}
+
+  /* 因果コード月間合計 */
+  .cause-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 0;border-bottom:1px solid #EEF1EE;
+  }
+  .cause-row:last-child{border-bottom:none}
+  .cause-left{display:flex;align-items:center;gap:8px;min-width:0}
+  .cause-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .cause-name{font-size:12.5px;font-weight:600}
+  .cause-num{font-size:15px;font-weight:700;flex-shrink:0}
+  .cause-num .u{font-size:10.5px;font-weight:600;color:var(--sub)}
+
+  /* 広告別ファネル */
+  .ad-card{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);padding:14px;margin-bottom:10px;
+  }
+  .ad-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .ad-card-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .ad-card-name .material-symbols-outlined{font-size:16px;color:var(--sub)}
+  .ad-src-tag{
+    font-size:10px;font-weight:700;color:var(--sub);background:#F2F5F2;
+    border-radius:20px;padding:2px 8px;
+  }
+  .ad-funnel-row{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub);margin-bottom:10px}
+  .ad-funnel-row .node{
+    display:flex;flex-direction:column;align-items:center;gap:1px;
+    border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 8px;flex:1;
+  }
+  .ad-funnel-row .node b{font-size:14px;color:var(--text);font-weight:700}
+  .ad-funnel-row .material-symbols-outlined{font-size:14px;flex-shrink:0}
+  .ad-insight{
+    display:flex;gap:6px;font-size:11.5px;color:var(--text);
+    background:#FAFBFA;border-radius:var(--radius-sm);padding:8px 10px;line-height:1.6;
+  }
+  .ad-insight .material-symbols-outlined{font-size:14px;color:var(--primary);flex-shrink:0}
+
+  .footnote-line{font-size:11px;color:var(--sub);line-height:1.6;margin-top:18px}
+
+  nav{
+    position:fixed;left:0;right:0;bottom:0;
+    max-width:480px;margin:0 auto;
+    background:#FFFFFF;border-top:1px solid var(--border);
+    display:flex;
+    padding:6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  nav a{
+    position:relative;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:6px 0;color:var(--sub);text-decoration:none;font-size:10px;font-weight:500;
+  }
+  nav a .material-symbols-outlined{font-size:22px}
+  nav a.active{color:var(--primary);font-weight:700}
+  nav a.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+  .nav-badge{
+    position:absolute;top:2px;right:calc(50% - 18px);
+    background:var(--coral);color:#fff;font-size:9px;font-weight:700;
+    min-width:14px;height:14px;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="title">月次レポートA</div>
+    <div class="month-switch">
+      <span class="material-symbols-outlined">chevron_left</span>
+      <span class="m">2026年7月</span>
+      <span class="material-symbols-outlined">chevron_right</span>
+    </div>
+  </header>
+
+  <main>
+
+    <div class="section-label">フルファネル（月間）</div>
+    <div class="funnel-step hero">
+      <div class="fn-label">LP訪問</div>
+      <div class="fn-num tabular">842</div>
+    </div>
+    <div class="funnel-arrow"><span class="material-symbols-outlined">south</span></div>
+    <div class="funnel-step">
+      <div class="fn-label">CTA到達</div>
+      <div class="fn-num tabular">210</div>
+      <div class="fn-rate tabular">訪問比 25%</div>
+    </div>
+    <div class="funnel-arrow"><span class="material-symbols-outlined">south</span></div>
+    <div class="funnel-step">
+      <div class="fn-label">LINE友だち追加</div>
+      <div class="fn-num tabular">96</div>
+      <div class="fn-rate tabular">CTA比 46%</div>
+    </div>
+    <div class="funnel-arrow"><span class="material-symbols-outlined">south</span></div>
+    <div class="funnel-step">
+      <div class="fn-label">予約／購入</div>
+      <div class="fn-num tabular">31</div>
+      <div class="fn-rate tabular">友だち比 32%</div>
+    </div>
+
+    <div class="section-label">因果コード別 取りこぼし合計（月間）</div>
+    <div class="ad-card">
+      <div class="cause-row">
+        <div class="cause-left"><span class="cause-dot" style="background:#B45309"></span><span class="cause-name">料金の手前で不安未解消</span></div>
+        <div class="cause-num tabular">41<span class="u">人</span></div>
+      </div>
+      <div class="cause-row">
+        <div class="cause-left"><span class="cause-dot" style="background:#C2410C"></span><span class="cause-name">料金で迷い</span></div>
+        <div class="cause-num tabular">33<span class="u">人</span></div>
+      </div>
+      <div class="cause-row">
+        <div class="cause-left"><span class="cause-dot" style="background:#1D4ED8"></span><span class="cause-name">CTAで摩擦</span></div>
+        <div class="cause-num tabular">22<span class="u">人</span></div>
+      </div>
+      <div class="cause-row">
+        <div class="cause-left"><span class="cause-dot" style="background:#6D28D9"></span><span class="cause-name">関心の薄い流入</span></div>
+        <div class="cause-num tabular">18<span class="u">人</span></div>
+      </div>
+    </div>
+
+    <div class="section-label">広告別ファネル</div>
+
+    <div class="ad-card">
+      <div class="ad-card-head">
+        <div class="ad-card-name"><span class="material-symbols-outlined">campaign</span>夏割A</div>
+        <div class="ad-src-tag">lt_ad=夏割A</div>
+      </div>
+      <div class="ad-funnel-row tabular">
+        <div class="node">訪問<b>210</b></div>
+        <span class="material-symbols-outlined">arrow_right_alt</span>
+        <div class="node">LINE<b>34</b></div>
+        <span class="material-symbols-outlined">arrow_right_alt</span>
+        <div class="node">予約<b>6</b></div>
+      </div>
+      <div class="ad-insight"><span class="material-symbols-outlined">info</span>この広告は pricing ブロックでの離脱率が他より高く、料金で止まる傾向があります。</div>
+    </div>
+
+    <div class="ad-card">
+      <div class="ad-card-head">
+        <div class="ad-card-name"><span class="material-symbols-outlined">campaign</span>Instagram固定投稿</div>
+        <div class="ad-src-tag">lt_ad=固定投稿</div>
+      </div>
+      <div class="ad-funnel-row tabular">
+        <div class="node">訪問<b>156</b></div>
+        <span class="material-symbols-outlined">arrow_right_alt</span>
+        <div class="node">LINE<b>29</b></div>
+        <span class="material-symbols-outlined">arrow_right_alt</span>
+        <div class="node">予約<b>9</b></div>
+      </div>
+      <div class="ad-insight"><span class="material-symbols-outlined">info</span>LINE到達率・予約率ともに夏割Aより高く、cta_friction の比率は低めです。</div>
+    </div>
+
+    <div class="ad-card">
+      <div class="ad-card-head">
+        <div class="ad-card-name"><span class="material-symbols-outlined">campaign</span>紹介リンク</div>
+        <div class="ad-src-tag">lt_ad=紹介</div>
+      </div>
+      <div class="ad-funnel-row tabular">
+        <div class="node">訪問<b>58</b></div>
+        <span class="material-symbols-outlined">arrow_right_alt</span>
+        <div class="node">LINE<b>19</b></div>
+        <span class="material-symbols-outlined">arrow_right_alt</span>
+        <div class="node">予約<b>8</b></div>
+      </div>
+      <div class="ad-insight"><span class="material-symbols-outlined">info</span>訪問数は少ないものの予約到達率が最も高い経路です。</div>
+    </div>
+
+    <div class="footnote-line">広告別の内訳はURLパラメータ（lt_src・lt_ad）で運ばれるため、LINE内ブラウザのITPやCookie制限の影響を受けません。数値はダミーです。効果保証・満足度・体験談は含みません。</div>
+
+  </main>
+
+  <nav>
+    <a href="screen-1-today.html"><span class="material-symbols-outlined">today</span>今日</a>
+    <a href="screen-2-map.html"><span class="material-symbols-outlined">map</span>注目マップ</a>
+    <a href="screen-3-approve.html"><span class="material-symbols-outlined">inbox</span>承認箱<span class="nav-badge">3</span></a>
+    <a href="#" class="active"><span class="material-symbols-outlined">monitoring</span>レポート</a>
+    <a href="screen-5-setup.html"><span class="material-symbols-outlined">settings</span>設定</a>
+  </nav>
+
+</div>
+
+</body>
+</html>

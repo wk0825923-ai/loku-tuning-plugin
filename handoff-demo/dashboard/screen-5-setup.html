@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>セットアップ | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52;
+    --primary-soft:#ECFDF5;
+    --text:#111827;
+    --sub:#64748B;
+    --border:#D8E0DA;
+    --radius-sm:4px;
+    --radius-md:6px;
+    --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309;
+    --coral:#C2410C;
+    --sapphire:#1D4ED8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#FFFFFF;
+    color:var(--text);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .material-symbols-outlined{
+    font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    font-size:20px;
+    vertical-align:middle;
+    line-height:1;
+  }
+  .tabular{font-variant-numeric:tabular-nums}
+
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  header .title{font-size:15px;font-weight:700;letter-spacing:.02em}
+  header .date{font-size:12px;color:var(--sub);margin-top:2px}
+  #dev-toggle{
+    display:flex;align-items:center;gap:4px;
+    font-size:11px;color:var(--sub);
+    background:#F7F9F7;border:1px solid var(--border);border-radius:20px;
+    padding:5px 10px;cursor:pointer;user-select:none;
+  }
+  #dev-toggle .material-symbols-outlined{font-size:15px}
+  #dev-toggle:active{background:#EEF2EE}
+
+  main{flex:1;padding:18px 16px 90px}
+
+  .step-label{
+    display:flex;align-items:center;gap:8px;
+    font-size:12px;font-weight:700;color:var(--sub);
+    margin:22px 0 10px;letter-spacing:.03em;
+  }
+  .step-label .num{
+    width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;
+  }
+  .step-label:first-child{margin-top:0}
+
+  .card{
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);
+    padding:14px;
+    margin-bottom:10px;
+  }
+
+  /* STEP1 タグ */
+  .tag-box{
+    background:#F7F9F7;border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:10px 12px;font-size:11px;font-family:'SFMono-Regular',Consolas,monospace;
+    color:var(--text);overflow-x:auto;white-space:nowrap;margin-bottom:10px;
+  }
+  .btn{
+    display:inline-flex;align-items:center;gap:5px;
+    border-radius:var(--radius-sm);
+    padding:9px 14px;font-size:12.5px;font-weight:600;
+    cursor:pointer;border:1px solid transparent;transition:background .15s;
+  }
+  .btn .material-symbols-outlined{font-size:16px}
+  .btn-primary{background:var(--primary-soft);color:var(--primary);border-color:#B7E4CF}
+  .btn-primary:active{background:#D9F5E6}
+  .btn-outline{background:#FFFFFF;color:var(--text);border-color:var(--border)}
+  .btn-outline:active{background:#F7F9F7}
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+  .status-line{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);margin-top:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--sub);flex-shrink:0}
+  .dot.on{background:var(--primary)}
+
+  /* STEP2 ブロック分割 */
+  .lp-strip{border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden}
+  .lp-band{
+    border-bottom:1px solid var(--border);padding:12px 12px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    cursor:pointer;background:#FFFFFF;
+  }
+  .lp-band:last-child{border-bottom:none}
+  .lp-band:active{background:#FAFBFA}
+  .lp-band-main{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .lp-band-src{font-size:10.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lp-band-label{display:flex;align-items:center;gap:6px}
+  .lp-band-label .name{font-size:13px;font-weight:700}
+  .conf{
+    font-size:10px;font-weight:700;border-radius:20px;padding:2px 8px;flex-shrink:0;
+  }
+  .conf.high{background:var(--primary-soft);color:var(--primary)}
+  .conf.mid{background:#FEF3E7;color:var(--amber)}
+  .conf.low{background:#FDECEA;color:var(--coral)}
+  select.label-select{
+    font-family:inherit;font-size:12px;font-weight:600;color:var(--text);
+    border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:5px 8px;background:#FFFFFF;flex-shrink:0;
+  }
+
+  .confirm-row{margin-top:12px;text-align:center}
+  .confirm-row .btn-primary{width:100%;justify-content:center;padding:11px}
+
+  /* STEP3 広告リンク発行 */
+  .field-row{display:flex;gap:8px;margin-bottom:10px}
+  .field-row input[type=text]{
+    flex:1;font-family:inherit;font-size:13px;
+    border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:9px 10px;color:var(--text);min-width:0;
+  }
+  .field-row input[type=text]:focus{outline:2px solid var(--primary-soft);border-color:var(--primary)}
+  .preview-url{
+    background:#F7F9F7;border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:9px 10px;font-size:11px;font-family:'SFMono-Regular',Consolas,monospace;
+    color:var(--sub);word-break:break-all;margin-bottom:10px;
+  }
+  .preview-url b{color:var(--primary);font-weight:700}
+
+  .link-list-title{font-size:11px;font-weight:700;color:var(--sub);margin:16px 0 8px;letter-spacing:.03em}
+  .link-item{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:10px 12px;margin-bottom:8px;background:#FFFFFF;
+  }
+  .link-item-main{min-width:0}
+  .link-item-name{font-size:12.5px;font-weight:700}
+  .link-item-url{font-size:10.5px;color:var(--sub);font-family:'SFMono-Regular',Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .icon-btn{
+    display:flex;align-items:center;justify-content:center;
+    width:32px;height:32px;border-radius:var(--radius-sm);
+    border:1px solid var(--border);background:#FFFFFF;flex-shrink:0;cursor:pointer;
+  }
+  .icon-btn:active{background:#F7F9F7}
+  .icon-btn .material-symbols-outlined{font-size:17px;color:var(--sub)}
+
+  .note-line{font-size:11.5px;color:var(--sub);line-height:1.6;margin-top:8px}
+  .note-line .material-symbols-outlined{font-size:13px;vertical-align:-2px;margin-right:2px;color:var(--primary)}
+
+  #toast{
+    position:fixed;left:50%;bottom:96px;transform:translate(-50%,12px);
+    background:var(--text);color:#fff;
+    padding:11px 18px;border-radius:var(--radius-md);
+    font-size:13px;font-weight:600;
+    display:flex;align-items:center;gap:7px;
+    box-shadow:0 6px 20px rgba(17,24,39,.25);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    max-width:calc(480px - 32px);
+    z-index:50;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast .material-symbols-outlined{font-size:17px;color:#6EE7B7}
+
+  nav{
+    position:fixed;left:0;right:0;bottom:0;
+    max-width:480px;margin:0 auto;
+    background:#FFFFFF;border-top:1px solid var(--border);
+    display:flex;
+    padding:6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  nav a{
+    position:relative;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:6px 0;color:var(--sub);text-decoration:none;font-size:10px;font-weight:500;
+  }
+  nav a .material-symbols-outlined{font-size:22px}
+  nav a.active{color:var(--primary);font-weight:700}
+  nav a.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+  .nav-badge{
+    position:absolute;top:2px;right:calc(50% - 18px);
+    background:var(--coral);color:#fff;font-size:9px;font-weight:700;
+    min-width:14px;height:14px;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div>
+      <div class="title">セットアップ</div>
+      <div class="date">タグ設置とブロック分割の確認</div>
+    </div>
+    <div id="dev-toggle" onclick="toggleState()">
+      <span class="material-symbols-outlined">science</span>
+      <span id="dev-toggle-label">未設置状態を確認</span>
+    </div>
+  </header>
+
+  <main>
+
+    <div id="state-normal">
+
+      <div class="step-label"><div class="num">1</div>タグを設置する</div>
+      <div class="card">
+        <div class="tag-box">&lt;script src="https://cdn.loku-tuning.ai/t.js" data-site="ptl-yuki-01" async&gt;&lt;/script&gt;</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="copyTag(this)">
+            <span class="material-symbols-outlined">content_copy</span>タグをコピー
+          </button>
+        </div>
+        <div class="status-line"><span class="dot on"></span>直近24時間で発火を検知（計測中）</div>
+      </div>
+
+      <div class="step-label"><div class="num">2</div>AIブロック自動推定の確認</div>
+      <div class="card">
+        <p style="font-size:12px;color:var(--sub);margin:0 0 12px;line-height:1.6">LPをブロックごとの帯に分割し、内容をAIが推定しました。タップしてラベルを直せます。</p>
+        <div class="lp-strip" id="lp-strip">
+          <!-- bands injected by JS -->
+        </div>
+        <div class="confirm-row">
+          <button class="btn btn-primary" onclick="confirmBoxes()">
+            <span class="material-symbols-outlined">check_circle</span>この分割でOK
+          </button>
+        </div>
+      </div>
+
+      <div class="step-label"><div class="num">3</div>広告用リンクを発行する</div>
+      <div class="card">
+        <p style="font-size:12px;color:var(--sub);margin:0 0 12px;line-height:1.6">広告名を入れるとLPのURLに <code style="background:#F2F5F2;border-radius:4px;padding:1px 5px;font-size:11px">lt_src</code> と <code style="background:#F2F5F2;border-radius:4px;padding:1px 5px;font-size:11px">lt_ad</code> を付けたリンクを発行します。パラメータでID連携するため、LINE内ブラウザのITP（Cookie制限）の影響を受けません。</p>
+        <div class="field-row">
+          <input type="text" id="ad-name" placeholder="広告名（例：夏割A）">
+          <button class="btn btn-outline" onclick="issueLink()">
+            <span class="material-symbols-outlined">add_link</span>発行
+          </button>
+        </div>
+        <div class="preview-url" id="preview-url">https://例のLP/?lt_src=meta&amp;lt_ad=<b>広告名がここに入ります</b></div>
+
+        <div class="link-list-title">発行済みリンク一覧</div>
+        <div id="link-list">
+          <div class="link-item">
+            <div class="link-item-main">
+              <div class="link-item-name">夏割A</div>
+              <div class="link-item-url">https://例のLP/?lt_src=meta&amp;lt_ad=夏割A</div>
+            </div>
+            <div class="icon-btn" onclick="copyGeneric('https://例のLP/?lt_src=meta&amp;lt_ad=夏割A', this)"><span class="material-symbols-outlined">content_copy</span></div>
+          </div>
+          <div class="link-item">
+            <div class="link-item-main">
+              <div class="link-item-name">Instagram固定投稿</div>
+              <div class="link-item-url">https://例のLP/?lt_src=instagram&amp;lt_ad=固定投稿</div>
+            </div>
+            <div class="icon-btn" onclick="copyGeneric('https://例のLP/?lt_src=instagram&amp;lt_ad=固定投稿', this)"><span class="material-symbols-outlined">content_copy</span></div>
+          </div>
+        </div>
+        <div class="note-line"><span class="material-symbols-outlined">info</span>実際の発行・短縮URL化はまだ行われません（デモ動作）。画面4「月次レポートA」の広告別ファネルに反映される想定です。</div>
+      </div>
+
+    </div>
+
+    <div id="state-empty" style="display:none">
+      <div style="text-align:center;padding:50px 20px;color:var(--sub)">
+        <span class="material-symbols-outlined" style="font-size:40px;color:#B7C4BA;margin-bottom:10px;display:block">radio_button_unchecked</span>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">タグがまだ検知されていません</div>
+        <div style="font-size:12px;line-height:1.6">STEP1のタグをLPの&lt;head&gt;内に貼り付けてください。設置後、最大1時間で検知状況が更新されます。</div>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="toast">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span id="toast-text">コピーしました</span>
+  </div>
+
+  <nav>
+    <a href="screen-1-today.html"><span class="material-symbols-outlined">today</span>今日</a>
+    <a href="screen-2-map.html"><span class="material-symbols-outlined">map</span>注目マップ</a>
+    <a href="screen-3-approve.html"><span class="material-symbols-outlined">inbox</span>承認箱<span class="nav-badge">3</span></a>
+    <a href="screen-4-report.html"><span class="material-symbols-outlined">monitoring</span>レポート</a>
+    <a href="#" class="active"><span class="material-symbols-outlined">settings</span>設定</a>
+  </nav>
+
+</div>
+
+<script>
+  const BOXES = [
+    {key:'hero', name:'hero（トップ）', src:'ファーストビュー全体の見出し・写真', conf:'high', pct:'92%'},
+    {key:'problem', name:'problem（悩み提起）', src:'「こんなお悩みありませんか」の段落', conf:'high', pct:'88%'},
+    {key:'beforeafter', name:'beforeafter（変化）', src:'ビフォーアフター写真の比較段', conf:'mid', pct:'71%'},
+    {key:'staff', name:'staff（スタッフ紹介）', src:'インストラクター紹介カード', conf:'high', pct:'85%'},
+    {key:'pricing', name:'pricing（料金）', src:'プラン一覧の表組み', conf:'mid', pct:'68%'},
+    {key:'voice', name:'voice（お客様の声）', src:'口コミカードの並び', conf:'low', pct:'42%'},
+    {key:'faq', name:'faq（よくある質問）', src:'アコーディオンの質問一覧', conf:'high', pct:'90%'},
+    {key:'cta', name:'cta（予約導線）', src:'ページ下部の予約ボタン群', conf:'mid', pct:'75%'}
+  ];
+  const LABEL_OPTIONS = ['hero','problem','beforeafter','staff','pricing','voice','faq','cta','（未分類）'];
+  const LABEL_JP = {hero:'トップ',problem:'悩み提起',beforeafter:'変化',staff:'スタッフ紹介',pricing:'料金',voice:'お客様の声',faq:'よくある質問',cta:'予約導線','（未分類）':'未分類'};
+
+  function confLabel(c){ return c==='high'?'自動判定・高信頼':c==='mid'?'自動判定・要確認':'自動判定・低信頼（要確認）'; }
+
+  function renderBoxes(){
+    const strip = document.getElementById('lp-strip');
+    strip.innerHTML = BOXES.map((b,i) => `
+      <div class="lp-band">
+        <div class="lp-band-main">
+          <div class="lp-band-label">
+            <span class="name">${b.name}</span>
+            <span class="conf ${b.conf}">${confLabel(b.conf)} ${b.pct}</span>
+          </div>
+          <div class="lp-band-src">${b.src}</div>
+        </div>
+        <select class="label-select" id="sel-${i}" onchange="relabel(${i}, this.value)">
+          ${LABEL_OPTIONS.map(o => `<option value="${o}" ${o===b.key?'selected':''}>${LABEL_JP[o]}</option>`).join('')}
+        </select>
+      </div>
+    `).join('');
+  }
+  function relabel(i, val){
+    BOXES[i].key = val;
+    showToast(BOXES[i].name.split('（')[0] + ' を「' + LABEL_JP[val] + '」に修正しました');
+  }
+  function confirmBoxes(){
+    showToast('ブロック分割を保存しました（今日の1枚・注目マップに反映）');
+  }
+  renderBoxes();
+
+  function copyTag(btn){
+    showToast('タグをコピーしました');
+  }
+  let adCount = 2;
+  function issueLink(){
+    const input = document.getElementById('ad-name');
+    const name = input.value.trim();
+    if(!name){ showToast('広告名を入力してください'); return; }
+    const url = 'https://例のLP/?lt_src=manual&amp;lt_ad=' + encodeURIComponent(name);
+    const list = document.getElementById('link-list');
+    const item = document.createElement('div');
+    item.className = 'link-item';
+    item.innerHTML = `
+      <div class="link-item-main">
+        <div class="link-item-name">${name}</div>
+        <div class="link-item-url">${url}</div>
+      </div>
+      <div class="icon-btn" onclick="copyGeneric('${url}', this)"><span class="material-symbols-outlined">content_copy</span></div>
+    `;
+    list.prepend(item);
+    input.value = '';
+    adCount++;
+    showToast('リンクを発行しました（' + adCount + '件目・デモ）');
+  }
+  function copyGeneric(url, el){
+    showToast('リンクをコピーしました');
+  }
+
+  let toastTimer = null;
+  function showToast(text){
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+
+  let isEmpty = false;
+  function toggleState(){
+    isEmpty = !isEmpty;
+    document.getElementById('state-normal').style.display = isEmpty ? 'none' : 'block';
+    document.getElementById('state-empty').style.display = isEmpty ? 'block' : 'none';
+    document.getElementById('dev-toggle-label').textContent = isEmpty ? '通常表示に戻す' : '未設置状態を確認';
+  }
+</script>
+
+</body>
+</html>

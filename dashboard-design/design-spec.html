@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>店主向けダッシュボード 設計図 | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52; --primary-soft:#ECFDF5;
+    --text:#111827; --sub:#64748B; --border:#D8E0DA;
+    --radius-sm:4px; --radius-md:6px; --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309; --coral:#C2410C; --sapphire:#1D4ED8; --amethyst:#6D28D9;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;background:#FFFFFF;color:var(--text);line-height:1.7;margin:0}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:20px;vertical-align:middle;line-height:1}
+  .tabular{font-variant-numeric:tabular-nums}
+  .wrap{max-width:880px;margin:0 auto;padding:32px 20px 80px}
+
+  .cover{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:32px}
+  .cover .eyebrow{font-size:12px;font-weight:700;color:var(--primary);letter-spacing:.08em;text-transform:uppercase}
+  .cover h1{font-size:26px;font-weight:700;margin:6px 0 8px}
+  .cover .note{font-size:13px;color:var(--sub)}
+
+  .callout{
+    background:var(--primary-soft);border:1px solid #B7E4CF;border-radius:var(--radius-lg);
+    padding:14px 16px;font-size:13px;color:#065F46;margin-bottom:32px;
+  }
+  .callout b{font-weight:700}
+
+  h2.section{
+    font-size:13px;font-weight:700;color:var(--sub);letter-spacing:.08em;text-transform:uppercase;
+    margin:40px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);
+  }
+
+  /* ==== 5画面マップ ==== */
+  .map-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+  .map-card{
+    border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 10px;
+    box-shadow:var(--shadow-flat);text-align:center;
+  }
+  .map-card .num{
+    width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+    margin:0 auto 8px;
+  }
+  .map-card .material-symbols-outlined{font-size:22px;color:var(--primary)}
+  .map-card .t{font-size:11.5px;font-weight:700;margin-top:6px}
+  .map-card .d{font-size:10px;color:var(--sub);margin-top:3px;line-height:1.5}
+
+  /* ==== 画面カード ==== */
+  .screen{
+    border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-flat);
+    padding:24px;margin-bottom:28px;
+  }
+  .screen-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .screen-head .num{
+    width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;
+  }
+  .screen-head h3{font-size:17px;font-weight:700;margin:0}
+  .screen-sub{font-size:12px;color:var(--sub);margin:2px 0 16px 36px}
+
+  .block-label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;margin:16px 0 8px;text-transform:uppercase}
+  .block-label .material-symbols-outlined{font-size:14px;margin-right:4px;vertical-align:-2px}
+
+  p.body-text{font-size:13px;margin:0 0 8px;color:var(--text)}
+  ul.body-list{margin:0;padding-left:18px;font-size:13px}
+  ul.body-list li{margin-bottom:5px}
+
+  /* ワイヤーフレーム簡易描画 */
+  .wire{
+    background:#FAFBFA;border:1px dashed #C6D2C8;border-radius:var(--radius-md);
+    padding:14px;font-size:11px;color:var(--sub);
+  }
+  .wire .w-box{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:8px 10px;margin-bottom:6px;
+  }
+  .wire .w-box.hero{text-align:center;border-color:#B7E4CF;background:var(--primary-soft)}
+  .wire .w-box.hero .n{font-size:24px;font-weight:700;color:var(--primary)}
+  .wire .w-row{display:flex;gap:6px}
+  .wire .w-row .w-box{flex:1}
+  .wire .w-nav{display:flex;justify-content:space-around;border-top:1px solid var(--border);padding-top:8px;margin-top:8px}
+
+  table.api{width:100%;border-collapse:collapse;font-size:12px}
+  table.api th{text-align:left;font-size:10.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--border)}
+  table.api td{padding:8px;border-bottom:1px solid #EEF1EE;vertical-align:top}
+  table.api code{background:#F2F5F2;border-radius:4px;padding:1px 5px;font-size:11px;font-family:'SFMono-Regular',Consolas,monospace}
+
+  .state-row{display:flex;gap:8px;flex-wrap:wrap}
+  .state-chip{
+    display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;
+    border:1px solid var(--border);border-radius:20px;padding:5px 11px;background:#FAFBFA;
+  }
+  .state-chip .material-symbols-outlined{font-size:14px;color:var(--amber)}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px}
+  .flow .node{border:1px solid var(--border);border-radius:20px;padding:6px 13px;background:#FFFFFF;box-shadow:var(--shadow-flat);font-weight:600}
+  .flow .node.self{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .flow .arrow{color:var(--sub)}
+
+  .footnote{font-size:11.5px;color:var(--sub);border-top:1px solid var(--border);padding-top:14px;margin-top:40px}
+
+  /* ==== マイルストーン ==== */
+  .milestone-track{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+  .milestone-card{
+    border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 10px;
+    box-shadow:var(--shadow-flat);text-align:center;background:#FFFFFF;
+  }
+  .milestone-card .m-tag{
+    display:inline-block;font-size:11px;font-weight:700;color:var(--sub);
+    border:1px solid var(--border);border-radius:20px;padding:2px 10px;margin-bottom:8px;
+  }
+  .milestone-card .m-t{font-size:11.5px;font-weight:700;line-height:1.4}
+  .milestone-card .m-d{font-size:10px;color:var(--sub);margin-top:4px;line-height:1.5}
+  .milestone-card.done .m-tag{background:var(--primary-soft);color:var(--primary);border-color:#B7E4CF}
+  .milestone-card.current{border-color:var(--primary);box-shadow:0 0 0 2px var(--primary-soft)}
+  .milestone-card.current .m-tag{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .milestone-card.goal .m-tag{background:#F3EBFC;color:var(--amethyst);border-color:#DCC8F5}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="eyebrow">Loku Tuning &mdash; Owner Dashboard</div>
+    <h1>店主向けWebダッシュボード 設計図</h1>
+    <div class="note">対象：ピラティス／パーソナルジムのオーナー（スマホ・LINE内ブラウザで閲覧）　入口：独立URL（LINEリッチメニューにリンクを設置）　全5画面</div>
+  </div>
+
+  <h2 class="section">思想 &mdash; そばにいるWebマーケター</h2>
+  <div class="callout">
+    完成形は、店主がWebマーケターを雇わなくても、毎朝1分で「昨日何が起きた・なぜ・次に何をする」が承認1タップで完結する状態。数字を渡して解釈は店主任せにする「見える化ツール」とは違い、原因の診断と次の一手の下書きまでをAIが担い、店主は承認するだけでいい。毎朝10分、専属Webマーケターと打ち合わせする感覚に近い。
+  </div>
+
+  <div class="callout">
+    <b>思想の一貫性：</b> 数字は事実（誰が・どこで離脱したか／深さ・注視度）だけを示す。AIが作るのは「診断」と「一言の下書き」までで、送信は必ず店主の承認（画面3）を通す。効果保証・満足度・体験談などの主張は一切生成しない。
+  </div>
+
+  <h2 class="section">完成ゴールと中間地点</h2>
+  <div class="milestone-track">
+    <div class="milestone-card done"><div class="m-tag">M0</div><div class="m-t">画面1「今日の1枚」モック</div><div class="m-d">済</div></div>
+    <div class="milestone-card current"><div class="m-tag">M1</div><div class="m-t">全5画面モック＋設計図完成</div><div class="m-d">現在地　screen-1-today.html／screen-2-map.html／screen-3-approve.html／screen-4-report.html／screen-5-setup.html</div></div>
+    <div class="milestone-card"><div class="m-tag">M2</div><div class="m-t">デモAPIと結線し動くダッシュボード</div><div class="m-d">handoff-demo app.mjs</div></div>
+    <div class="milestone-card"><div class="m-tag">M3</div><div class="m-t">タグ＋ID結合／画面5セットアップ実装</div><div class="m-d">anon_id→予約リンク→friend_id・エンジンP3と合流</div></div>
+    <div class="milestone-card"><div class="m-tag">M4</div><div class="m-t">1スタジオ目で実運用</div><div class="m-d">GATE=③エンジン証明</div></div>
+    <div class="milestone-card goal"><div class="m-tag">GOAL</div><div class="m-t">「そばにいるWebマーケター」実現</div><div class="m-d">→ P5横展開</div></div>
+  </div>
+
+  <h2 class="section">全体像 &mdash; 5画面マップ</h2>
+  <div class="map-grid">
+    <div class="map-card"><div class="num">1</div><span class="material-symbols-outlined">today</span><div class="t">今日の1枚</div><div class="d">ホーム・数字は1個</div></div>
+    <div class="map-card"><div class="num">2</div><span class="material-symbols-outlined">map</span><div class="t">LP注目マップ</div><div class="d">ブロック別の滞留/離脱</div></div>
+    <div class="map-card"><div class="num">3</div><span class="material-symbols-outlined">inbox</span><div class="t">送る承認箱</div><div class="d">下書きを承認/却下</div></div>
+    <div class="map-card"><div class="num">4</div><span class="material-symbols-outlined">monitoring</span><div class="t">月次レポートA</div><div class="d">フルファネル1枚</div></div>
+    <div class="map-card"><div class="num">5</div><span class="material-symbols-outlined">settings</span><div class="t">セットアップ</div><div class="d">タグ設置と安全弁</div></div>
+  </div>
+
+  <h2 class="section">画面設計</h2>
+
+  <!-- ============ 画面1 ============ -->
+  <div class="screen">
+    <div class="screen-head"><div class="num">1</div><h3>今日の1枚（ホーム）</h3></div>
+    <div class="screen-sub">動くモック：screen-1-today.html</div>
+
+    <div class="block-label"><span class="material-symbols-outlined">flag</span>目的</div>
+    <p class="body-text">店主が毎朝1回、10秒で見て「昨日どれだけ取りこぼしたか・なぜか」を理解し、必要ならワンタップで一言を承認箱に送れる状態にする。数字は「昨日の取りこぼし◯人」の1個だけに絞り、判断コストを最小化する。</p>
+
+    <div class="block-label"><span class="material-symbols-outlined">dashboard</span>主要要素のワイヤー</div>
+    <div class="wire">
+      <div class="w-box hero">昨日の取りこぼし　<span class="n">7人</span><br><span style="font-size:10px">マイクロファネル：LP訪問52人 &rarr; LINE到達12人 &rarr; 予約4人</span></div>
+      <div class="w-box">理由カード：料金の手前で不安未解消　3人　[一言を送る]</div>
+      <div class="w-box">理由カード：料金で迷い　2人　[一言を送る]</div>
+      <div class="w-box">理由カード：CTAで摩擦　2人　[一言を送る]</div>
+      <div class="w-nav">今日｜注目マップ｜承認箱｜レポート｜設定</div>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">data_object</span>表示データとAPI対応</div>
+    <table class="api">
+      <tr><th>要素</th><th>データ</th><th>API</th></tr>
+      <tr><td>取りこぼし総数</td><td>昨日分・原因コードが特定できたユーザー数の合計</td><td><code>GET /diagnose?range=yesterday</code></td></tr>
+      <tr><td>理由別内訳</td><td>因果コード別の人数と店主向け日本語ラベル・説明文</td><td><code>GET /cause-segments?range=yesterday</code></td></tr>
+      <tr><td>マイクロファネル（母数）</td><td>LP訪問数／LINE到達数／予約数の3段。取りこぼし7人が母数52人のうちの何割かを文脈づける</td><td><code>GET /diagnose?range=yesterday&field=funnel</code></td></tr>
+      <tr><td>一言を送る</td><td>選んだ因果コードの下書きを承認箱へ投入（送信はしない）</td><td><code>POST /dispatch-plan</code></td></tr>
+    </table>
+
+    <div class="block-label"><span class="material-symbols-outlined">layers</span>状態</div>
+    <div class="state-row">
+      <span class="state-chip"><span class="material-symbols-outlined">query_stats</span>データなし（アクセス僅少／タグ未設置）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">smart_toy</span>bot除外中（集計対象外の可能性を注記）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">privacy_tip</span>未同意ユーザー除外（同意率を注記）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">check_circle</span>送付済み（トースト表示のみ・実送信ではない）</span>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">route</span>画面遷移</div>
+    <div class="flow">
+      <span class="node self">今日の1枚</span>
+      <span class="arrow">→ タップ「一言を送る」→</span>
+      <span class="node">承認箱へ追加（画面遷移なし・トースト）</span>
+    </div>
+    <div class="flow" style="margin-top:8px">
+      <span class="node">下部ナビ</span><span class="arrow">→</span>
+      <span class="node">画面2〜5へ</span>
+    </div>
+  </div>
+
+  <!-- ============ 画面2 ============ -->
+  <div class="screen">
+    <div class="screen-head"><div class="num">2</div><h3>LP注目マップ</h3></div>
+
+    <div class="block-label"><span class="material-symbols-outlined">flag</span>目的</div>
+    <p class="body-text">LPをブロック単位（hero/problem/beforeafter/staff/pricing/voice/faq/cta）で見て、どこで注目が集まり、どこで離脱が起きているかを縦スクロールの積み上げで一目にする。「今日の1枚」の理由内訳がLPのどこの話かを裏付ける画面。</p>
+
+    <div class="block-label"><span class="material-symbols-outlined">dashboard</span>主要要素のワイヤー</div>
+    <div class="wire">
+      <div class="w-row">
+        <div class="w-box">hero<br>注視70%</div>
+        <div class="w-box">problem<br>注視55%</div>
+        <div class="w-box">beforeafter<br>注視48%</div>
+      </div>
+      <div class="w-row">
+        <div class="w-box">staff<br>注視40%</div>
+        <div class="w-box">pricing<br>離脱35%↑</div>
+        <div class="w-box">voice<br>注視20%</div>
+      </div>
+      <div class="w-row">
+        <div class="w-box">faq<br>注視18%</div>
+        <div class="w-box">cta<br>離脱12%</div>
+      </div>
+      <div class="w-box">ブロックタップ→そのブロックで離脱した理由コードの内訳を下に展開</div>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">data_object</span>表示データとAPI対応</div>
+    <table class="api">
+      <tr><th>要素</th><th>データ</th><th>API</th></tr>
+      <tr><td>ブロック別注視/離脱</td><td>BOX_ORDER順の box_engagement 集計と exit_box 分布</td><td><code>GET /cause-segments?range=custom&groupBy=exit_box</code></td></tr>
+      <tr><td>ブロック詳細</td><td>選択ブロックで離脱した人の因果コード内訳</td><td><code>GET /cause-segments?exit_box=pricing</code></td></tr>
+      <tr><td>期間切替</td><td>昨日／直近7日／直近30日</td><td><code>GET /diagnose?range=&hellip;</code></td></tr>
+    </table>
+
+    <div class="block-label"><span class="material-symbols-outlined">layers</span>状態</div>
+    <div class="state-row">
+      <span class="state-chip"><span class="material-symbols-outlined">query_stats</span>データなし（期間内アクセス0）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">construction</span>ブロック未マッピング（画面5未完了）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">smart_toy</span>bot除外中</span>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">route</span>画面遷移</div>
+    <div class="flow">
+      <span class="node">今日の1枚</span><span class="arrow">→</span>
+      <span class="node self">LP注目マップ</span><span class="arrow">→ ブロックタップ →</span>
+      <span class="node">同画面内で内訳展開（画面遷移なし）</span>
+    </div>
+  </div>
+
+  <!-- ============ 画面3 ============ -->
+  <div class="screen">
+    <div class="screen-head"><div class="num">3</div><h3>送る承認箱</h3></div>
+
+    <div class="block-label"><span class="material-symbols-outlined">flag</span>目的</div>
+    <p class="body-text">AIが作った「離脱者への翌朝一言」の下書きを、店主が読んで承認／却下／編集してから初めて送信キューに乗る。<b>勝手に送らない</b>思想の要。承認済みのものだけがLoku本体（app側）で実送信される。</p>
+
+    <div class="block-label"><span class="material-symbols-outlined">dashboard</span>主要要素のワイヤー</div>
+    <div class="wire">
+      <div class="w-box">未承認 3件　｜　承認済み 12件　｜　却下 1件（タブ切替）</div>
+      <div class="w-box">下書きカード：CTAで摩擦の方へ<br>「ご予約ページまでお進みいただき&hellip;」<br>[却下]　[編集]　[承認して送信キューへ]</div>
+      <div class="w-box">下書きカード：料金で迷いの方へ<br>&hellip;</div>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">data_object</span>表示データとAPI対応</div>
+    <table class="api">
+      <tr><th>要素</th><th>データ</th><th>API</th></tr>
+      <tr><td>承認待ち一覧</td><td>画面1/2から投入された下書き（因果コード・宛先セグメント・本文）</td><td><code>GET /dispatch-plan?status=pending</code></td></tr>
+      <tr><td>承認</td><td>店主の明示操作で送信キューへ（<code>requires_approval</code> を満たす唯一の経路）</td><td><code>POST /dispatch-plan/:id/approve</code></td></tr>
+      <tr><td>却下</td><td>下書きを破棄・理由メモ任意</td><td><code>POST /dispatch-plan/:id/reject</code></td></tr>
+      <tr><td>編集</td><td>本文を店主が書き換えてから承認（checkCopy を再通過）</td><td><code>PATCH /dispatch-plan/:id</code></td></tr>
+    </table>
+
+    <div class="block-label"><span class="material-symbols-outlined">layers</span>状態</div>
+    <div class="state-row">
+      <span class="state-chip"><span class="material-symbols-outlined">inbox</span>承認待ちなし</span>
+      <span class="state-chip"><span class="material-symbols-outlined">block</span>NGワード検知で送信ブロック中（checkCopy）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">schedule</span>送信キュー待機中（翌朝配信予定）</span>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">route</span>画面遷移</div>
+    <div class="flow">
+      <span class="node">今日の1枚／注目マップ</span><span class="arrow">→ 下書き投入 →</span>
+      <span class="node self">承認箱</span><span class="arrow">→ 承認 →</span>
+      <span class="node">送信キュー（Loku本体・app側）</span>
+    </div>
+  </div>
+
+  <!-- ============ 画面4 ============ -->
+  <div class="screen">
+    <div class="screen-head"><div class="num">4</div><h3>月次レポートA</h3></div>
+
+    <div class="block-label"><span class="material-symbols-outlined">flag</span>目的</div>
+    <p class="body-text">視線（LP閲覧）→ LINE友だち追加 → 予約／購入までの一連の流れを、縦長1枚のファネルで俯瞰する。日々の「今日の1枚」の積み重ねが月単位でどう成果に繋がっているかを店主が月イチで確認する画面。</p>
+
+    <div class="block-label"><span class="material-symbols-outlined">dashboard</span>主要要素のワイヤー</div>
+    <div class="wire">
+      <div class="w-box">対象月：2026年7月　[前月][翌月]</div>
+      <div class="w-box hero">LP訪問　<span class="n">842</span></div>
+      <div class="w-box">↓ CTA到達　210（25%）</div>
+      <div class="w-box">↓ LINE友だち追加　96（46%）</div>
+      <div class="w-box">↓ 予約／購入　31（32%）</div>
+      <div class="w-box">因果コード別 取りこぼし合計（月間）の内訳表</div>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">data_object</span>表示データとAPI対応</div>
+    <table class="api">
+      <tr><th>要素</th><th>データ</th><th>API</th></tr>
+      <tr><td>ファネル各段</td><td>訪問／CTA到達／友だち追加／予約・購入の月間集計</td><td><code>GET /diagnose?range=month&groupBy=funnel</code></td></tr>
+      <tr><td>因果コード別合計</td><td>月間の cause-segments 合計（画面1の積み上げ）</td><td><code>GET /cause-segments?range=month</code></td></tr>
+      <tr><td>月切替</td><td>過去12ヶ月分まで遡及可</td><td><code>GET /diagnose?range=month&month=YYYY-MM</code></td></tr>
+      <tr><td>広告別ファネル</td><td>画面5で発行した <code>lt_ad</code> ごとの 訪問→LINE友だち→予約 を行カードで比較。ダミー事実のみの1行所見（例：「広告Aは料金で止まる」型）を添える</td><td><code>GET /diagnose?range=month&groupBy=lt_ad</code></td></tr>
+    </table>
+
+    <div class="block-label"><span class="material-symbols-outlined">layers</span>状態</div>
+    <div class="state-row">
+      <span class="state-chip"><span class="material-symbols-outlined">query_stats</span>当月データ収集中（月末に確定）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">history</span>過去月データなし（計測開始前）</span>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">route</span>画面遷移</div>
+    <div class="flow">
+      <span class="node">下部ナビ</span><span class="arrow">→</span>
+      <span class="node self">月次レポートA</span><span class="arrow">→ 段タップ →</span>
+      <span class="node">LP注目マップへ（当該月の期間指定付き）</span>
+    </div>
+  </div>
+
+  <!-- ============ 画面5 ============ -->
+  <div class="screen">
+    <div class="screen-head"><div class="num">5</div><h3>セットアップ</h3></div>
+
+    <div class="block-label"><span class="material-symbols-outlined">flag</span>目的</div>
+    <p class="body-text">既存LPへの後付け導入を支える安全弁UI。タグ1行をコピーして設置 → AIがLPのHTML構造からブロック（hero/problem/pricing等）を自動推定 → 店主が「ここが料金」など10秒で目視確認・修正できるようにし、誤判定によるおかしな診断を防ぐ。</p>
+
+    <div class="block-label"><span class="material-symbols-outlined">dashboard</span>主要要素のワイヤー</div>
+    <div class="wire">
+      <div class="w-box">STEP1　タグ1行をコピー　[コピーする]</div>
+      <div class="w-box">STEP2　設置確認　計測中 ●／未検知 ○</div>
+      <div class="w-box">STEP3　AIブロック自動推定結果<br>hero=検出／pricing=検出（要確認）／faq=未検出</div>
+      <div class="w-box">プレビュー上でブロックを囲み枠表示 → タップで「ここが料金」等を選び直し　[保存]</div>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">data_object</span>表示データとAPI対応</div>
+    <table class="api">
+      <tr><th>要素</th><th>データ</th><th>API</th></tr>
+      <tr><td>計測タグ</td><td>LP埋め込み用スニペット（サイトID込み）</td><td><code>GET /setup/tag</code></td></tr>
+      <tr><td>設置検知</td><td>直近のタグ発火有無</td><td><code>GET /setup/status</code></td></tr>
+      <tr><td>ブロック自動推定</td><td>LPのHTMLを解析し BOX_ORDER の各キーに対応する要素候補を返す</td><td><code>POST /setup/infer-boxes</code></td></tr>
+      <tr><td>ブロック手動修正</td><td>店主が選び直したマッピングを保存（以後の診断に反映）</td><td><code>PUT /setup/box-mapping</code></td></tr>
+      <tr><td>広告用リンク発行</td><td>広告名から <code>lt_src</code>／<code>lt_ad</code> パラメータ付きLPリンクを生成（例：<code>https://例のLP/?lt_src=meta&amp;lt_ad=夏割A</code>）。URLで運ぶためLINE内ブラウザのITP・Cookie制限の影響を受けない</td><td><code>POST /setup/ad-links</code></td></tr>
+    </table>
+
+    <div class="block-label"><span class="material-symbols-outlined">layers</span>状態</div>
+    <div class="state-row">
+      <span class="state-chip"><span class="material-symbols-outlined">radio_button_unchecked</span>未設置（タグ未検知）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">help</span>自動推定できないブロックあり（要手動選択）</span>
+      <span class="state-chip"><span class="material-symbols-outlined">check_circle</span>設置・マッピング完了</span>
+    </div>
+
+    <div class="block-label"><span class="material-symbols-outlined">route</span>画面遷移</div>
+    <div class="flow">
+      <span class="node">下部ナビ</span><span class="arrow">→</span>
+      <span class="node self">セットアップ</span><span class="arrow">→ 保存完了 →</span>
+      <span class="node">今日の1枚（データ収集開始）</span>
+    </div>
+  </div>
+
+  <h2 class="section">デザイントークン（出典）</h2>
+  <p class="body-text">中川農園「PREMIUM LIGHT v2」（<code style="background:#F2F5F2;border-radius:4px;padding:1px 5px;font-size:11px">syatyo-suport/css/app.css</code>）のカード型・角丸・シャドウを流用。プライマリカラーはフォレストグリーン #0A6B52。ページ背景のみユーザー指定により #FFFFFF 固定に変更（元CSSの背景は #F2F5F2 系オフホワイトだが、本ダッシュボードでは採用しない）。角丸：sm 4px／md 6px／lg 8px。影：<code style="background:#F2F5F2;border-radius:4px;padding:1px 5px;font-size:11px">0 1px 2px rgba(17,24,39,.05)</code>。アイコンは Material Symbols Outlined（リガチャ方式・Google Fonts CDN）。数字は tabular-nums。絵文字は使用しない。</p>
+
+  <div class="footnote">
+    作成：2026-08-22　対象リポジトリ：C:\Users\Daiya\loku-tuning-plugin　因果コードの定義元：handoff-demo/causal.mjs（BOX_ORDER・deriveExit・classify・PRESETS）
+  </div>
+
+</div>
+</body>
+</html>

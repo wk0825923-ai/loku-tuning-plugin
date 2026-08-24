@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>LP注目マップ | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52;
+    --primary-soft:#ECFDF5;
+    --text:#111827;
+    --sub:#64748B;
+    --border:#D8E0DA;
+    --radius-sm:4px;
+    --radius-md:6px;
+    --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309;
+    --coral:#C2410C;
+    --sapphire:#1D4ED8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#FFFFFF;
+    color:var(--text);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .material-symbols-outlined{
+    font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    font-size:20px;
+    vertical-align:middle;
+    line-height:1;
+  }
+  .tabular{font-variant-numeric:tabular-nums}
+
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  header .title{font-size:15px;font-weight:700;letter-spacing:.02em}
+  header .date{font-size:12px;color:var(--sub);margin-top:2px}
+  .period-switch{display:flex;gap:6px;font-size:11px}
+  .period-switch span{
+    border:1px solid var(--border);border-radius:20px;padding:4px 9px;color:var(--sub);cursor:pointer;
+  }
+  .period-switch span.active{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700}
+
+  main{flex:1;padding:18px 16px 90px}
+
+  .legend-line{font-size:11.5px;color:var(--sub);margin-bottom:14px;line-height:1.6}
+  .legend-line b{color:var(--text)}
+
+  .lp-band{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);
+    padding:12px 14px;margin-bottom:8px;cursor:pointer;
+  }
+  .lp-band.top-exit{border-color:#F3B8A0;box-shadow:0 0 0 2px #FDECEA}
+  .lp-band-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .lp-band-name{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700}
+  .lp-band-name .badge-top{
+    font-size:9.5px;font-weight:700;color:#fff;background:var(--coral);
+    border-radius:20px;padding:1px 7px;
+  }
+  .lp-band-toggle{color:var(--sub);transition:transform .2s}
+  .lp-band-toggle.open{transform:rotate(180deg)}
+
+  .lp-band-stats{display:flex;gap:14px;margin-top:8px;font-size:11px;color:var(--sub)}
+  .lp-band-stats b{color:var(--text);font-weight:700}
+
+  .bar-row{margin-top:8px}
+  .bar-label{display:flex;justify-content:space-between;font-size:10.5px;color:var(--sub);margin-bottom:3px}
+  .bar-track{height:6px;border-radius:4px;background:#EEF1EE;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px;background:var(--primary)}
+  .bar-fill.exit{background:var(--coral)}
+
+  .detail-panel{
+    display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+  }
+  .detail-panel.open{display:block}
+  .detail-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:5px 0}
+  .detail-row .dcode{display:flex;align-items:center;gap:6px}
+  .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .detail-row .dn{font-weight:700}
+
+  #toast{
+    position:fixed;left:50%;bottom:96px;transform:translate(-50%,12px);
+    background:var(--text);color:#fff;
+    padding:11px 18px;border-radius:var(--radius-md);
+    font-size:13px;font-weight:600;
+    display:flex;align-items:center;gap:7px;
+    box-shadow:0 6px 20px rgba(17,24,39,.25);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    max-width:calc(480px - 32px);
+    z-index:50;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast .material-symbols-outlined{font-size:17px;color:#6EE7B7}
+
+  nav{
+    position:fixed;left:0;right:0;bottom:0;
+    max-width:480px;margin:0 auto;
+    background:#FFFFFF;border-top:1px solid var(--border);
+    display:flex;
+    padding:6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  nav a{
+    position:relative;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:6px 0;color:var(--sub);text-decoration:none;font-size:10px;font-weight:500;
+  }
+  nav a .material-symbols-outlined{font-size:22px}
+  nav a.active{color:var(--primary);font-weight:700}
+  nav a.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+  .nav-badge{
+    position:absolute;top:2px;right:calc(50% - 18px);
+    background:var(--coral);color:#fff;font-size:9px;font-weight:700;
+    min-width:14px;height:14px;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div>
+      <div class="title">LP注目マップ</div>
+      <div class="date">昨日分・ブロック別の滞留と離脱</div>
+    </div>
+    <div class="period-switch">
+      <span class="active">昨日</span><span>7日</span><span>30日</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="legend-line">帯をタップすると、そのブロックで離脱した人の<b>理由コード内訳</b>が開きます。赤い帯は最も離脱が多いブロックです。</div>
+
+    <div id="band-list"></div>
+  </main>
+
+  <div id="toast">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span id="toast-text">更新しました</span>
+  </div>
+
+  <nav>
+    <a href="screen-1-today.html"><span class="material-symbols-outlined">today</span>今日</a>
+    <a href="#" class="active"><span class="material-symbols-outlined">map</span>注目マップ</a>
+    <a href="screen-3-approve.html"><span class="material-symbols-outlined">inbox</span>承認箱<span class="nav-badge">3</span></a>
+    <a href="screen-4-report.html"><span class="material-symbols-outlined">monitoring</span>レポート</a>
+    <a href="screen-5-setup.html"><span class="material-symbols-outlined">settings</span>設定</a>
+  </nav>
+
+</div>
+
+<script>
+  const REASON_LABEL = {
+    proof_gap: {name:'料金の手前で不安未解消', color:'#B45309'},
+    price_anxiety: {name:'料金で迷い', color:'#C2410C'},
+    cta_friction: {name:'CTAで摩擦', color:'#1D4ED8'},
+    low_relevance: {name:'関心の薄い流入', color:'#6D28D9'}
+  };
+
+  const BOXES = [
+    {key:'hero', name:'hero（トップ）', stay:'8.2秒', engage:82, exit:6,
+      detail:[{code:'low_relevance', n:2}]},
+    {key:'problem', name:'problem（悩み提起）', stay:'6.5秒', engage:70, exit:9,
+      detail:[{code:'low_relevance', n:3}]},
+    {key:'beforeafter', name:'beforeafter（変化）', stay:'5.8秒', engage:63, exit:8,
+      detail:[{code:'proof_gap', n:2}, {code:'low_relevance', n:1}]},
+    {key:'staff', name:'staff（スタッフ紹介）', stay:'4.1秒', engage:48, exit:11,
+      detail:[{code:'proof_gap', n:4}]},
+    {key:'pricing', name:'pricing（料金）', stay:'3.4秒', engage:35, exit:35, top:true,
+      detail:[{code:'price_anxiety', n:9}, {code:'proof_gap', n:4}]},
+    {key:'voice', name:'voice（お客様の声）', stay:'2.9秒', engage:22, exit:7,
+      detail:[{code:'price_anxiety', n:2}]},
+    {key:'faq', name:'faq（よくある質問）', stay:'2.6秒', engage:20, exit:5,
+      detail:[{code:'proof_gap', n:2}]},
+    {key:'cta', name:'cta（予約導線）', stay:'3.0秒', engage:24, exit:19,
+      detail:[{code:'cta_friction', n:7}]}
+  ];
+
+  function renderBands(){
+    const list = document.getElementById('band-list');
+    list.innerHTML = BOXES.map((b,i) => `
+      <div class="lp-band ${b.top ? 'top-exit' : ''}" onclick="toggleDetail(${i})">
+        <div class="lp-band-head">
+          <div class="lp-band-name">${b.name}${b.top ? '<span class="badge-top">最離脱</span>' : ''}</div>
+          <span class="material-symbols-outlined lp-band-toggle" id="chev-${i}">expand_more</span>
+        </div>
+        <div class="lp-band-stats tabular">
+          <span>滞留 <b>${b.stay}</b></span>
+          <span>注視度 <b>${b.engage}%</b></span>
+          <span>離脱率 <b style="${b.top ? 'color:var(--coral)' : ''}">${b.exit}%</b></span>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label"><span>注視度</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${b.engage}%"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label"><span>離脱率</span></div>
+          <div class="bar-track"><div class="bar-fill exit" style="width:${b.exit}%"></div></div>
+        </div>
+        <div class="detail-panel" id="detail-${i}">
+          ${b.detail.map(d => `
+            <div class="detail-row">
+              <div class="dcode"><span class="dot" style="background:${REASON_LABEL[d.code].color}"></span>${REASON_LABEL[d.code].name}</div>
+              <div class="dn tabular">${d.n}人</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleDetail(i){
+    const panel = document.getElementById('detail-' + i);
+    const chev = document.getElementById('chev-' + i);
+    const open = panel.classList.toggle('open');
+    chev.classList.toggle('open', open);
+    event.stopPropagation();
+  }
+
+  renderBands();
+
+  const periods = document.querySelectorAll('.period-switch span');
+  periods.forEach(p => p.addEventListener('click', () => {
+    periods.forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    showToast(p.textContent + 'の集計に切り替えました');
+  }));
+
+  let toastTimer = null;
+  function showToast(text){
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+</script>
+
+</body>
+</html>

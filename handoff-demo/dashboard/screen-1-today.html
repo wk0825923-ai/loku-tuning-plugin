@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>今日の1枚 | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52;
+    --primary-soft:#ECFDF5;
+    --text:#111827;
+    --sub:#64748B;
+    --border:#D8E0DA;
+    --radius-sm:4px;
+    --radius-md:6px;
+    --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309;
+    --coral:#C2410C;
+    --sapphire:#1D4ED8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#FFFFFF;
+    color:var(--text);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .material-symbols-outlined{
+    font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    font-size:20px;
+    vertical-align:middle;
+    line-height:1;
+  }
+  .tabular{font-variant-numeric:tabular-nums}
+
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  header .title{font-size:15px;font-weight:700;letter-spacing:.02em}
+  header .date{font-size:12px;color:var(--sub);margin-top:2px}
+  #dev-toggle{
+    display:flex;align-items:center;gap:4px;
+    font-size:11px;color:var(--sub);
+    background:#F7F9F7;border:1px solid var(--border);border-radius:20px;
+    padding:5px 10px;cursor:pointer;user-select:none;
+  }
+  #dev-toggle .material-symbols-outlined{font-size:15px}
+  #dev-toggle:active{background:#EEF2EE}
+
+  main{flex:1;padding:18px 16px 90px}
+
+  .hero-card{
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-flat);
+    padding:22px 18px;
+    text-align:center;
+  }
+  .hero-label{font-size:13px;color:var(--sub);font-weight:500}
+  .hero-number{
+    font-size:56px;font-weight:700;color:var(--primary);
+    line-height:1.1;margin:8px 0 2px;
+  }
+  .hero-unit{font-size:16px;font-weight:600;color:var(--primary)}
+  .hero-sub{font-size:12px;color:var(--sub);margin-top:6px}
+
+  .micro-funnel{
+    display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;
+    margin-top:12px;font-size:12px;color:var(--sub);
+  }
+  .micro-funnel .material-symbols-outlined{font-size:14px;color:var(--sub)}
+  .micro-funnel b{color:var(--text);font-weight:700}
+
+  .booked-line{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--border);
+    font-size:12px;color:var(--sub);
+  }
+  .booked-line .material-symbols-outlined{font-size:16px;color:var(--primary)}
+  .booked-line b{color:var(--text);font-weight:700}
+
+  .section-label{
+    font-size:12px;font-weight:600;color:var(--sub);
+    margin:22px 0 10px;letter-spacing:.03em;
+  }
+  .reason-card{
+    background:#FFFFFF;
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);
+    padding:14px 14px;
+    margin-bottom:10px;
+  }
+  .reason-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .reason-meta{display:flex;gap:10px;align-items:flex-start}
+  .reason-icon{
+    width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .reason-icon .material-symbols-outlined{font-size:18px}
+  .reason-text .name{font-size:13.5px;font-weight:600;color:var(--text)}
+  .reason-text .desc{font-size:11.5px;color:var(--sub);margin-top:2px;line-height:1.5}
+  .reason-count{
+    font-size:22px;font-weight:700;flex-shrink:0;
+    display:flex;align-items:baseline;gap:2px;
+  }
+  .reason-count .u{font-size:11px;font-weight:600;color:var(--sub)}
+
+  .reason-action{
+    margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+    display:flex;justify-content:flex-end;
+  }
+  .btn-send{
+    display:inline-flex;align-items:center;gap:5px;
+    background:var(--primary-soft);color:var(--primary);
+    border:1px solid #B7E4CF;
+    border-radius:var(--radius-sm);
+    padding:8px 14px;font-size:12.5px;font-weight:600;
+    cursor:pointer;transition:background .15s;
+  }
+  .btn-send .material-symbols-outlined{font-size:16px}
+  .btn-send:active{background:#D9F5E6}
+  .btn-send:disabled{opacity:.5;cursor:default}
+
+  .empty-state{
+    text-align:center;padding:50px 20px;color:var(--sub);
+  }
+  .empty-state .material-symbols-outlined{font-size:40px;color:#B7C4BA;margin-bottom:10px}
+  .empty-state .t{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+  .empty-state .d{font-size:12px;line-height:1.6}
+
+  #toast{
+    position:fixed;left:50%;bottom:96px;transform:translate(-50%,12px);
+    background:var(--text);color:#fff;
+    padding:11px 18px;border-radius:var(--radius-md);
+    font-size:13px;font-weight:600;
+    display:flex;align-items:center;gap:7px;
+    box-shadow:0 6px 20px rgba(17,24,39,.25);
+    opacity:0;pointer-events:none;
+    transition:opacity .25s ease, transform .25s ease;
+    max-width:calc(480px - 32px);
+    z-index:50;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #toast .material-symbols-outlined{font-size:17px;color:#6EE7B7}
+
+  nav{
+    position:fixed;left:0;right:0;bottom:0;
+    max-width:480px;margin:0 auto;
+    background:#FFFFFF;border-top:1px solid var(--border);
+    display:flex;
+    padding:6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  nav a{
+    position:relative;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:6px 0;color:var(--sub);text-decoration:none;font-size:10px;font-weight:500;
+  }
+  nav a .material-symbols-outlined{font-size:22px}
+  nav a.active{color:var(--primary);font-weight:700}
+  nav a.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+  .nav-badge{
+    position:absolute;top:2px;right:calc(50% - 18px);
+    background:var(--coral);color:#fff;font-size:9px;font-weight:700;
+    min-width:14px;height:14px;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div>
+      <div class="title">今日の1枚</div>
+      <div class="date" id="header-date">読み込み中…</div>
+    </div>
+    <div id="dev-toggle" onclick="toggleState()">
+      <span class="material-symbols-outlined">science</span>
+      <span id="dev-toggle-label">データなし確認</span>
+    </div>
+  </header>
+
+  <main>
+
+    <div id="state-data">
+
+      <div class="hero-card">
+        <div class="hero-label">取りこぼし（LINE到達後・未予約）</div>
+        <div class="hero-number tabular" id="hero-number">–</div>
+        <div class="micro-funnel tabular" id="micro-funnel"></div>
+        <div class="hero-sub" id="hero-sub"></div>
+        <div class="booked-line">
+          <span class="material-symbols-outlined">event_available</span>
+          このうち予約に至った人 <b id="booked-num">–</b>人
+        </div>
+      </div>
+
+      <div class="section-label">理由の内訳（診断エンジン実数値）</div>
+      <div id="reason-list"></div>
+
+    </div>
+
+    <div id="state-empty" style="display:none">
+      <div class="empty-state">
+        <span class="material-symbols-outlined">query_stats</span>
+        <div class="t">計測データがありません</div>
+        <div class="d">アクセスが少なかった日、または計測タグ未設置の可能性があります。<br>「設定」からタグの設置状況を確認できます。</div>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="toast">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span id="toast-text">承認箱に入りました</span>
+  </div>
+
+  <nav>
+    <a href="#" class="active"><span class="material-symbols-outlined">today</span>今日</a>
+    <a href="screen-2-map.html"><span class="material-symbols-outlined">map</span>注目マップ</a>
+    <a href="screen-3-approve.html"><span class="material-symbols-outlined">inbox</span>承認箱<span class="nav-badge" id="nav-badge">3</span></a>
+    <a href="screen-4-report.html"><span class="material-symbols-outlined">monitoring</span>レポート</a>
+    <a href="screen-5-setup.html"><span class="material-symbols-outlined">settings</span>設定</a>
+  </nav>
+
+</div>
+
+<script src="dash-api.js"></script>
+<script>
+  // 因果コード → アイコン/色（causal.mjs の CAUSE_LABEL に対応。文言はAPIから取得する）
+  const REASON_META = {
+    cta_friction:        { icon:'touch_app',       bg:'#EAF1FD', color:'var(--sapphire)' },
+    unresolved_doubt:    { icon:'help',             bg:'#F3E8FF', color:'#6D28D9' },
+    value_before_price:  { icon:'auto_awesome',     bg:'#F3E8FF', color:'#6D28D9' },
+    price_anxiety:       { icon:'sell',             bg:'#FDECEA', color:'var(--coral)' },
+    proof_gap:           { icon:'psychology_alt',   bg:'#FEF3E7', color:'var(--amber)' },
+    weak_hook:           { icon:'visibility_off',   bg:'#F2F5F2', color:'var(--sub)' },
+  };
+
+  // フォールバック：M1モック（dashboard-design）と同じ数字・文言
+  const FALLBACK = {
+    funnel: { lp_visitors: 52, loku_reached: 12, outcomes: 4 },
+    reasons: [
+      { cause_code:'proof_gap', label:'料金の手前で不安未解消', explanation:'料金に到達する前、信頼を形成する区間で離脱しています。スタジオやインストラクターの信頼が伝わり切る前に離れた可能性があります。', count:3 },
+      { cause_code:'price_anxiety', label:'料金で迷い', explanation:'料金プランのセクションで離脱しています。価格に対する納得感が不足している可能性があります。', count:2 },
+      { cause_code:'cta_friction', label:'CTAで摩擦', explanation:'体験予約の導線まで到達しましたが予約に至っていません。フォームや導線の摩擦が最後の一歩を止めている可能性があります。', count:2 },
+    ],
+  };
+
+  async function loadLive() {
+    const [ji, outcomes, manifest] = await Promise.all([
+      DashAPI.getJSON(`/api/attn/journey-intelligence?page_slug=${DashAPI.PAGE_SLUG}`),
+      DashAPI.getJSON('/api/attn/cause-outcomes'),
+      DashAPI.getManifest(),
+    ]);
+    const reasons = outcomes.outcomes
+      .filter(o => !['no_data', 'unclassified'].includes(o.cause_code))
+      .map(o => ({ cause_code: o.cause_code, label: o.cause_label, count: o.n - o.booked }))
+      .filter(r => r.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .map(r => {
+        const sample = manifest.friends.find(f => f.cause_code === r.cause_code && f.explanation);
+        return { ...r, explanation: sample ? sample.explanation : '' };
+      });
+    return { funnel: ji.funnel, reasons, live: true };
+  }
+
+  function render(data) {
+    const total = data.reasons.reduce((a, r) => a + r.count, 0);
+    document.getElementById('hero-number').innerHTML = `${total}<span class="hero-unit">人</span>`;
+    const f = data.funnel;
+    document.getElementById('micro-funnel').innerHTML =
+      `LP訪問 <b>${f.lp_visitors}</b>人 <span class="material-symbols-outlined">arrow_right_alt</span> LINE到達 <b>${f.loku_reached}</b>人 <span class="material-symbols-outlined">arrow_right_alt</span> 予約 <b>${f.outcomes}</b>人`;
+    document.getElementById('hero-sub').textContent =
+      `取りこぼし${total}人＝LINE到達${f.loku_reached}人のうち予約に至らなかった人（診断エンジンの因果分類より）`;
+    document.getElementById('booked-num').textContent = f.outcomes;
+    document.getElementById('header-date').textContent = data.live
+      ? `${DashAPI.PAGE_SLUG}・診断エンジン実数値（seedデータ）` : 'デモ表示（API未接続）';
+
+    const list = document.getElementById('reason-list');
+    if (data.reasons.length === 0) {
+      document.getElementById('state-data').style.display = 'none';
+      document.getElementById('state-empty').style.display = 'block';
+      return;
+    }
+    list.innerHTML = data.reasons.map(r => {
+      const meta = REASON_META[r.cause_code] || { icon:'help_outline', bg:'#F2F5F2', color:'var(--sub)' };
+      return `
+      <div class="reason-card">
+        <div class="reason-top">
+          <div class="reason-meta">
+            <div class="reason-icon" style="background:${meta.bg};color:${meta.color}">
+              <span class="material-symbols-outlined">${meta.icon}</span>
+            </div>
+            <div class="reason-text">
+              <div class="name">${r.label}</div>
+              <div class="desc">${r.explanation || ''}</div>
+            </div>
+          </div>
+          <div class="reason-count tabular">${r.count}<span class="u">人</span></div>
+        </div>
+        <div class="reason-action">
+          <button class="btn-send" onclick="sendToApproval(this,'${r.cause_code}','${r.label}')">
+            <span class="material-symbols-outlined">forward_to_inbox</span>
+            一言を送る（承認へ）
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function sendToApproval(btn, code, label) {
+    // ローカル状態のみ（実送信はしない）。承認箱の実際の下書きは screen-3 が dispatch-plan から取得する。
+    btn.disabled = true;
+    btn.innerHTML = '<span class="material-symbols-outlined">check</span>承認へ送付済み';
+    showToast(label + ' の一言が承認箱に入りました（承認箱で下書きを確認）');
+  }
+
+  let toastTimer = null;
+  function showToast(text) {
+    const toast = document.getElementById('toast');
+    document.getElementById('toast-text').textContent = text;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+
+  let isEmpty = false;
+  function toggleState() {
+    isEmpty = !isEmpty;
+    document.getElementById('state-data').style.display = isEmpty ? 'none' : 'block';
+    document.getElementById('state-empty').style.display = isEmpty ? 'block' : 'none';
+    document.getElementById('dev-toggle-label').textContent = isEmpty ? '通常表示に戻す' : 'データなし確認';
+  }
+
+  DashAPI.withFallback(loadLive, () => ({ ...FALLBACK, live: false })).then(render);
+</script>
+
+</body>
+</html>

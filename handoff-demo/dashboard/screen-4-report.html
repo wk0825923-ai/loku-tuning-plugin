@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>月次レポートA | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52;
+    --primary-soft:#ECFDF5;
+    --text:#111827;
+    --sub:#64748B;
+    --border:#D8E0DA;
+    --radius-sm:4px;
+    --radius-md:6px;
+    --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309;
+    --coral:#C2410C;
+    --sapphire:#1D4ED8;
+    --amethyst:#6D28D9;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:#FFFFFF;
+    color:var(--text);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .material-symbols-outlined{
+    font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;
+    font-size:20px;
+    vertical-align:middle;
+    line-height:1;
+  }
+  .tabular{font-variant-numeric:tabular-nums}
+
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  header .title{font-size:15px;font-weight:700;letter-spacing:.02em}
+  header .sub{font-size:11px;color:var(--sub);margin-top:2px}
+
+  main{flex:1;padding:18px 16px 90px}
+
+  .section-label{
+    font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;text-transform:uppercase;
+    margin:26px 0 10px;
+  }
+  .section-label:first-child{margin-top:0}
+
+  .funnel-step{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);padding:14px;margin-bottom:6px;position:relative;
+  }
+  .funnel-step.hero{background:var(--primary-soft);border-color:#B7E4CF;text-align:center}
+  .funnel-step .fn-label{font-size:12px;color:var(--sub);font-weight:600}
+  .funnel-step .fn-num{font-size:26px;font-weight:700;color:var(--primary);margin-top:2px}
+  .funnel-step.hero .fn-num{font-size:36px}
+  .funnel-step .fn-rate{font-size:11px;color:var(--sub);margin-top:2px}
+  .funnel-arrow{text-align:center;color:var(--sub);font-size:12px;padding:2px 0}
+  .funnel-arrow .material-symbols-outlined{font-size:18px}
+
+  .cause-row{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 0;border-bottom:1px solid #EEF1EE;
+  }
+  .cause-row:last-child{border-bottom:none}
+  .cause-left{display:flex;align-items:center;gap:8px;min-width:0}
+  .cause-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .cause-name{font-size:12.5px;font-weight:600}
+  .cause-num{font-size:15px;font-weight:700;flex-shrink:0}
+  .cause-num .u{font-size:10.5px;font-weight:600;color:var(--sub)}
+
+  .ad-card{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:var(--radius-md);
+    box-shadow:var(--shadow-flat);padding:14px;margin-bottom:10px;
+  }
+  .ad-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .ad-card-name{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .ad-card-name .material-symbols-outlined{font-size:16px;color:var(--sub)}
+  .ad-src-tag{
+    font-size:10px;font-weight:700;color:var(--sub);background:#F2F5F2;
+    border-radius:20px;padding:2px 8px;
+  }
+  .ad-funnel-row{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub);margin-bottom:10px}
+  .ad-funnel-row .node{
+    display:flex;flex-direction:column;align-items:center;gap:1px;
+    border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 8px;flex:1;
+  }
+  .ad-funnel-row .node b{font-size:14px;color:var(--text);font-weight:700}
+  .ad-funnel-row .material-symbols-outlined{font-size:14px;flex-shrink:0}
+  .ad-insight{
+    display:flex;gap:6px;font-size:11.5px;color:var(--text);
+    background:#FAFBFA;border-radius:var(--radius-sm);padding:8px 10px;line-height:1.6;
+  }
+  .ad-insight .material-symbols-outlined{font-size:14px;color:var(--primary);flex-shrink:0}
+
+  .footnote-line{font-size:11px;color:var(--sub);line-height:1.6;margin-top:18px}
+
+  nav{
+    position:fixed;left:0;right:0;bottom:0;
+    max-width:480px;margin:0 auto;
+    background:#FFFFFF;border-top:1px solid var(--border);
+    display:flex;
+    padding:6px 0 max(6px, env(safe-area-inset-bottom));
+  }
+  nav a{
+    position:relative;
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:6px 0;color:var(--sub);text-decoration:none;font-size:10px;font-weight:500;
+  }
+  nav a .material-symbols-outlined{font-size:22px}
+  nav a.active{color:var(--primary);font-weight:700}
+  nav a.active .material-symbols-outlined{font-variation-settings:'FILL' 1,'wght' 500,'GRAD' 0,'opsz' 24}
+  .nav-badge{
+    position:absolute;top:2px;right:calc(50% - 18px);
+    background:var(--coral);color:#fff;font-size:9px;font-weight:700;
+    min-width:14px;height:14px;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;padding:0 3px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div>
+      <div class="title">月次レポートA</div>
+      <div class="sub" id="header-sub">読み込み中…</div>
+    </div>
+  </header>
+
+  <main>
+
+    <div class="section-label">フルファネル（累計・seedデータ）</div>
+    <div id="funnel-list"></div>
+
+    <div class="section-label">因果コード別 取りこぼし合計</div>
+    <div class="ad-card"><div id="cause-list"></div></div>
+
+    <div class="section-label">流入経路別ファネル</div>
+    <div id="ad-list"></div>
+
+    <div class="footnote-line" id="footnote">広告別の内訳はURLパラメータ（lt_src・lt_ad）で運ばれるため、LINE内ブラウザのITPやCookie制限の影響を受けません。効果保証・満足度・体験談は含みません。</div>
+
+  </main>
+
+  <nav>
+    <a href="screen-1-today.html"><span class="material-symbols-outlined">today</span>今日</a>
+    <a href="screen-2-map.html"><span class="material-symbols-outlined">map</span>注目マップ</a>
+    <a href="screen-3-approve.html"><span class="material-symbols-outlined">inbox</span>承認箱<span class="nav-badge" id="nav-badge">0</span></a>
+    <a href="#" class="active"><span class="material-symbols-outlined">monitoring</span>レポート</a>
+    <a href="screen-5-setup.html"><span class="material-symbols-outlined">settings</span>設定</a>
+  </nav>
+
+</div>
+
+<script src="dash-api.js"></script>
+<script>
+  const CODE_COLOR = {
+    proof_gap:'#B45309', price_anxiety:'#C2410C', value_before_price:'#6D28D9',
+    cta_friction:'#1D4ED8', unresolved_doubt:'#0A6B52', weak_hook:'#64748B',
+  };
+
+  const FALLBACK = {
+    funnel: { visitors:842, cta:210, line:96, booked:31 },
+    causes: [
+      { code:'proof_gap', label:'料金の手前で不安未解消', count:41 },
+      { code:'price_anxiety', label:'料金で迷い', count:33 },
+      { code:'cta_friction', label:'CTAで摩擦', count:22 },
+      { code:'value_before_price', label:'関心の薄い流入', count:18 },
+    ],
+    ads: [
+      { name:'夏割A', visitors:210, line:34, booked:6, insight:'この広告は pricing ブロックでの離脱率が他より高く、料金で止まる傾向があります。' },
+      { name:'固定投稿', visitors:156, line:29, booked:9, insight:'LINE到達率・予約率ともに夏割Aより高く、cta_friction の比率は低めです。' },
+      { name:'紹介', visitors:58, line:19, booked:8, insight:'訪問数は少ないものの予約到達率が最も高い経路です。' },
+    ],
+  };
+
+  async function loadLive() {
+    const [ji, outcomes, manifest] = await Promise.all([
+      DashAPI.getJSON(`/api/attn/journey-intelligence?page_slug=${DashAPI.PAGE_SLUG}`),
+      DashAPI.getJSON('/api/attn/cause-outcomes'),
+      DashAPI.getManifest(),
+    ]);
+    const ctaReach = manifest.friends.filter(f => f.exit_box === 'cta').length;
+    const funnel = { visitors: ji.funnel.lp_visitors, cta: ctaReach, line: ji.funnel.loku_reached, booked: ji.funnel.outcomes };
+
+    const causes = outcomes.outcomes
+      .filter(o => !['no_data', 'unclassified'].includes(o.cause_code))
+      .map(o => ({ code: o.cause_code, label: o.cause_label, count: o.n - o.booked }))
+      .filter(c => c.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    const groups = {};
+    for (const f of manifest.friends) {
+      const key = f.source_label || '不明';
+      const g = groups[key] || (groups[key] = { name: key, visitors: 0, line: 0, booked: 0, causeCount: {}, causeLabel: {} });
+      g.visitors++; g.line++;
+      if (f.booked) g.booked++;
+      else if (f.cause_code) {
+        g.causeCount[f.cause_code] = (g.causeCount[f.cause_code] || 0) + 1;
+        g.causeLabel[f.cause_code] = f.cause_label;
+      }
+    }
+    const ads = Object.values(groups).map(g => {
+      const top = Object.entries(g.causeCount).sort((a, b) => b[1] - a[1])[0];
+      const insight = top
+        ? `この経路は「${g.causeLabel[top[0]]}」での離脱が最も多く、${top[1]}名です。`
+        : '未予約者の離脱理由は確認されていません（全員予約済み、または計測不足）。';
+      return { ...g, insight };
+    }).sort((a, b) => b.visitors - a.visitors);
+
+    return { funnel, causes, ads, live: true };
+  }
+
+  function pct(a, b) { return b ? Math.round(a / b * 1000) / 10 : null; }
+
+  function render(data) {
+    const f = data.funnel;
+    // 注：merge(LINE友だち追加)はCTA到達を経由しなくても発生しうる（別動線のLIFFボタン等）ため、
+    // 「前段比」ではなく常にLP訪問を分母にした「訪問比」で表示する（直前比だと100%超があり得て誤解を招く）。
+    const steps = [
+      { label:'LP訪問', num:f.visitors, rate:null },
+      { label:'CTA到達', num:f.cta, rate:pct(f.cta, f.visitors) },
+      { label:'LINE友だち追加', num:f.line, rate:pct(f.line, f.visitors) },
+      { label:'予約／購入', num:f.booked, rate:pct(f.booked, f.visitors) },
+    ];
+    document.getElementById('funnel-list').innerHTML = steps.map((s, i) => `
+      ${i > 0 ? '<div class="funnel-arrow"><span class="material-symbols-outlined">south</span></div>' : ''}
+      <div class="funnel-step ${i === 0 ? 'hero' : ''}">
+        <div class="fn-label">${s.label}</div>
+        <div class="fn-num tabular">${s.num}</div>
+        ${s.rate != null ? `<div class="fn-rate tabular">訪問比 ${s.rate}%</div>` : ''}
+      </div>
+    `).join('');
+
+    document.getElementById('cause-list').innerHTML = data.causes.length ? data.causes.map(c => `
+      <div class="cause-row">
+        <div class="cause-left"><span class="cause-dot" style="background:${CODE_COLOR[c.code] || '#94A3B8'}"></span><span class="cause-name">${c.label}</span></div>
+        <div class="cause-num tabular">${c.count}<span class="u">人</span></div>
+      </div>
+    `).join('') : '<div class="cause-row"><span class="cause-name">データがありません</span></div>';
+
+    document.getElementById('ad-list').innerHTML = data.ads.map(a => `
+      <div class="ad-card">
+        <div class="ad-card-head">
+          <div class="ad-card-name"><span class="material-symbols-outlined">campaign</span>${a.name}</div>
+          <div class="ad-src-tag">lt_ad=${a.name}</div>
+        </div>
+        <div class="ad-funnel-row tabular">
+          <div class="node">訪問<b>${a.visitors}</b></div>
+          <span class="material-symbols-outlined">arrow_right_alt</span>
+          <div class="node">LINE<b>${a.line}</b></div>
+          <span class="material-symbols-outlined">arrow_right_alt</span>
+          <div class="node">予約<b>${a.booked}</b></div>
+        </div>
+        <div class="ad-insight"><span class="material-symbols-outlined">info</span>${a.insight}</div>
+      </div>
+    `).join('');
+
+    document.getElementById('header-sub').textContent = data.live
+      ? `${DashAPI.PAGE_SLUG}・累計（seedデータ・journey-intelligence実数値）` : 'デモ表示（API未接続）';
+    document.getElementById('footnote').textContent = data.live
+      ? '広告別の内訳はURLパラメータ（lt_src・lt_ad）で運ばれるため、LINE内ブラウザのITPやCookie制限の影響を受けません。効果保証・満足度・体験談は含みません。数値はseed-demo.mjsで投入したデモ来訪の実集計です。'
+      : '広告別の内訳はURLパラメータ（lt_src・lt_ad）で運ばれるため、LINE内ブラウザのITPやCookie制限の影響を受けません。効果保証・満足度・体験談は含みません。数値はダミーです。';
+  }
+
+  DashAPI.withFallback(loadLive, () => ({ ...FALLBACK, live: false })).then(render);
+</script>
+
+</body>
+</html>
