@@ -410,6 +410,15 @@ function handle(store, req, res, body) {
       sess.entry_health = detectHealthTerms(String(d.entry.query || '')).length > 0;
     }
     if (d.referrer != null && sess.referrer == null) sess.referrer = String(d.referrer).slice(0, 2048);
+    // m3層A: lt_src/lt_ad受け口。タグ/店主向け表記は lt_src/lt_ad のまま維持し、サーバ内部でutmに正規化して一本化する。
+    // 既にutmが明示的に来ている場合はutmを優先し、上書きしない（utm優先ロジック）。
+    if (!(d.utm && typeof d.utm === 'object' && !Array.isArray(d.utm)) && (d.lt_src != null || d.lt_ad != null)) {
+      d.utm = {};
+      if (d.lt_src != null) d.utm.source = d.lt_src;
+      if (d.lt_ad != null) d.utm.campaign = d.lt_ad;
+    }
+    // 元の値(lt_ad)もセッションに別ラベルで保持し、journey行・journey-intelligenceの流入集計から参照できるようにする。
+    if (d.lt_ad != null && sess.lt_ad == null) sess.lt_ad = String(d.lt_ad).slice(0, 256);
     if (d.utm && sess.utm == null && typeof d.utm === 'object' && !Array.isArray(d.utm)) {
       sess.utm = Object.fromEntries(['source', 'medium', 'campaign', 'content', 'term']
         .filter(k => d.utm[k] != null).map(k => [k, String(d.utm[k]).slice(0, 256)]));
@@ -521,6 +530,7 @@ function handle(store, req, res, body) {
         active_sec: sess.active_sec, box_engagement,
         target_id: sess.target_id || null, change_id: sess.change_id || null,
         measurement_phase: sess.measurement_phase || null,
+        utm: sess.utm || null, lt_ad: sess.lt_ad || null, // m3層A: lt_src/lt_ad受け口（utm正規化済み＋元ラベル保持）
         exit_box: exit.exit_box, exit_type: exit.exit_type, // P0:離脱ポイント
         search: searchSummary(store, sess.page_id), // 来る前（サチコAPI取込・無ければnull）
       });

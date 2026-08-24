@@ -1134,6 +1134,46 @@ async function suite() {
     const foreignOutbox = await (await getH('/api/attn/report-outbox', { 'x-tenant-id': 't_2' })).json();
     eq(foreignOutbox.deliveries.length, 0, 'JI: 他テナントは週次outboxを読めない');
   });
+
+  section('I lt_src/lt_ad受け口（utm正規化で一本化）');
+  await withServer(async ({ post, get }) => {
+    // lt_src/lt_adのみ→サーバ内部でutmに正規化される
+    await post('/api/attn/collect', {
+      anon_id: 'LT1', page_slug: 'seitai-lp-a',
+      lt_src: 'line', lt_ad: 'aug-camp',
+      boxes: [{ box_key: 'hero', engagement: 50 }],
+    });
+    await post('/api/attn/merge', { anon_id: 'LT1', friend_id: 'f_lt1', consented: true });
+    const j1 = await (await get('/api/attn/journey?friend_id=f_lt1')).json();
+    eq(j1.journeys[0].utm, { source: 'line', campaign: 'aug-camp' }, 'lt_受け口: lt_src/lt_adをutm.source/campaignに正規化');
+    eq(j1.journeys[0].lt_ad, 'aug-camp', 'lt_受け口: 元の値(lt_ad)もjourney行に別ラベルで保持');
+
+    // utmが明示的に来ている場合はutmを優先し、lt_src/lt_adで上書きしない
+    await post('/api/attn/collect', {
+      anon_id: 'LT2', page_slug: 'seitai-lp-a',
+      utm: { source: 'instagram', campaign: 'ig-camp' }, lt_src: 'line', lt_ad: 'aug-camp',
+      boxes: [{ box_key: 'hero', engagement: 40 }],
+    });
+    await post('/api/attn/merge', { anon_id: 'LT2', friend_id: 'f_lt2', consented: true });
+    const j2 = await (await get('/api/attn/journey?friend_id=f_lt2')).json();
+    eq(j2.journeys[0].utm, { source: 'instagram', campaign: 'ig-camp' }, 'lt_受け口: utm優先・lt_src/lt_adで上書きしない');
+    eq(j2.journeys[0].lt_ad, 'aug-camp', 'lt_受け口: utm優先時も元のlt_adラベルは保持される');
+
+    // journey-intelligenceの流入集計にlt_src由来のsourceが反映される
+    const ji = await (await get('/api/attn/journey-intelligence?page_slug=seitai-lp-a')).json();
+    ok(ji.source_breakdown.some(s => s.source === 'line / aug-camp'), 'lt_受け口: journey-intelligenceの流入集計にlt_src/lt_ad由来のsourceが反映');
+
+    // 未指定時は無害（utmもlt_adも付かず、エラーにならない）
+    const r3 = await post('/api/attn/collect', {
+      anon_id: 'LT3', page_slug: 'seitai-lp-a',
+      boxes: [{ box_key: 'hero', engagement: 10 }],
+    });
+    eq(r3.status, 200, 'lt_受け口: lt_src/lt_ad未指定でも200');
+    await post('/api/attn/merge', { anon_id: 'LT3', friend_id: 'f_lt3', consented: true });
+    const j3 = await (await get('/api/attn/journey?friend_id=f_lt3')).json();
+    eq(j3.journeys[0].utm, null, 'lt_受け口: 未指定時はutmを生成しない(無害)');
+    eq(j3.journeys[0].lt_ad, null, 'lt_受け口: 未指定時はlt_adも付かない(無害)');
+  });
 }
 
 const LOOPS = Number(process.argv[2] || 5);

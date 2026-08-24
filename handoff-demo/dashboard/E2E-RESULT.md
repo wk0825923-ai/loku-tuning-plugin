@@ -43,20 +43,12 @@ LINE結合（merge）は3人とも実施（因果分類の答え合わせに`fri
 
 ## lt_src / lt_ad の行き先検証（事実確認）
 
-**サーバ側では無視される（保存も返却もされない）。**
+**解消済み(2026-08-22)：サーバ側で受け・utm正規化・journey反映まで実装済み。**
 
 - `loku-attn.js` の `buildPayload()` は仕様通り `lt_src` / `lt_ad` を collect ペイロードに含めて送信している（タグ側は実装済み）。
-- しかし `app.mjs` の `POST /api/attn/collect` ハンドラ（364行目〜）は `d.entry` / `d.utm` / `d.referrer` / `d.active_sec` / `d.boxes` は読むが、`d.lt_src` / `d.lt_ad` を読むコードが**存在しない**。セッション(`sess`)にも保存されない。
-- 3人分すべてで `lt_src=meta&lt_ad=E2E割` 等を送信したが、`/api/attn/journey?friend_id=` のレスポンス行には `lt_src`/`lt_ad` フィールドが一切現れないことを実測で確認（`journeyRowKeys` に該当キーなし）。
-
-### ギャップとして記録
-
-**層Aタグ（`loku-attn.js`）は lt_src/lt_ad を送信済みだが、サーバ側（`app.mjs`）の受けは未実装。**
-`app.mjs` は別セッションで未コミット変更があり本タスクでは編集禁止のため、**実装はせず保留**として記録する。
-実装する場合の想定差分（参考・未実施）：
-- `POST /api/attn/collect` 内で `d.lt_src` / `d.lt_ad` をバリデーションのうえ `sess.lt_src` / `sess.lt_ad`（初回のみ確定・巻き戻り防止は他フィールドと同方針）に保存
-- `GET /api/attn/journey` のレスポンス行に `lt_src` / `lt_ad` を追加
-- 広告経由の予約率比較（`cause-outcomes` 相当の lt_src 別集計）を将来追加する場合の入力になる
+- `app.mjs` の `POST /api/attn/collect` ハンドラに lt_src/lt_ad 受け口を追加（m3層A）。`d.lt_src`→`utm.source`、`d.lt_ad`→`utm.campaign` にサーバ内部で正規化し、既に `d.utm` が明示的に来ている場合は utm を優先して上書きしない。元の値(`lt_ad`)はセッションに `sess.lt_ad` として別ラベルでも保持する。
+- `GET /api/attn/journey` のレスポンス行に `utm` / `lt_ad` を追加。`node handoff-demo/dashboard/e2e-tag.mjs` 再実行で3人分すべて `lt_src or lt_ad present=true` を実測確認。`journey-intelligence` の `source_breakdown` にも `meta / E2E割`・`line / E2E友だち限定` として正しく反映されることを確認済み。
+- テストは `handoff-demo/test.mjs` に Section I（lt_受け口: 正規化/utm優先/journey反映/未指定時に無害）を追加し全緑（既存A〜Hのpass数は変化なし）。
 
 ## ダッシュボードAPI反映確認（画面1）
 
@@ -77,7 +69,7 @@ LINE結合（merge）は3人とも実施（因果分類の答え合わせに`fri
 
 ## 発見したギャップ / バグ
 
-1. **[記録済み・保留]** `lt_src` / `lt_ad` はタグ送信済み・サーバ受け未実装（上記参照）。app.mjs凍結中のため今回は実装せず。
+1. **[解消済み(2026-08-22)]** `lt_src` / `lt_ad` のサーバ受け（utm正規化）を実装済み。上記「lt_src / lt_ad の行き先検証」参照。
 2. 実装上のバグは検出されなかった（collect/merge/booking/diagnose/cause-segments/cause-outcomes/journey/journey-intelligence は全て仕様通りHTTP 200・期待どおりの因果分類）。
 
 ## プロセス
