@@ -43,7 +43,7 @@ LINE結合（merge）は3人とも実施（因果分類の答え合わせに`fri
 
 ## lt_src / lt_ad の行き先検証（事実確認）
 
-**解消済み(2026-08-22)：サーバ側で受け・utm正規化・journey反映まで実装済み。**
+**解消済み(2026-08-24)：サーバ側で受け・utm正規化・journey反映まで実装済み。**
 
 - `loku-attn.js` の `buildPayload()` は仕様通り `lt_src` / `lt_ad` を collect ペイロードに含めて送信している（タグ側は実装済み）。
 - `app.mjs` の `POST /api/attn/collect` ハンドラに lt_src/lt_ad 受け口を追加（m3層A）。`d.lt_src`→`utm.source`、`d.lt_ad`→`utm.campaign` にサーバ内部で正規化し、既に `d.utm` が明示的に来ている場合は utm を優先して上書きしない。元の値(`lt_ad`)はセッションに `sess.lt_ad` として別ラベルでも保持する。
@@ -69,7 +69,7 @@ LINE結合（merge）は3人とも実施（因果分類の答え合わせに`fri
 
 ## 発見したギャップ / バグ
 
-1. **[解消済み(2026-08-22)]** `lt_src` / `lt_ad` のサーバ受け（utm正規化）を実装済み。上記「lt_src / lt_ad の行き先検証」参照。
+1. **[解消済み(2026-08-24)]** `lt_src` / `lt_ad` のサーバ受け（utm正規化）を実装済み。上記「lt_src / lt_ad の行き先検証」参照。
 2. 実装上のバグは検出されなかった（collect/merge/booking/diagnose/cause-segments/cause-outcomes/journey/journey-intelligence は全て仕様通りHTTP 200・期待どおりの因果分類）。
 
 ## プロセス

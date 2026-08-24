@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta name="robots" content="noindex">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LIFF疎通テスト | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52; --primary-soft:#ECFDF5;
+    --text:#111827; --sub:#64748B; --border:#D8E0DA;
+    --radius-sm:4px; --radius-md:6px; --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309; --coral:#C2410C; --ok:#0A6B52; --ok-bg:#ECFDF5; --ok-border:#B7E4CF;
+    --ng:#B91C1C; --ng-bg:#FEF2F2; --ng-border:#FECACA;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;background:#FFFFFF;color:var(--text);line-height:1.6;margin:0}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:20px;vertical-align:middle;line-height:1}
+  .wrap{max-width:480px;margin:0 auto;padding:20px 16px 60px}
+
+  .banner{
+    background:#111827;color:#E5E7EB;border-radius:var(--radius-md);padding:10px 14px;
+    font-size:11.5px;margin-bottom:16px;display:flex;align-items:center;gap:6px;
+  }
+  .banner .material-symbols-outlined{font-size:16px;color:#93C5FD}
+
+  h1{font-size:18px;font-weight:700;margin:0 0 4px}
+  .sub{font-size:12px;color:var(--sub);margin:0 0 20px}
+
+  .card{
+    border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-flat);
+    padding:16px;margin-bottom:14px;background:#fff;
+  }
+  .card h2{font-size:13px;font-weight:700;margin:0 0 10px;display:flex;align-items:center;gap:6px}
+  .card h2 .material-symbols-outlined{font-size:16px;color:var(--primary)}
+
+  .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+  .row .k{font-size:11.5px;color:var(--sub)}
+  .row .v{font-size:12.5px;font-weight:600;font-family:'SFMono-Regular',Consolas,monospace;word-break:break-all;text-align:right}
+
+  .status{
+    display:flex;align-items:center;gap:8px;border-radius:var(--radius-md);padding:12px 14px;font-size:13px;font-weight:700;
+  }
+  .status.ok{background:var(--ok-bg);border:1px solid var(--ok-border);color:var(--ok)}
+  .status.ng{background:var(--ng-bg);border:1px solid var(--ng-border);color:var(--ng)}
+  .status.pending{background:#FAFBFA;border:1px solid var(--border);color:var(--sub)}
+  .status .material-symbols-outlined{font-size:20px}
+
+  .bignum{font-size:28px;font-weight:700;font-family:'SFMono-Regular',Consolas,monospace;word-break:break-all}
+  .bignum.ok{color:var(--ok)}
+  .bignum.ng{color:var(--ng)}
+
+  .errbox{
+    margin-top:8px;background:var(--ng-bg);border:1px solid var(--ng-border);border-radius:var(--radius-sm);
+    padding:8px 10px;font-size:11px;color:var(--ng);font-family:'SFMono-Regular',Consolas,monospace;white-space:pre-wrap;word-break:break-all;
+  }
+
+  .inputbox{margin-top:8px}
+  .inputbox input{
+    width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 10px;
+    font-size:13px;font-family:inherit;box-sizing:border-box;margin-bottom:8px;
+  }
+  .inputbox button{
+    width:100%;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);
+    padding:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;
+  }
+  .inputbox button:active{opacity:.85}
+
+  .footnote{font-size:10.5px;color:var(--sub);border-top:1px solid var(--border);padding-top:12px;margin-top:24px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="banner">
+    <span class="material-symbols-outlined">shield</span>
+    このページはどこにも送信しません。表示のみの疎通確認用です（noindex）。
+  </div>
+
+  <h1>LIFF疎通テスト</h1>
+  <p class="sub">Loku Tuning M3層B検証用。userId・anon_id・LIFF状態を画面表示のみで確認します。</p>
+
+  <div id="liffIdInputCard" class="card" style="display:none">
+    <h2><span class="material-symbols-outlined">key</span>LIFF ID入力</h2>
+    <p style="font-size:11.5px;color:var(--sub);margin:0 0 8px">URLに <code>?liffId=xxxxxxxx-xxxxxxxx</code> が無かったため、手動で入力してください。</p>
+    <div class="inputbox">
+      <input id="liffIdInput" type="text" placeholder="例: 1234567890-AbCdEfGh" autocomplete="off">
+      <button id="liffIdSubmit">この LIFF ID で init する</button>
+    </div>
+  </div>
+
+  <div id="initStatusCard" class="card">
+    <h2><span class="material-symbols-outlined">bolt</span>init状態</h2>
+    <div id="initStatus" class="status pending">
+      <span class="material-symbols-outlined">hourglass_empty</span>
+      <span>読み込み中&hellip;</span>
+    </div>
+    <div id="initErrBox"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="material-symbols-outlined">badge</span>userId</h2>
+    <div id="userIdBox" class="status pending">
+      <span class="material-symbols-outlined">hourglass_empty</span>
+      <span>init待ち</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="material-symbols-outlined">tag</span>URLパラメータ（anon_id等）</h2>
+    <div id="paramsBox">
+      <div class="row"><span class="k">読み込み中&hellip;</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="material-symbols-outlined">smartphone</span>実行環境</h2>
+    <div class="row"><span class="k">LINE内ブラウザ（isInClient）</span><span class="v" id="isInClientVal">-</span></div>
+    <div class="row"><span class="k">OS</span><span class="v" id="osVal">-</span></div>
+    <div class="row"><span class="k">言語</span><span class="v" id="langVal">-</span></div>
+    <div class="row"><span class="k">context.type</span><span class="v" id="ctxTypeVal">-</span></div>
+    <div class="row"><span class="k">accessTokenHash</span><span class="v" id="tokenHashVal">-</span></div>
+  </div>
+
+  <div class="footnote">
+    表示のみ・送信一切なし。詳細手順は同ディレクトリの b-layer-verify.html を参照。
+    LINE外ブラウザで開いた場合は liff.init は失敗しないが liff.isInClient()=false・getProfile 等は
+    LINEログインを別途要求する挙動になります（未ログイン時はエラー表示のみで落ちません）。
+  </div>
+
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+(function(){
+  function $(id){ return document.getElementById(id); }
+
+  function setStatus(el, kind, iconName, text){
+    el.className = 'status ' + kind;
+    el.innerHTML = '<span class="material-symbols-outlined">' + iconName + '</span><span>' + text + '</span>';
+  }
+
+  function showErr(container, err){
+    var box = document.createElement('div');
+    box.className = 'errbox';
+    var msg = (err && err.message) ? err.message : String(err);
+    var code = (err && err.code) ? ('[' + err.code + '] ') : '';
+    box.textContent = code + msg;
+    container.innerHTML = '';
+    container.appendChild(box);
+  }
+
+  function renderParams(){
+    var box = $('paramsBox');
+    box.innerHTML = '';
+    var qs = new URLSearchParams(location.search);
+    var entries = Array.from(qs.entries());
+    if (entries.length === 0){
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = '<span class="k">パラメータなし</span>';
+      box.appendChild(row);
+      return;
+    }
+    entries.forEach(function(pair){
+      var row = document.createElement('div');
+      row.className = 'row';
+      var kEl = document.createElement('span'); kEl.className = 'k'; kEl.textContent = pair[0];
+      var vEl = document.createElement('span'); vEl.className = 'v'; vEl.textContent = pair[1];
+      row.appendChild(kEl); row.appendChild(vEl);
+      box.appendChild(row);
+    });
+    var anon = qs.get('anon_id');
+    var anonRow = document.createElement('div');
+    anonRow.className = 'row';
+    if (anon){
+      anonRow.innerHTML = '<span class="k">anon_id 判定</span><span class="v" style="color:var(--ok)">検出: ' + anon + '</span>';
+    } else {
+      anonRow.innerHTML = '<span class="k">anon_id 判定</span><span class="v" style="color:var(--ng)">未検出</span>';
+    }
+    box.appendChild(anonRow);
+  }
+
+  function renderEnv(){
+    try {
+      $('isInClientVal').textContent = String(liff.isInClient());
+    } catch(e){ $('isInClientVal').textContent = 'エラー'; }
+    try {
+      $('osVal').textContent = String(liff.getOS());
+    } catch(e){ $('osVal').textContent = '-'; }
+    try {
+      $('langVal').textContent = String(liff.getLanguage());
+    } catch(e){ $('langVal').textContent = '-'; }
+  }
+
+  function renderContext(){
+    try {
+      var ctx = liff.getContext ? liff.getContext() : null;
+      if (ctx){
+        $('ctxTypeVal').textContent = ctx.type || '-';
+        $('tokenHashVal').textContent = ctx.accessTokenHash || '-';
+        if (ctx.userId){
+          setStatus($('userIdBox'), 'ok', 'check_circle', 'getContext: ' + ctx.userId);
+        }
+      } else {
+        $('ctxTypeVal').textContent = '未取得';
+      }
+    } catch(e){
+      $('ctxTypeVal').textContent = 'エラー';
+    }
+  }
+
+  function tryGetProfile(){
+    if (!liff.isLoggedIn || !liff.isLoggedIn()){
+      // 外部ブラウザ等・未ログインの場合はここで打ち止め（送信も遷移もしない）
+      var box = $('userIdBox');
+      if (box.className.indexOf('ok') === -1){
+        setStatus(box, 'ng', 'block', '未ログイン（getProfile不可・getContextの結果を参照）');
+      }
+      return;
+    }
+    liff.getProfile().then(function(profile){
+      setStatus($('userIdBox'), 'ok', 'check_circle', 'getProfile: ' + profile.userId);
+    }).catch(function(err){
+      var box = $('userIdBox');
+      setStatus(box, 'ng', 'error', 'getProfile失敗（profileスコープ未許諾の可能性）');
+      showErrAppend(box, err);
+    });
+  }
+
+  function showErrAppend(container, err){
+    var box = document.createElement('div');
+    box.className = 'errbox';
+    var msg = (err && err.message) ? err.message : String(err);
+    box.textContent = msg;
+    container.parentNode.appendChild(box);
+  }
+
+  function afterInitSuccess(){
+    setStatus($('initStatus'), 'ok', 'check_circle', 'liff.init 成功');
+    renderEnv();
+    renderContext();
+    tryGetProfile();
+  }
+
+  function afterInitFail(err){
+    setStatus($('initStatus'), 'ng', 'error', 'liff.init 失敗');
+    showErr($('initErrBox'), err);
+    setStatus($('userIdBox'), 'ng', 'block', 'init失敗のため取得不可');
+  }
+
+  function doInit(liffId){
+    liff.init({ liffId: liffId }).then(afterInitSuccess).catch(afterInitFail);
+  }
+
+  function boot(){
+    renderParams();
+    var qs = new URLSearchParams(location.search);
+    var liffId = qs.get('liffId');
+
+    if (liffId){
+      doInit(liffId);
+      return;
+    }
+
+    // 二段構え：URLにliffIdが無ければ入力欄を出す
+    setStatus($('initStatus'), 'pending', 'help', 'LIFF ID未指定（下の入力欄へ）');
+    $('liffIdInputCard').style.display = 'block';
+    $('liffIdSubmit').addEventListener('click', function(){
+      var v = $('liffIdInput').value.trim();
+      if (!v){ return; }
+      setStatus($('initStatus'), 'pending', 'hourglass_empty', 'init実行中&hellip;');
+      doInit(v);
+    });
+  }
+
+  if (typeof liff === 'undefined'){
+    setStatus($('initStatus'), 'ng', 'error', 'LIFF SDK読み込み失敗（ネットワークまたはCDNブロック）');
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>

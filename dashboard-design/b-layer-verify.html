@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta name="robots" content="noindex">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>層B検証手順書（LIFF／MCP疎通） | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52; --primary-soft:#ECFDF5;
+    --text:#111827; --sub:#64748B; --border:#D8E0DA;
+    --radius-sm:4px; --radius-md:6px; --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309; --coral:#C2410C; --sapphire:#1D4ED8; --amethyst:#6D28D9;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;background:#FFFFFF;color:var(--text);line-height:1.7;margin:0}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:20px;vertical-align:middle;line-height:1}
+  .tabular{font-variant-numeric:tabular-nums}
+  .wrap{max-width:880px;margin:0 auto;padding:32px 20px 80px}
+
+  .cover{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:32px}
+  .cover .eyebrow{font-size:12px;font-weight:700;color:var(--primary);letter-spacing:.08em;text-transform:uppercase}
+  .cover h1{font-size:26px;font-weight:700;margin:6px 0 8px}
+  .cover .note{font-size:13px;color:var(--sub)}
+
+  .callout{
+    background:var(--primary-soft);border:1px solid #B7E4CF;border-radius:var(--radius-lg);
+    padding:14px 16px;font-size:13px;color:#065F46;margin-bottom:24px;
+  }
+  .callout b{font-weight:700}
+  .callout.warn{background:#FFFBEB;border-color:#FDE68A;color:#92400E}
+  .callout.warn .material-symbols-outlined{color:var(--amber)}
+
+  h2.section{
+    font-size:13px;font-weight:700;color:var(--sub);letter-spacing:.08em;text-transform:uppercase;
+    margin:40px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);
+  }
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;margin-bottom:8px}
+  .flow .node{border:1px solid var(--border);border-radius:20px;padding:6px 13px;background:#FFFFFF;box-shadow:var(--shadow-flat);font-weight:600}
+  .flow .node.self{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .flow .arrow{color:var(--sub)}
+
+  .term{border-bottom:1px dashed var(--sub);cursor:help}
+
+  .screen{
+    border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-flat);
+    padding:24px;margin-bottom:24px;
+  }
+  .screen-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .screen-head .num{
+    width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;
+  }
+  .screen-head h3{font-size:17px;font-weight:700;margin:0}
+  .screen-sub{font-size:12px;color:var(--sub);margin:2px 0 16px 36px}
+
+  .block-label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;margin:16px 0 8px;text-transform:uppercase}
+  .block-label .material-symbols-outlined{font-size:14px;margin-right:4px;vertical-align:-2px}
+
+  p.body-text{font-size:13px;margin:0 0 8px;color:var(--text)}
+  ul.body-list{margin:0;padding-left:18px;font-size:13px}
+  ul.body-list li{margin-bottom:5px}
+
+  .steps{counter-reset:step;list-style:none;margin:0;padding:0}
+  .steps li{
+    counter-increment:step;position:relative;padding:14px 14px 14px 44px;
+    border:1px solid var(--border);border-radius:var(--radius-md);margin-bottom:10px;background:#FAFBFA;
+  }
+  .steps li::before{
+    content:counter(step);position:absolute;left:12px;top:14px;
+    width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+  }
+  .steps li .s-title{font-size:13px;font-weight:700;margin-bottom:4px}
+  .steps li .s-body{font-size:12.5px;color:var(--text)}
+  .steps li .s-expect{
+    margin-top:8px;font-size:11.5px;background:var(--primary-soft);border:1px solid #B7E4CF;
+    border-radius:var(--radius-sm);padding:6px 10px;color:#065F46;
+  }
+  .steps li .s-fail{
+    margin-top:6px;font-size:11.5px;background:#FEF2F2;border:1px solid #FECACA;
+    border-radius:var(--radius-sm);padding:6px 10px;color:#991B1B;
+  }
+  .steps li .s-expect .material-symbols-outlined,
+  .steps li .s-fail .material-symbols-outlined{font-size:14px;margin-right:4px;vertical-align:-2px}
+
+  code, .code{
+    background:#F2F5F2;border-radius:4px;padding:1px 6px;font-size:11.5px;
+    font-family:'SFMono-Regular',Consolas,monospace;
+  }
+  pre.codeblock{
+    background:#111827;color:#E5E7EB;border-radius:var(--radius-md);padding:14px 16px;
+    font-size:11.5px;font-family:'SFMono-Regular',Consolas,monospace;overflow-x:auto;line-height:1.6;
+  }
+  pre.codeblock .cm{color:#6EE7B7}
+
+  .cite{font-size:10.5px;color:var(--sub);margin-top:4px}
+  .cite a{color:var(--sapphire);text-decoration:none}
+  .cite a:hover{text-decoration:underline}
+  .unconfirmed{
+    display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;color:var(--coral);
+    border:1px solid #FED7AA;background:#FFF7ED;border-radius:20px;padding:2px 9px;margin-left:6px;
+  }
+  .unconfirmed .material-symbols-outlined{font-size:12px}
+
+  table.factcheck{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+  table.factcheck th{text-align:left;font-size:10.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--border)}
+  table.factcheck td{padding:8px;border-bottom:1px solid #EEF1EE;vertical-align:top}
+
+  .checklist{border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;background:#FAFBFA}
+  .checklist label{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;margin-bottom:10px;cursor:pointer}
+  .checklist input[type=checkbox]{margin-top:2px;accent-color:var(--primary);width:15px;height:15px;flex-shrink:0}
+  .checklist textarea{
+    width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;
+    font-family:inherit;font-size:12px;resize:vertical;min-height:44px;margin-top:4px;box-sizing:border-box
+  }
+
+  .decision{
+    border:1px solid #DCC8F5;background:#F3EBFC;border-radius:var(--radius-lg);padding:14px 16px;font-size:12.5px;color:#4C1D95;
+  }
+  .decision b{font-weight:700}
+
+  .footnote{font-size:11.5px;color:var(--sub);border-top:1px solid var(--border);padding-top:14px;margin-top:40px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="eyebrow">Loku Tuning &mdash; M3 層B検証</div>
+    <h1>層B検証手順書（LIFF疎通／MCP・APIキー疎通）</h1>
+    <div class="note">対象：Daiya本人がLINE Developers・Loku設定画面・スマホLINEを実際に操作して確認する。所要目安：LIFF検証15〜20分／MCP検証10分。</div>
+  </div>
+
+  <div class="callout">
+    <b>目的：</b> 「LP訪問者（<span class="term" title="anon_id：LPに来た人をまだ誰か分からないまま追跡するための仮ID。例えると：来店客に一旦『お客様A』と呼びかける仮の呼び名。あとで本名（LINEの友だち）と分かった瞬間にひも付ける">anon_id</span>）」と「LINEの友だち（userId）」を<span class="term" title="ID結合：別々に振られた2つの仮IDを、同一人物だと分かった瞬間に1本の記録につなぎ直すこと。例えると：受付で渡した整理券と、あとで書いてもらった診察券を、同じ人のカルテに閉じること">ID結合</span>できるか、また店舗ごとにAI連携（MCP／APIキー）が安全に切り替えられるかを、実機で確かめる。ここが通れば、LP→LINE友だち→承認配信→再訪捕捉の一気通貫が「絵に描いた設計」から「動く土台」になる。
+  </div>
+
+  <div class="flow">
+    <span class="node">LP訪問（anon_id発行）</span><span class="arrow">&rarr;</span>
+    <span class="node">LIFFを開く（?anon_id=&hellip;）</span><span class="arrow">&rarr;</span>
+    <span class="node self">userId取得・結合</span><span class="arrow">&rarr;</span>
+    <span class="node">友だち追加</span><span class="arrow">&rarr;</span>
+    <span class="node">承認配信（画面3）</span><span class="arrow">&rarr;</span>
+    <span class="node">再訪はトラッキングURLのuidで実名捕捉</span>
+  </div>
+
+  <h2 class="section">検証① LIFF疎通</h2>
+  <p class="body-text">
+    <span class="term" title="LIFF（LINE Front-end Framework）：LINEアプリの中でそのまま開ける自社Webページの仕組み。例えると：LINEというビルの中に、自分の店専用の窓口フロアを間借りして出すようなもの">LIFF</span>
+    を使って、LP上のanon_idとLINEのuserIdが同じ画面で同時に取れるかを確認する。
+  </p>
+
+  <ol class="steps">
+    <li>
+      <div class="s-title">LINE Developersでチャネルを確認する</div>
+      <div class="s-body">
+        <a href="https://developers.line.biz/console/" target="_blank" rel="noopener">developers.line.biz/console</a> にログインし、Loku Tuning用（またはモニター店舗用）の<span class="term" title="チャネル：LINE公式アカウント1つに対応するLINE Developers上の管理単位。例えると：1つのお店に対して発行される、開発者向けの管理パネル">チャネル</span>を開く。「LIFF」タブがあることを確認。
+        <div class="s-expect"><span class="material-symbols-outlined">check_circle</span>期待：LIFFタブが存在し、「追加」ボタンが押せる状態</div>
+        <div class="s-fail"><span class="material-symbols-outlined">error</span>失敗時：チャネルが見当たらない／権限がない → Loku側の管理者権限を確認してから再試行</div>
+      </div>
+    </li>
+    <li>
+      <div class="s-title">LIFFアプリを追加し、エンドポイントURLに検証ページを登録する</div>
+      <div class="s-body">
+        「追加」→ LIFFアプリ名を入力 → サイズは「Full」推奨 → <b>エンドポイントURL</b>に、これから作る検証ページのVercel URL（例：<code>https://loku-tuning-plugin.vercel.app/dashboard-design/liff-test.html</code>）を入力。スコープは <code>profile</code> を選択（<span class="term" title="スコープ：LIFFアプリがユーザーのどの情報にアクセスしてよいかの許可範囲。例えると：入店時に『お名前だけ教えてください』と許可を求める範囲設定">profile</span>スコープがないとuserIdの取得元＝getProfile()が使えない）。「友だち追加option」は検証段階では「On（通常）」を選ぶ（後述の④参照）。
+        <div class="s-expect"><span class="material-symbols-outlined">check_circle</span>期待：保存後、<code>liff.line.me/xxxxxxxx-xxxxxxxx</code>形式のLIFF URLとLIFF IDが発行される</div>
+        <div class="cite">
+          エンドポイントURLの要件（URLスキームはhttps必須、URLフラグメント不可、liff.init()はエンドポイントURL以下の階層でのみ動作）：
+          <a href="https://developers.line.biz/en/docs/liff/registering-liff-apps/" target="_blank" rel="noopener">LINE Developers - Registering LIFF apps</a>
+        </div>
+      </div>
+    </li>
+    <li>
+      <div class="s-title">スマホのLINEでLIFF URLに?anon_idを付けて開く</div>
+      <div class="s-body">
+        発行されたLIFF URLの末尾に <code>?anon_id=test123</code> を付けてスマホに送る（LINEのトーク画面に自分宛メモとして貼るのが簡単）→ タップして開く。
+        <div class="s-expect"><span class="material-symbols-outlined">check_circle</span>期待：liff-test.html画面が開き、userId（プロフィール取得を許可した場合）とanon_id=test123が両方表示される</div>
+        <div class="s-fail"><span class="material-symbols-outlined">error</span>失敗時：白画面／エラー表示 → LIFF IDが正しいか、エンドポイントURLがVercelに実際にデプロイ済みか確認</div>
+        <div class="cite">
+          クエリパラメータの引き継ぎ：LIFF URLに付けた追加情報は<code>liff.state</code>としてリダイレクト後のURLに引き継がれ、<code>liff.init()</code>がこれを元に初期化する。SDK側で付与されるパラメータ（liff.state・access_token等）は、init完了前に自分で書き換えないこと。
+          <a href="https://developers.line.biz/en/docs/liff/opening-liff-app/" target="_blank" rel="noopener">LINE Developers - Opening a LIFF app</a>
+        </div>
+      </div>
+    </li>
+    <li>
+      <div class="s-title">userId取得の条件を確認する（ログイン／同意／LINE内ブラウザ）</div>
+      <div class="s-body">
+        画面に表示されたuserIdが空でないか確認。空の場合は以下を切り分ける。
+        <ul class="body-list">
+          <li>PCブラウザや外部ブラウザで開いた → <code>liff.isInClient()</code>がfalseになりログイン状態に依存（外部ブラウザではLINEログインを別途要求）</li>
+          <li><code>profile</code>スコープの同意画面でユーザーが拒否した → getProfile()が失敗する</li>
+          <li><code>liff.getContext()</code>のuserIdは<span class="unconfirmed"><span class="material-symbols-outlined">help</span>未確認</span>：常にログイン済みユーザーのuserIdを返すか、匿名アクセス時は空になるかの厳密な条件は一次情報で明言箇所を特定できなかった。実機で①LINE内②profile許可済③LINEログイン済の状態にして表示されるかを本検証で確認する</li>
+        </ul>
+        <div class="s-expect"><span class="material-symbols-outlined">check_circle</span>期待：LINE内ブラウザ・profile許可済みの状態でuserIdが取得できる</div>
+        <div class="cite">
+          getProfile()にはprofileスコープが必須。getContext()はtype/userId/viewType/accessTokenHashを含むコンテキスト情報を返す：
+          <a href="https://developers.line.biz/en/docs/liff/using-user-profile/" target="_blank" rel="noopener">LINE Developers - Using user data in LIFF apps and servers</a>
+        </div>
+      </div>
+    </li>
+    <li>
+      <div class="s-title">友だち追加の導線を確認する</div>
+      <div class="s-body">
+        LIFFアプリ設定の「友だち追加option」は3種類：<b>On（通常）</b>＝許諾画面に友だち追加のチェックが並ぶ、<b>On（aggressive）</b>＝許諾画面のあとに追加確認の別画面が出る、<b>Off</b>＝表示しない。まずは通常（On）で試し、友だち追加チェックが実際に許諾画面に出るか確認する。
+        <div class="s-expect"><span class="material-symbols-outlined">check_circle</span>期待：初回アクセス時の許諾画面に「LINE公式アカウントを友だち追加」のチェックボックスが表示される</div>
+        <div class="s-fail"><span class="material-symbols-outlined">error</span>失敗時：出ない → 既に友だちの場合は表示されない仕様の可能性。一旦ブロック→解除して再テスト</div>
+        <div class="cite">
+          追加オプションの仕様（通常／aggressive／Off）：
+          <a href="https://developers.line.biz/en/docs/liff/registering-liff-apps/" target="_blank" rel="noopener">LINE Developers - Registering LIFF apps</a>　／　既存の友だちに再度追加を促す新API <code>liff.requestFriendship()</code>：
+          <a href="https://developers.line.biz/en/tips/2026/05/21/line-request-friendship/" target="_blank" rel="noopener">LINE Developers Tips - request-friendship</a>
+        </div>
+      </div>
+    </li>
+  </ol>
+
+  <h2 class="section">事前調査ファクトチェック一覧（出典付き）</h2>
+  <table class="factcheck">
+    <tr><th>項目</th><th>結果</th><th>出典</th></tr>
+    <tr>
+      <td>(a) LIFFエンドポイントURLに任意の自前HTTPSドメイン（Vercel等）を登録できるか</td>
+      <td>できる。要件はhttpsスキームであることとURLフラグメントを含まないことのみ。ドメイン自体の制限（Vercel不可等）の記載は確認できなかった</td>
+      <td><a href="https://developers.line.biz/en/docs/liff/registering-liff-apps/" target="_blank" rel="noopener">Registering LIFF apps</a></td>
+    </tr>
+    <tr>
+      <td>(b) LIFF URLのクエリパラメータの引き継ぎ挙動</td>
+      <td>URLに付けた追加情報（クエリ含む）は<code>liff.state</code>としてリダイレクト先URLに引き継がれ、<code>liff.init()</code>がこれを解決する。init解決前にSDK付与パラメータを書き換えないこと、と明記あり</td>
+      <td><a href="https://developers.line.biz/en/docs/liff/opening-liff-app/" target="_blank" rel="noopener">Opening a LIFF app</a></td>
+    </tr>
+    <tr>
+      <td>(c) getProfile()/getContext()でuserIdを取る条件</td>
+      <td>getProfile()はprofileスコープの許諾が必須。getContext()はtype/userId/viewType/accessTokenHashを返す。LINE内ブラウザか外部ブラウザかでログイン要求の有無が変わる（外部ブラウザは別途LINEログインが必要）という一般仕様は確認できたが、getContext()のuserIdが未ログイン状態でも取れるかの明言箇所は<span class="unconfirmed"><span class="material-symbols-outlined">help</span>未確認</span></td>
+      <td><a href="https://developers.line.biz/en/docs/liff/using-user-profile/" target="_blank" rel="noopener">Using user data in LIFF apps and servers</a></td>
+    </tr>
+    <tr>
+      <td>(d) 友だち追加の導線</td>
+      <td>LIFF追加時の「友だち追加option」＝On（通常）／On（aggressive）／Offの3種。加えて2026年に<code>liff.requestFriendship()</code>という能動喚起APIが追加された（ブロック解除の再喚起にも使える）</td>
+      <td><a href="https://developers.line.biz/en/docs/liff/registering-liff-apps/" target="_blank" rel="noopener">Registering LIFF apps</a>／<a href="https://developers.line.biz/en/tips/2026/05/21/line-request-friendship/" target="_blank" rel="noopener">request-friendship Tips</a></td>
+    </tr>
+  </table>
+
+  <h2 class="section">検証② MCP／APIキー疎通</h2>
+  <p class="body-text">
+    <span class="term" title="MCP（Model Context Protocol）：AIツール（Claude等）がLokuの中身を外部から読み書きするための接続規格。例えると：AIが店の裏側システムに直接ログインするための共通USBポート">MCP</span>
+    接続とAPIキーが、モニター店舗運用（複数店を同時に見る）に耐えるかを確認する。既知の罠＝MCPが「アクティブアカウント固定」でサポート用LINEに載っている点（メモ参照）を実機で裏取りする。
+  </p>
+
+  <ol class="steps">
+    <li>
+      <div class="s-title">Loku設定→AI連携→APIキー作成</div>
+      <div class="s-body">
+        Loku管理画面の設定 → AI連携（またはAPI/インテグレーション）タブを開き、新規APIキーを発行する（<code>Bearer lk_&hellip;</code>形式）。スコープが選べる場合は<b>読み取り系のみ</b>を選ぶ（送信系は今回は叩かない）。
+        <div class="s-expect"><span class="material-symbols-outlined">check_circle</span>期待：<code>lk_</code>で始まるキーが発行され、一度だけ表示される（再表示不可の場合はこの場でメモ）</div>
+      </div>
+    </li>
+    <li>
+      <div class="s-title">curlで疎通を確認する（読み取り系のみ）</div>
+      <div class="s-body">
+        発行したキーで、友だち一覧など読み取り系エンドポイントに1回だけ疎通確認する。
+<pre class="codeblock"><span class="cm"># 例：友だち一覧の疎通確認（読み取り専用）</span>
+curl -s -H "Authorization: Bearer lk_xxxxxxxxxxxx" \
+  "https://api.oku.jp/v1/friends?limit=1"</pre>
+        <div class="s-expect"><span class="material-symbols-outlined">check_circle</span>期待：HTTP 200・JSONが1件返る</div>
+        <div class="s-fail"><span class="material-symbols-outlined">error</span>失敗時：401/403 → キーのスコープ不足かアカウント紐付け違い。404 → エンドポイントURLが実際のLoku API仕様と異なる可能性（この手順書のURL例は仮。実際のAPIリファレンスで要確認）</div>
+      </div>
+    </li>
+    <li>
+      <div class="s-title">罠の確認：MCPはアクティブアカウント固定か</div>
+      <div class="s-body">
+        既知メモ：「⚠️MCPはアクティブアカウント固定でサポート用LINEに載る（おく本体でない）」。これをこのタイミングで再現確認する。
+        <ul class="body-list">
+          <li>Claude側のMCP接続設定を開き、現在つながっているLINEアカウントが「サポート用LINE」か「おく本体」かを確認</li>
+          <li>モニター店舗Aの情報を読み取り → 続けてモニター店舗Bへ切替可能か試す（設定画面上でアカウント切替UIがあるか）</li>
+          <li>切替UIがない場合：1接続＝1アカウント固定と確定させる</li>
+        </ul>
+        <div class="s-expect"><span class="material-symbols-outlined">check_circle</span>期待（想定シナリオ）：アクティブアカウント固定が再現される＝店舗ごとにMCP接続を別立てする必要があると確定</div>
+      </div>
+    </li>
+    <li>
+      <div class="s-title">複数店舗運用の場合の運用案</div>
+      <div class="s-body">
+        アカウント固定が確定した場合の対処案（本検証で優先度を確定させる）：
+        <ul class="body-list">
+          <li><b>案1：</b>店舗ごとにAPIキー（Bearer lk_）を分けて発行し、curl/HTTP直叩きはキー切替だけで済ませる（MCP経由の対話操作はしない）</li>
+          <li><b>案2：</b>モニター店舗が2〜3店の間はMCP接続先アカウントを都度手動切替（Claude設定画面でLoku接続を張り直す）</li>
+          <li><b>案3：</b>店舗数が増えたらAPIキー直叩きのダッシュボード側バッチ処理に寄せ、MCPは開発・デバッグ専用に限定する</li>
+        </ul>
+      </div>
+    </li>
+  </ol>
+
+  <h2 class="section">結果記入欄</h2>
+  <div class="checklist">
+    <label><input type="checkbox"> ①-1 LINE Developersでチャネル・LIFFタブを確認できた</label>
+    <label><input type="checkbox"> ①-2 LIFFアプリを追加し、エンドポイントURLに検証ページを登録できた</label>
+    <label><input type="checkbox"> ①-3 スマホLINEでLIFF URL+?anon_id=test123を開き、画面が表示された</label>
+    <label><input type="checkbox"> ①-4 userIdとanon_idが同じ画面に両方表示された</label>
+    <label><input type="checkbox"> ①-5 友だち追加の導線（許諾画面のチェック）を確認できた</label>
+    <textarea placeholder="①メモ：うまくいかなかった場合の状況・エラー文言など"></textarea>
+    <label><input type="checkbox"> ②-1 APIキー（lk_）を発行できた</label>
+    <label><input type="checkbox"> ②-2 curlで読み取り系エンドポイントの疎通に成功した（HTTP 200）</label>
+    <label><input type="checkbox"> ②-3 MCPのアクティブアカウント固定を再現確認した</label>
+    <textarea placeholder="②メモ：どのアカウントに固定されたか・切替UIの有無など"></textarea>
+  </div>
+
+  <div class="decision" style="margin-top:16px">
+    <b>判断基準（社長依頼pendingを復活させるライン）：</b>
+    ①-3または①-4が3回試して1度も成功しない（LIFF自体が環境要因で開けない・userId/anon_idが恒常的に片方しか取れない）、または②-2でAPIキーが正規手順でも401/403を解消できない場合は、自力検証で詰まったとみなし、社長（おく）への環境確認依頼pendingを復活させる。①-5（友だち追加導線）と②-3（アカウント固定の運用不便さ）は<b>それ自体が失敗ではなく仕様確認</b>のため、結果を記録した上で運用案（案1〜3）の採用判断に進む。
+  </div>
+
+  <div class="footnote">
+    作成：2026-08-24　対象リポジトリ：C:\Users\Daiya\loku-tuning-plugin　関連：<a href="m3-design.html" style="color:var(--primary)">m3-design.html</a>／<a href="design-spec.html" style="color:var(--primary)">design-spec.html</a>／検証ページ：<code>liff-test.html</code>（同ディレクトリ）。事前調査はWebSearch経由でdevelopers.line.biz一次情報を優先。断定できない箇所は「未確認」と明記した。
+  </div>
+
+</div>
+</body>
+</html>
