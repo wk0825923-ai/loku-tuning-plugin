@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M3 境界設計書 | Loku Tuning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0..1,0&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#0A6B52; --primary-soft:#ECFDF5;
+    --text:#111827; --sub:#64748B; --border:#D8E0DA;
+    --radius-sm:4px; --radius-md:6px; --radius-lg:8px;
+    --shadow-flat:0 1px 2px rgba(17,24,39,.05);
+    --amber:#B45309; --coral:#C2410C; --sapphire:#1D4ED8; --amethyst:#6D28D9;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Inter',system-ui,sans-serif;background:#FFFFFF;color:var(--text);line-height:1.7;margin:0}
+  .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;font-size:20px;vertical-align:middle;line-height:1}
+  .tabular{font-variant-numeric:tabular-nums}
+  .wrap{max-width:880px;margin:0 auto;padding:32px 20px 80px}
+
+  .cover{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:32px}
+  .cover .eyebrow{font-size:12px;font-weight:700;color:var(--primary);letter-spacing:.08em;text-transform:uppercase}
+  .cover h1{font-size:26px;font-weight:700;margin:6px 0 8px}
+  .cover .note{font-size:13px;color:var(--sub)}
+
+  .callout{
+    background:var(--primary-soft);border:1px solid #B7E4CF;border-radius:var(--radius-lg);
+    padding:14px 16px;font-size:13px;color:#065F46;margin-bottom:32px;
+  }
+  .callout b{font-weight:700}
+
+  h2.section{
+    font-size:13px;font-weight:700;color:var(--sub);letter-spacing:.08em;text-transform:uppercase;
+    margin:40px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border);
+  }
+
+  .block-label{font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;margin:16px 0 8px;text-transform:uppercase}
+  .block-label .material-symbols-outlined{font-size:14px;margin-right:4px;vertical-align:-2px}
+
+  p.body-text{font-size:13px;margin:0 0 8px;color:var(--text)}
+  ul.body-list{margin:0;padding-left:18px;font-size:13px}
+  ul.body-list li{margin-bottom:5px}
+
+  code.inline{background:#F2F5F2;border-radius:4px;padding:1px 5px;font-size:11px;font-family:'SFMono-Regular',Consolas,monospace}
+
+  /* ==== フロー ==== */
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;margin-bottom:8px}
+  .flow .node{border:1px solid var(--border);border-radius:20px;padding:6px 13px;background:#FFFFFF;box-shadow:var(--shadow-flat);font-weight:600}
+  .flow .node.self{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .flow .arrow{color:var(--sub);font-size:11px}
+
+  /* ==== 層カード ==== */
+  .layer{
+    border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-flat);
+    padding:22px 24px;margin-bottom:20px;
+  }
+  .layer-head{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .layer-head .tag{
+    width:28px;height:28px;border-radius:50%;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;
+  }
+  .layer.a .layer-head .tag{background:var(--primary)}
+  .layer.b .layer-head .tag{background:var(--sapphire)}
+  .layer.c .layer-head .tag{background:var(--amethyst)}
+  .layer-head h3{font-size:16px;font-weight:700;margin:0}
+  .layer-head .owner{font-size:11px;color:var(--sub);margin-left:auto;font-weight:600;white-space:nowrap}
+  .layer-sub{font-size:12px;color:var(--sub);margin:2px 0 14px 38px}
+
+  ul.item-list{margin:0;padding:0;list-style:none;font-size:13px}
+  ul.item-list li{
+    border:1px solid #EEF1EE;border-radius:var(--radius-md);padding:10px 12px;margin-bottom:8px;background:#FAFBFA;
+  }
+  ul.item-list li .it{font-weight:700;font-size:12.5px;margin-bottom:3px}
+  ul.item-list li .id{color:var(--sub);font-size:12px;line-height:1.6}
+
+  .ask-box{
+    margin-top:6px;border-left:3px solid var(--sapphire);background:#EFF4FE;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+    padding:8px 10px;font-size:12px;color:#1E3A8A;
+  }
+  .ask-box b{font-weight:700;color:var(--sapphire)}
+
+  /* ==== チェックリスト ==== */
+  .check{display:flex;gap:8px;font-size:13px;margin-bottom:6px;align-items:flex-start}
+  .check .material-symbols-outlined{font-size:16px;color:var(--primary);flex-shrink:0;margin-top:1px}
+
+  table.api{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  table.api th{text-align:left;font-size:10.5px;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--border)}
+  table.api td{padding:8px;border-bottom:1px solid #EEF1EE;vertical-align:top}
+  table.api code{background:#F2F5F2;border-radius:4px;padding:1px 5px;font-size:11px;font-family:'SFMono-Regular',Consolas,monospace}
+
+  /* ==== ステップ ==== */
+  .step{
+    display:flex;gap:14px;border:1px solid var(--border);border-radius:var(--radius-lg);
+    padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow-flat);
+  }
+  .step .snum{
+    width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+  }
+  .step .stitle{font-size:14px;font-weight:700;margin-bottom:4px}
+  .step .sdesc{font-size:12.5px;color:var(--text);margin-bottom:6px}
+  .step .sdone{font-size:11.5px;color:var(--primary);font-weight:600;display:flex;align-items:center;gap:4px}
+  .step .sdone .material-symbols-outlined{font-size:14px}
+
+  .footnote{font-size:11.5px;color:var(--sub);border-top:1px solid var(--border);padding-top:14px;margin-top:40px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cover">
+    <div class="eyebrow">Loku Tuning &mdash; M3 Boundary Design</div>
+    <h1>M3 境界設計書 &mdash; タグ＋ID結合の実装</h1>
+    <div class="note">位置づけ：design-spec.html のマイルストーンM3詳細版　対象：広告/GBP/SNS → LP → LINE友だち化 → 因果診断 → 承認配信の一気通貫をモニター店舗の実LPで成立させる工程</div>
+  </div>
+
+  <div class="callout">
+    <b>M3の要点：</b> M2まではデモ環境（handoff-demo）で完結していたが、M3は<b>3者（Daiya／Loku本体・社長／モニター店舗）</b>が絡む初めてのフェーズ。誰が何を持つかを先に切り分けないと「デモではできたのに実店舗で動かない」が起きる。この文書はその境界線を固定するための設計書。
+  </div>
+
+  <h2 class="section">1. M3のゴール</h2>
+  <p class="body-text">下記の一気通貫を、モニター店舗の実LP上で成立させる。</p>
+  <div class="flow">
+    <span class="node">広告／GBP／SNS</span><span class="arrow">→</span>
+    <span class="node">LP（loku-attn.jsタグ・lt_src/lt_ad捕捉）</span><span class="arrow">→</span>
+    <span class="node">LINE友だち化（anon_id→予約リンク→friend_id結合）</span><span class="arrow">→</span>
+    <span class="node">因果診断</span><span class="arrow">→</span>
+    <span class="node self">承認配信</span>
+  </div>
+  <p class="body-text">M2までは <code class="inline">handoff-demo/app.mjs</code> のインメモリストアで anon_id ↔ friend_id の結合・同意ゲート（<code class="inline">consent_record</code>）・因果診断までを動作確認済み。M3で結合部分を実LP・実LINEアカウントに繋ぎ、デモの配線を本番の配線に置き換える。</p>
+
+  <h2 class="section">2. 3層の境界表（M3の核）</h2>
+  <p class="body-text">「誰が何を作る/持つか」で3層に切る。層Aを自力で全部終わらせてから層Bを依頼し、層Bの回答を待つ間に層Cの受け入れ準備を進める、が基本の進み方（詳細は4章）。</p>
+
+  <!-- 層A -->
+  <div class="layer a">
+    <div class="layer-head"><div class="tag">A</div><h3>デモ環境だけで完成できるもの</h3><span class="owner">担当：Daiya（このリポジトリ内で完結）</span></div>
+    <div class="layer-sub">Loku本体にもモニター店舗にも依存しない。今すぐ着手・完成できる。</div>
+    <ul class="item-list">
+      <li>
+        <div class="it">タグ本体（loku-attn.js）</div>
+        <div class="id">1stパーティ anon_id 発行・localStorage併用・7日揮発前提。既存LPにhead1行を足すだけで動く後付け設計を維持する。</div>
+      </li>
+      <li>
+        <div class="it">lt_src・lt_ad パラメータ捕捉</div>
+        <div class="id">広告用リンク（画面5 <code class="inline">POST /setup/ad-links</code>で発行）のURLパラメータをタグが読み取り保存。LINE内ブラウザのITP・Cookie制限を受けないURL運びの経路として既に設計済み。</div>
+      </li>
+      <li>
+        <div class="it">IntersectionObserverブロック計測</div>
+        <div class="id">BOX_ORDER（hero/problem/beforeafter/staff/pricing/voice/faq/cta）単位の注視・離脱を計測。画面2「LP注目マップ」の元データ。</div>
+      </li>
+      <li>
+        <div class="it">sendBeacon離脱フラッシュ</div>
+        <div class="id">タブクローズ・遷移時に取りこぼしなく計測データを送る仕組み。</div>
+      </li>
+      <li>
+        <div class="it">結合API（anon_id → friend_id）</div>
+        <div class="id"><code class="inline">POST /api/attn/merge</code> 相当（app.mjs 452行目付近）。<code class="inline">consent_record</code>（obtained_by・method・未成年時は guardian_consent 必須）が揃わないと <code class="inline">consent_record_complete=false</code> のまま結合を保留するゲートを既に実装済み。M3ではこのAPIを実サーバーへデプロイするだけで、ロジック自体の新規実装は不要。</div>
+      </li>
+      <li>
+        <div class="it">既存LPへの後付けブロック推定</div>
+        <div class="id">画面5「セットアップ」＝AIがLPのHTML構造からブロックを自動推定→店主が10秒で目視確認・修正するUI。<code class="inline">POST /setup/infer-boxes</code> / <code class="inline">PUT /setup/box-mapping</code>。</div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 層B -->
+  <div class="layer b">
+    <div class="layer-head"><div class="tag">B</div><h3>Loku本体／社長（奥村航稀）の協力が要るもの</h3><span class="owner">担当：Loku本体（奥村社長への依頼）</span></div>
+    <div class="layer-sub">Daiya側だけでは完成できない。1件ずつ依頼し、社長判断待ちの間は層Cの準備に回る。</div>
+    <ul class="item-list">
+      <li>
+        <div class="it">予約リンクへの anon_id パラメータ通過</div>
+        <div class="id">現状の予約リンクは <code class="inline">l.oku-ai.co.jp/r/&lt;id&gt;</code> 固定形式。ここに anon_id をクエリまたはstateとして通し、友だち追加完了後に回収できるようにする改修が必要。</div>
+        <div class="ask-box"><b>依頼の一文：</b>「予約リンク（l.oku-ai.co.jp/r/&lt;id&gt;）に、LP側で発行したanon_idをパラメータとして付けて渡し、友だち追加完了時にそのanon_idを一緒に受け取れるようにしていただけますか。」</div>
+      </li>
+      <li>
+        <div class="it">友だち追加時の friend_id 払い出しWebhook</div>
+        <div class="id">友だち追加が成立した瞬間に、上記で渡した anon_id と新規発行された friend_id のペアをこちら（Loku Tuning側の結合API）へ通知するWebhookが必要。これが来ないと anon_id→friend_id結合（層Aの結合API）が発火しない。</div>
+        <div class="ask-box"><b>依頼の一文：</b>「友だち追加が成立したタイミングで、そのfriend_idと直前に受け取ったanon_idのペアを、こちらが指定するエンドポイントにWebhookで送っていただけますか（本文はJSONで {anon_id, friend_id, added_at} の3項目のみで構いません）。」</div>
+      </li>
+      <li>
+        <div class="it">AI配信（撃つ側）への因果セグメント受け渡し</div>
+        <div class="id">画面3「送る承認箱」で店主が承認した下書きを、Loku本体の実配信（LINE一斉/個別送信機能）に渡して実送信させる経路。現状は「送信キューに乗せる」までがLoku Tuning側の責任範囲で、実送信はLoku本体が担う。</div>
+        <div class="ask-box"><b>依頼の一文：</b>「店主が承認済みにした下書き（friend_id・本文・送信予定タイミング）を渡すので、それをLINE配信として実際に送る窓口（APIかWebhook）を用意していただけますか。」</div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- 層C -->
+  <div class="layer c">
+    <div class="layer-head"><div class="tag">C</div><h3>モニター店舗側に必要なもの</h3><span class="owner">担当：モニター店舗オーナー</span></div>
+    <div class="layer-sub">募集時のチェックリストで先に確認する（3章）。</div>
+    <ul class="item-list">
+      <li><div class="it">LP（既存で可）</div><div class="id">headにタグ1行を追加できること。新規LP制作は不要。</div></li>
+      <li><div class="it">LINE公式アカウント</div><div class="id">友だち追加の受け皿として保有していること。</div></li>
+      <li><div class="it">Loku導入（または導入意思）</div><div class="id">未導入の場合はモニター参加と同時に導入を条件とする。</div></li>
+      <li><div class="it">モニター同意</div><div class="id">計測・LINE結合・データの使い途への同意（3章参照）。</div></li>
+    </ul>
+  </div>
+
+  <h2 class="section">3. モニター募集方式（1スタジオ目の経路変更・2026-08-24 Daiya決定）</h2>
+  <p class="body-text">経路を「YUKIさん1社への個別提案」から「コミュニティ内の無料モニター募集（複数店並列）」へ切り替える。</p>
+
+  <div class="block-label"><span class="material-symbols-outlined">route</span>募集経路</div>
+  <div class="flow">
+    <span class="node self">はじめて.AI（Daiya所属コミュニティ）</span><span class="arrow">→ 無料モニター募集案内 →</span>
+    <span class="node">応募（複数店舗を並列で受け入れ）</span>
+  </div>
+
+  <div class="block-label"><span class="material-symbols-outlined">priority_high</span>優先枠</div>
+  <p class="body-text">ピラティス／パーソナルジム（pilatesプリセット適合）を優先枠とする。他業種の応募は受け入れるが、因果コード辞書（judo温存済みの既定プリセット）が業種特化のため<b>参考データ扱い</b>とし、楔（Loku Tuningの主戦場を絞る方針）を崩さない。</p>
+
+  <div class="block-label"><span class="material-symbols-outlined">checklist</span>募集要件チェックリスト</div>
+  <div class="check"><span class="material-symbols-outlined">check_box_outline_blank</span>LP有無（既存URLがあるか。なければ導入時に簡易LP代替を検討）</div>
+  <div class="check"><span class="material-symbols-outlined">check_box_outline_blank</span>LINE公式有無（未保有なら開設意思があるか）</div>
+  <div class="check"><span class="material-symbols-outlined">check_box_outline_blank</span>月間流入の目安（LP訪問が月100件未満だと因果診断のサンプル数が不足しやすい旨を事前共有）</div>
+  <div class="check"><span class="material-symbols-outlined">check_box_outline_blank</span>業種（ピラティス／パーソナルジム＝優先枠、それ以外＝参考データ扱いである旨を事前共有）</div>
+
+  <div class="block-label"><span class="material-symbols-outlined">verified_user</span>モニター同意の要点</div>
+  <table class="api">
+    <tr><th>同意項目</th><th>店主に説明する内容</th><th>対応するcompliance資産</th></tr>
+    <tr><td>計測内容の明示</td><td>LP上での滞留・離脱・注視ブロックを匿名IDで計測する旨</td><td>タグ本体（層A）・<code>consent_record</code></td></tr>
+    <tr><td>LINE結合の同意</td><td>予約リンク経由で匿名IDとLINE友だちを紐付ける旨。同意情報（誰が・どの方法で取得したか）を記録する</td><td><code>POST /api/attn/merge</code> の <code>consent_record</code>（obtained_by / method / guardian_consent）</td></tr>
+    <tr><td>opt-out</td><td>友だちがいつでも配信停止・プロファイリング拒否できる旨</td><td><code>POST /api/attn/opt-out</code>・<code>POST /api/attn/profiling-opt-out</code></td></tr>
+    <tr><td>データの使い途</td><td>診断・下書き作成にのみ使い、送信は必ず店主の承認を通す旨（画面3の思想）</td><td><code>buildDisclosure</code>（開示文生成）・画面3「送る承認箱」</td></tr>
+    <tr><td>無料の対価＝事例化許可</td><td>モニター期間中の利用料は無料とする代わりに、事例として紹介する許可をいただく。<b>店名は匿名可</b>とし、強制はしない</td><td>募集文・同意書に別途明記（本設計書の対象外）</td></tr>
+  </table>
+
+  <p class="body-text" style="margin-top:14px">募集文そのものはここでは作らない。方式決定（本章）を踏まえ、別途Daiyaが指示する。</p>
+
+  <h2 class="section">4. M3実装順</h2>
+  <p class="body-text">層Aを先に全部終わらせる → 層Bを依頼して待つ間に層Cの受け入れ準備を進める → 層Cを受け入れる、の順で進む。層Bの回答待ちで手が止まらないよう、層Cの準備は層B依頼と並行する。</p>
+
+  <div class="step">
+    <div class="snum">1</div>
+    <div>
+      <div class="stitle">層Aを実サーバーへデプロイ</div>
+      <div class="sdesc">handoff-demo のインメモリ実装（app.mjs）を永続ストレージ（DB）に載せ替え、実LPから叩ける本番エンドポイントとして立てる。タグ本体（loku-attn.js）も配布可能なCDN/静的ホスティングに置く。</div>
+      <div class="sdone"><span class="material-symbols-outlined">check_circle</span>完了判定：任意のテストLPにタグ1行を貼り、anon_id発行・ブロック計測・sendBeacon離脱送信が本番エンドポイントに届くことを確認できた時</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="snum">2</div>
+    <div>
+      <div class="stitle">層Bを社長へ依頼（2章の3件）</div>
+      <div class="sdesc">予約リンクへのanon_id通過→友だち追加Webhook→AI配信への受け渡し、の順で依頼。1件目が通らないと2件目の検証ができないため、順番に確認しながら進める。</div>
+      <div class="sdone"><span class="material-symbols-outlined">check_circle</span>完了判定：テストLP→予約リンク→LINE友だち追加を実際に行い、anon_idとfriend_idのペアが層AのDBに届いて結合が成立した時</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="snum">3</div>
+    <div>
+      <div class="stitle">層Cの受け入れ準備（層Bと並行）</div>
+      <div class="sdesc">3章の募集要件チェックリスト・同意の要点をもとに、Daiyaが別途、募集文とモニター同意書のたたきを作る（本設計書の対象外）。募集経路（はじめて.AI）への案内文の下書きも並行して進めて良い。</div>
+      <div class="sdone"><span class="material-symbols-outlined">check_circle</span>完了判定：募集文・同意書のたたきが揃い、いつでも募集を出せる状態になった時</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="snum">4</div>
+    <div>
+      <div class="stitle">モニター1店舗目の受け入れ・実地確認</div>
+      <div class="sdesc">層1〜3が揃った状態で最初のモニター店舗を受け入れ、画面5のセットアップフロー（タグ設置→ブロック自動推定→広告リンク発行）を店主と一緒に完走する。</div>
+      <div class="sdone"><span class="material-symbols-outlined">check_circle</span>完了判定：モニター店舗の実LPで「LP訪問→LINE友だち追加→因果診断→承認箱への下書き投入」が実データで1周した時（＝M4「モニター店舗で実運用」への移行条件）</div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    作成：2026-08-24　対象リポジトリ：C:\Users\Daiya\loku-tuning-plugin　参照元：dashboard-design/design-spec.html（思想・マイルストーン・画面5仕様）／handoff-demo/app.mjs（collect/merge系エンドポイントの入出力）
+  </div>
+
+</div>
+</body>
+</html>
