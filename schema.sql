@@ -74,6 +74,47 @@ create table if not exists loku_attn_identity (
 );
 create index if not exists idx_attn_identity_friend on loku_attn_identity(friend_id);
 
+-- ========== Loku内の質問テーマ（Journey Intelligence） ==========
+-- 生の会話本文や症状は保存しない。Loku側で分類済みの非機微カテゴリだけを受け取る。
+create table if not exists loku_attn_conversation_events (
+  event_id    text primary key,               -- LokuイベントID（再送時の冪等キー）
+  tenant_id   uuid not null,
+  friend_id   uuid not null,                  -- references friends(id)
+  theme       text not null check (theme in (
+    'pricing', 'schedule', 'access', 'trial_flow', 'eligibility', 'cancellation', 'other'
+  )),
+  occurred_at timestamptz not null default now()
+);
+create index if not exists idx_attn_conversation_tenant_at
+  on loku_attn_conversation_events(tenant_id, occurred_at desc);
+create index if not exists idx_attn_conversation_friend
+  on loku_attn_conversation_events(friend_id);
+
+-- Marketer Autopilot: 週次購読と配信待ちキュー。外部送信はLoku既存workerへ渡す。
+create table if not exists loku_attn_report_subscriptions (
+  subscription_id text primary key,
+  tenant_id uuid not null,
+  page_id uuid not null references loku_attn_pages(id) on delete cascade,
+  channel text not null check (channel in ('loku', 'line', 'email')),
+  delivery_target_ref text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+create table if not exists loku_attn_report_outbox (
+  delivery_id text primary key,               -- subscription_id:week_key
+  subscription_id text not null references loku_attn_report_subscriptions(subscription_id) on delete cascade,
+  tenant_id uuid not null,
+  week_key text not null,
+  payload jsonb not null,
+  status text not null default 'ready' check (status in ('ready', 'sent', 'failed')),
+  created_at timestamptz not null default now(),
+  sent_at timestamptz,
+  unique (subscription_id, week_key)
+);
+
+-- RLS方針：参照はauthのtenant_idと一致する行だけ。書込はLoku本体のservice roleから行い、
+-- friendの所属テナント・現行同意・theme allowlistをAPI側でも再確認する。
+
 -- ★要配慮個人情報（症状・診断等の健康情報）は保存しない。
 --   collect 側で stripSensitive() により剥がす（compliance.mjs）。本テーブル群は行動データのみ。
 -- ★忘れられる権利/オプトアウト（/api/attn/forget 相当）:

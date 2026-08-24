@@ -6,9 +6,12 @@
 
 import http from 'node:http';
 import crypto from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { checkCopy, stripSensitive, detectHealthTerms, buildDisclosure, defaultSubprocessors, transferAssessment, assessBreach } from './compliance.mjs';
 import { ingestSearchConsole, searchSummary } from './search-console.mjs';
 import { deriveExit, inferCause, suggestActions, CAUSE_LABEL, CAUSE_CODES, PRESETS, DEFAULT_PRESET, getPreset } from './causal.mjs';
+
+const JOURNEY_UI = readFileSync(new URL('./journey-intelligence.html', import.meta.url), 'utf8');
 
 // 計測堅牢化（目付還流P2）：既知botのUAパターン。素直に名乗るbot＝GA4のIABリスト相当の最小版。
 // ※ヘッドレス偽装は捕まらない＝SDK側の挙動フラグ(suspect_bot)との二段構え。
@@ -50,6 +53,9 @@ function seedStore() {
     friend_tags: new Map(),   // friend_id -> Set(tag)  ← 本番Lokuの friend_tags 相当
     search_console: [],       // Search Console API から引っ張った行（来る前）
     product_events: [],       // 自分の画面(オンボ/管理)の利用イベント（自己改善サイクル）
+    conversation_events: [],  // Loku内の質問テーマ（本文は保存せず、匿名集計用カテゴリのみ）
+    report_subscriptions: new Map(), // subscription_id -> 週次自動報告設定
+    report_outbox: [],        // Loku既存配信へ渡す配信待ちpayload（week×subscriptionで冪等）
     bookings: new Set(),      // 予約が入った friend_id（実測CVRの母数）
     opt_out: new Set(),       // 配信停止した friend_id（送らない）
     bot_excluded: [],         // botとして計測から除外した記録（黙って消さず可視化する＝bot-report）
@@ -233,13 +239,126 @@ function primaryCause(store, fid) {
   return best;
 }
 
+const CONVERSATION_THEMES = new Set(['pricing', 'schedule', 'access', 'trial_flow', 'eligibility', 'cancellation', 'other']);
+
+function sourceLabel(sess) {
+  const source = sess.utm?.source || sess.entry_source;
+  const medium = sess.utm?.medium || sess.entry_medium;
+  const campaign = sess.utm?.campaign || sess.entry_campaign;
+  if (source) return [source, medium, campaign].filter(Boolean).join(' / ');
+  if (sess.referrer) {
+    try { return new URL(sess.referrer).hostname || 'referral'; } catch { return 'referral'; }
+  }
+  if (sess.entry_query) return 'organic_search';
+  return 'direct_or_unknown';
+}
+
+// Journey Intelligenceの「4つの答え」を1レスポンスにまとめる。
+// 生の会話本文は扱わず、Loku側で分類済みの質問テーマだけを集計する。
+export function buildJourneyIntelligenceSummary(store, { tenantId = null, pageSlug = null, since = null, until = null } = {}) {
+  const page = pageSlug ? pageBySlug(store, pageSlug) : null;
+  if (pageSlug && !page) return null;
+  const selected = [...store.sessions.entries()].filter(([, sess]) => {
+    if (sess.suspect_bot) return false;
+    if (tenantId && sess.tenant_id !== tenantId) return false;
+    if (page && sess.page_id !== page.id) return false;
+    const at = sess.started_at || 0;
+    return (!since || at >= since) && (!until || at <= until);
+  });
+  const anons = new Set(selected.map(([anon]) => anon));
+  const reachedFriends = new Set();
+  const consentedFriends = new Set();
+  for (const [anon, id] of store.identity) {
+    if (!anons.has(anon)) continue;
+    reachedFriends.add(id.friend_id);
+    if (id.consented) consentedFriends.add(id.friend_id);
+  }
+  const bookedFriends = new Set([...consentedFriends].filter(fid => store.bookings.has(fid)));
+
+  const sources = new Map();
+  for (const [, sess] of selected) {
+    const label = sourceLabel(sess);
+    sources.set(label, (sources.get(label) || 0) + 1);
+  }
+  const source_breakdown = [...sources.entries()].map(([source, visitors]) => ({ source, visitors })).sort((a, b) => b.visitors - a.visitors);
+
+  const boxGroups = { booked: new Map(), not_booked: new Map() };
+  const boxCounts = { booked: new Map(), not_booked: new Map() };
+  for (const [anon, id] of store.identity) {
+    if (!anons.has(anon) || !id.consented) continue;
+    const group = store.bookings.has(id.friend_id) ? 'booked' : 'not_booked';
+    const sess = store.sessions.get(anon);
+    for (const b of store.boxes.filter(x => x.page_id === sess.page_id)) {
+      const value = store.box_stats.get(`${anon}::${b.box_key}`)?.engagement;
+      if (!Number.isFinite(value)) continue;
+      boxGroups[group].set(b.box_key, (boxGroups[group].get(b.box_key) || 0) + value);
+      boxCounts[group].set(b.box_key, (boxCounts[group].get(b.box_key) || 0) + 1);
+    }
+  }
+  const averageBoxes = group => [...boxGroups[group].entries()].map(([box_key, total]) => ({
+    box_key, average_attention: Math.round(total / boxCounts[group].get(box_key)), samples: boxCounts[group].get(box_key),
+  })).sort((a, b) => b.average_attention - a.average_attention);
+
+  const themes = new Map();
+  for (const event of store.conversation_events) {
+    if (!consentedFriends.has(event.friend_id)) continue;
+    if (tenantId && event.tenant_id !== tenantId) continue;
+    if (since && event.at < since) continue;
+    if (until && event.at > until) continue;
+    themes.set(event.theme, (themes.get(event.theme) || 0) + 1);
+  }
+  const inferred = new Map();
+  for (const fid of consentedFriends) {
+    const cause = primaryCause(store, fid);
+    if (cause) inferred.set(cause.code, (inferred.get(cause.code) || 0) + 1);
+  }
+  const visitors = anons.size;
+  return {
+    period: { since, until }, page_slug: pageSlug,
+    funnel: {
+      lp_visitors: visitors,
+      loku_reached: reachedFriends.size,
+      outcomes: bookedFriends.size,
+      lp_to_loku_rate: visitors ? Math.round(reachedFriends.size / visitors * 10000) / 100 : null,
+      outcome_rate: visitors ? Math.round(bookedFriends.size / visitors * 10000) / 100 : null,
+    },
+    source_breakdown,
+    attention_by_outcome: { booked: averageBoxes('booked'), not_booked: averageBoxes('not_booked') },
+    hesitation_themes: [...themes.entries()].map(([theme, count]) => ({ theme, count })).sort((a, b) => b.count - a.count),
+    inferred_dropoff_causes: [...inferred.entries()].map(([cause_code, count]) => ({ cause_code, label: CAUSE_LABEL[cause_code], count })).sort((a, b) => b.count - a.count),
+    evidence: { identified_friends: consentedFriends.size, conversation_events: [...themes.values()].reduce((a, n) => a + n, 0) },
+    caveat: 'Attentionは推定注目度。質問テーマはLoku内で分類済みのカテゴリ集計であり、生の会話本文は保存しない。',
+  };
+}
+
+export function buildWeeklyReport(summary) {
+  const topSource = summary.source_breakdown[0];
+  const topTheme = summary.hesitation_themes[0];
+  const f = summary.funnel;
+  return {
+    title: 'Loku Tuning 週次Journeyレポート',
+    lines: [
+      `LP訪問 ${f.lp_visitors}件 → Loku到達 ${f.loku_reached}件（${f.lp_to_loku_rate ?? '-'}%）→ 成果 ${f.outcomes}件（${f.outcome_rate ?? '-'}%）`,
+      topSource ? `最多流入：${topSource.source}（${topSource.visitors}件）` : '流入データ：まだありません',
+      topTheme ? `最多の迷い：${topTheme.theme}（${topTheme.count}件）` : 'Loku内の質問テーマ：まだありません',
+    ],
+    generated_from: 'aggregated_facts', auto_sent: false,
+  };
+}
+
 // ---- HTTP ハンドラ ----
 function handle(store, req, res, body) {
   const url = new URL(req.url, 'http://x');
   const send = (code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)); };
+  const sendHtml = html => { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(html); };
   // RLS相当：呼び出し元テナント（本番はJWT・デモは x-tenant-id ヘッダ）。未指定なら管理ビュー扱い。
   const callerTenant = req.headers?.['x-tenant-id'] || null;
   const denyCrossTenant = (ownerTenant) => !tenantAccessAllowed(callerTenant, ownerTenant);
+
+  // Journey Intelligence UI。Next.js移植時は既存Loku分析画面内の1ページとして配置する。
+  if (req.method === 'GET' && (url.pathname === '/journey-intelligence' || url.pathname === '/journey-intelligence/')) {
+    return sendHtml(JOURNEY_UI);
+  }
 
   // POST /api/attn/collect — SDKからのバッチ（到達＋ボックス視線）
   if (req.method === 'POST' && url.pathname === '/api/attn/collect') {
@@ -284,8 +403,16 @@ function handle(store, req, res, body) {
       sess.entry_query = d.entry.query ?? sess.entry_query;
       sess.entry_pos = d.entry.pos ?? sess.entry_pos;
       sess.device = d.entry.device ?? sess.device;
+      sess.entry_source = d.entry.source ?? sess.entry_source ?? null;
+      sess.entry_medium = d.entry.medium ?? sess.entry_medium ?? null;
+      sess.entry_campaign = d.entry.campaign ?? sess.entry_campaign ?? null;
       // 検索クエリの健康語＝要配慮個人情報の"推知"に配慮するフラグ
       sess.entry_health = detectHealthTerms(String(d.entry.query || '')).length > 0;
+    }
+    if (d.referrer != null && sess.referrer == null) sess.referrer = String(d.referrer).slice(0, 2048);
+    if (d.utm && sess.utm == null && typeof d.utm === 'object' && !Array.isArray(d.utm)) {
+      sess.utm = Object.fromEntries(['source', 'medium', 'campaign', 'content', 'term']
+        .filter(k => d.utm[k] != null).map(k => [k, String(d.utm[k]).slice(0, 256)]));
     }
     // 計測堅牢化P1（目付還流）：単調増加マージ。離脱時フラッシュ(P0)で複数バッチが届く前提なので、
     // 後着の途中スナップショット（小さい値）が確定値を巻き戻さないよう max を取る。
@@ -424,6 +551,92 @@ function handle(store, req, res, body) {
     const page = pageBySlug(store, url.searchParams.get('page_slug'));
     if (!page) return send(404, { error: 'unknown page' });
     return send(200, { page_slug: page.slug, search: searchSummary(store, page.id) });
+  }
+
+  // POST /api/attn/conversation-event — Loku内の質問を匿名カテゴリで記録（本文・健康情報は保存しない）
+  if (req.method === 'POST' && url.pathname === '/api/attn/conversation-event') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.event_id || !d.friend_id || !d.theme) return send(400, { error: 'event_id, friend_id, theme required' });
+    if (!CONVERSATION_THEMES.has(d.theme)) return send(400, { error: 'unknown theme' });
+    if ('text' in d || 'message' in d || 'content' in d) return send(400, { error: 'raw conversation text is not accepted' });
+    const ownerTenant = tenantOfFriend(store, d.friend_id);
+    if (!ownerTenant) return send(404, { error: 'friend journey not found' });
+    if (denyCrossTenant(ownerTenant)) return send(403, { error: 'tenant scope violation' });
+    const consented = [...store.identity.values()].some(id => id.friend_id === d.friend_id && id.consented);
+    if (!consented) return send(403, { error: 'consent required' });
+    if (!store.conversation_events.some(e => e.event_id === d.event_id)) {
+      store.conversation_events.push({ event_id: d.event_id, friend_id: d.friend_id, tenant_id: ownerTenant, theme: d.theme, at: Date.now() });
+    }
+    return send(200, { ok: true, accepted: true, stored_fields: ['event_id', 'friend_id', 'tenant_id', 'theme', 'at'] });
+  }
+
+  // GET /api/attn/journey-intelligence — 利用者へ見せる4つの答えを一括集計
+  if (req.method === 'GET' && url.pathname === '/api/attn/journey-intelligence') {
+    const pageSlug = url.searchParams.get('page_slug');
+    if (!pageSlug) return send(400, { error: 'page_slug required' });
+    const page = pageBySlug(store, pageSlug);
+    if (!page) return send(404, { error: 'unknown page' });
+    if (denyCrossTenant(page.tenant_id)) return send(403, { error: 'tenant scope violation' });
+    const parseDate = key => {
+      const raw = url.searchParams.get(key);
+      if (!raw) return null;
+      const ms = Date.parse(raw);
+      return Number.isFinite(ms) ? ms : NaN;
+    };
+    const since = parseDate('since'), until = parseDate('until');
+    if (Number.isNaN(since) || Number.isNaN(until)) return send(400, { error: 'invalid period' });
+    return send(200, buildJourneyIntelligenceSummary(store, { tenantId: page.tenant_id, pageSlug, since, until }));
+  }
+
+  // GET /api/attn/weekly-report — Marketer AutopilotがLINE/メールへ渡す事実ベースの週次payload
+  if (req.method === 'GET' && url.pathname === '/api/attn/weekly-report') {
+    const pageSlug = url.searchParams.get('page_slug');
+    if (!pageSlug) return send(400, { error: 'page_slug required' });
+    const page = pageBySlug(store, pageSlug);
+    if (!page) return send(404, { error: 'unknown page' });
+    if (denyCrossTenant(page.tenant_id)) return send(403, { error: 'tenant scope violation' });
+    const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const summary = buildJourneyIntelligenceSummary(store, { tenantId: page.tenant_id, pageSlug, since, until: Date.now() });
+    return send(200, { summary, report: buildWeeklyReport(summary), delivery_ready: true });
+  }
+
+  // POST /api/attn/weekly-subscription — Marketer Autopilotの週次購読設定
+  if (req.method === 'POST' && url.pathname === '/api/attn/weekly-subscription') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    if (!d.subscription_id || !d.page_slug || !d.channel || !d.delivery_target_ref) return send(400, { error: 'subscription_id, page_slug, channel, delivery_target_ref required' });
+    if (!/^[a-z0-9][a-z0-9_-]{1,63}$/i.test(d.subscription_id)) return send(400, { error: 'invalid subscription_id' });
+    if (!['loku', 'line', 'email'].includes(d.channel)) return send(400, { error: 'invalid channel' });
+    const page = pageBySlug(store, d.page_slug);
+    if (!page) return send(404, { error: 'unknown page' });
+    if (denyCrossTenant(page.tenant_id)) return send(403, { error: 'tenant scope violation' });
+    store.report_subscriptions.set(d.subscription_id, { subscription_id: d.subscription_id, tenant_id: page.tenant_id, page_slug: page.slug, channel: d.channel, delivery_target_ref: String(d.delivery_target_ref).slice(0, 128), active: d.active !== false });
+    return send(200, { ok: true, subscription_id: d.subscription_id });
+  }
+
+  // POST /api/attn/run-weekly-reports — cronから呼び、Loku既存配信向けoutboxを自動生成
+  if (req.method === 'POST' && url.pathname === '/api/attn/run-weekly-reports') {
+    let d; try { d = JSON.parse(body || '{}'); } catch { return send(400, { error: 'bad json' }); }
+    const now = d.now ? Date.parse(d.now) : Date.now();
+    if (!Number.isFinite(now)) return send(400, { error: 'invalid now' });
+    const weekStart = new Date(now);
+    weekStart.setUTCHours(0, 0, 0, 0);
+    weekStart.setUTCDate(weekStart.getUTCDate() - ((weekStart.getUTCDay() + 6) % 7)); // 月曜始まり
+    const weekKey = weekStart.toISOString().slice(0, 10);
+    const created = [];
+    for (const sub of store.report_subscriptions.values()) {
+      if (!sub.active || denyCrossTenant(sub.tenant_id)) continue;
+      const deliveryId = `${sub.subscription_id}:${weekKey}`;
+      if (store.report_outbox.some(x => x.delivery_id === deliveryId)) continue;
+      const summary = buildJourneyIntelligenceSummary(store, { tenantId: sub.tenant_id, pageSlug: sub.page_slug, since: now - 7 * 86400000, until: now });
+      const item = { delivery_id: deliveryId, week_key: weekKey, subscription_id: sub.subscription_id, tenant_id: sub.tenant_id, channel: sub.channel, delivery_target_ref: sub.delivery_target_ref, report: buildWeeklyReport(summary), status: 'ready', created_at: now };
+      store.report_outbox.push(item); created.push(deliveryId);
+    }
+    return send(200, { ok: true, week_key: weekKey, created, created_count: created.length });
+  }
+
+  // GET /api/attn/report-outbox — 本番はLoku配信workerが自テナントのreadyだけ取得
+  if (req.method === 'GET' && url.pathname === '/api/attn/report-outbox') {
+    return send(200, { deliveries: store.report_outbox.filter(x => !denyCrossTenant(x.tenant_id)) });
   }
 
   // POST /api/attn/booking — 予約が入った友だちを記録（実測CVRの母数）

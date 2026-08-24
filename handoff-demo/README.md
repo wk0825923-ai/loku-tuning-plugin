@@ -30,6 +30,8 @@ node load-test.mjs 3000
 
 # 6) 手動サーバ（curlで触りたいとき）
 node serve.mjs         # → http://127.0.0.1:8787
+# Journey Intelligence UI → http://127.0.0.1:8787/journey-intelligence
+# 完成イメージのデモデータ表示 → http://127.0.0.1:8787/journey-intelligence?demo=1
 ```
 
 手動curl例：
@@ -60,6 +62,20 @@ curl -s "localhost:8787/api/attn/friend-tags?friend_id=f_1"
 | POST | `/api/attn/forget` | 忘れられる権利/オプトアウト：friend/anon単位で削除 | 全テーブルから削除 |
 | POST | `/api/attn/search-console/ingest` | サチコAPIで引っ張った行を取り込み（来る前を搭載） | `search_console_daily`（`search-console.mjs`） |
 | GET | `/api/attn/search-summary?page_slug=` | ページの検索サマリ（表示回数/クリック/順位/上位クエリ） | 集計 |
+| POST | `/api/attn/conversation-event` | Loku内の質問テーマをカテゴリで記録（生の会話本文は拒否） | `loku_attn_conversation_events` |
+| GET | `/api/attn/journey-intelligence?page_slug=` | 流入・Loku到達・成果・注目・迷いを一括集計 | 集計ビュー/API |
+| GET | `/api/attn/weekly-report?page_slug=` | LINE/メール定期配信用の事実ベースpayload | Marketer Autopilot |
+| POST | `/api/attn/weekly-subscription` | ページ単位の週次自動報告を購読 | `loku_attn_report_subscriptions` |
+| POST | `/api/attn/run-weekly-reports` | cron実行で週次payloadを冪等生成 | `loku_attn_report_outbox` |
+| GET | `/api/attn/report-outbox` | Loku既存配信workerへready payloadを渡す | `loku_attn_report_outbox` |
+
+### Journey Intelligence MVP（4つの答え）
+- **どこから来たか**：UTM、明示source、referrer、検索流入の順に自動分類。
+- **何人がLokuへ進んだか**：LPセッションと匿名→友だち結合からユニーク集計。
+- **何人が成果化したか**：同意済みの結合とLoku予約イベントを接続して集計。
+- **何を見て何に迷ったか**：予約者/未予約者別Attentionと、Loku内の質問テーマを並べる。
+
+会話は本文を保存せず、`pricing / schedule / access / trial_flow / eligibility / cancellation / other` のカテゴリだけを受信する。Attentionは視線ではなく推定注目度として表示する。`weekly-report`は自動送信先へそのまま渡せるpayloadを返すが、デモ自体は外部送信しない。
 
 ### Search Console 連携（サチコをAPIで引っ張って搭載）
 - サチコの検索データはGoogle所有＝自前計測では取れないので、**Search Console API（無料）で引っ張って**取り込む。

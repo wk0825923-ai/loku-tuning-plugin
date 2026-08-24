@@ -1076,6 +1076,64 @@ async function suite() {
     eq((await post('/api/attn/collect', { anon_id: 'BAD2', page_slug: 'seitai-lp-a', target_id: 'studio-001', measurement_phase: 'treatment' })).status, 400, '効果測定: treatmentはchange_id必須');
     eq((await get('/api/attn/change-outcomes?target_id=studio-001')).status, 400, '効果測定: 集計ID欠落を拒否');
   });
+
+  section('H Journey Intelligence MVP（4つの答え＋週次報告）');
+  await withServer(async ({ post, get, postH, getH }) => {
+    const ui = await get('/journey-intelligence');
+    const uiHtml = await ui.text();
+    ok(ui.status === 200 && ui.headers.get('content-type').includes('text/html'), 'JI: 実UIを同一オリジンで配信');
+    ok(uiHtml.includes('今週の顧客ジャーニー') && uiHtml.includes('Marketer Autopilot'), 'JI: 4つの答えと週次報告UIを搭載');
+    await post('/api/attn/collect', {
+      anon_id: 'JI1', page_slug: 'seitai-lp-a',
+      utm: { source: 'instagram', medium: 'paid', campaign: 'trial-a' },
+      boxes: [{ box_key: 'hero', engagement: 70 }, { box_key: 'pricing', engagement: 100 }],
+    });
+    await post('/api/attn/merge', { anon_id: 'JI1', friend_id: 'f_ji1', consented: true });
+    await post('/api/attn/booking', { friend_id: 'f_ji1' });
+    eq((await post('/api/attn/conversation-event', { event_id: 'ce_1', friend_id: 'f_ji1', theme: 'pricing' })).status, 200, 'JI: 予約者の質問テーマを記録');
+    eq((await post('/api/attn/conversation-event', { event_id: 'ce_1', friend_id: 'f_ji1', theme: 'pricing' })).status, 200, 'JI: 会話イベント再送は冪等');
+
+    await post('/api/attn/collect', {
+      anon_id: 'JI2', page_slug: 'seitai-lp-a',
+      entry: { source: 'instagram', medium: 'paid', campaign: 'trial-a' },
+      boxes: [{ box_key: 'hero', engagement: 60 }, { box_key: 'faq', engagement: 90 }],
+    });
+    await post('/api/attn/merge', { anon_id: 'JI2', friend_id: 'f_ji2', consented: true });
+    await post('/api/attn/conversation-event', { event_id: 'ce_2', friend_id: 'f_ji2', theme: 'schedule' });
+
+    await post('/api/attn/collect', {
+      anon_id: 'JI3', page_slug: 'seitai-lp-a', referrer: 'https://google.com/search?q=studio',
+      boxes: [{ box_key: 'hero', engagement: 20 }],
+    });
+
+    const ji = await (await get('/api/attn/journey-intelligence?page_slug=seitai-lp-a')).json();
+    eq(ji.funnel, { lp_visitors: 3, loku_reached: 2, outcomes: 1, lp_to_loku_rate: 66.67, outcome_rate: 33.33 }, 'JI: LP→Loku→成果の一括ファネル');
+    eq(ji.source_breakdown[0], { source: 'instagram / paid / trial-a', visitors: 2 }, 'JI: 流入元を自動集計');
+    ok(ji.attention_by_outcome.booked.some(x => x.box_key === 'pricing' && x.average_attention === 100), 'JI: 成果者の推定注目を集計');
+    ok(ji.attention_by_outcome.not_booked.some(x => x.box_key === 'faq' && x.average_attention === 90), 'JI: 未成果者の推定注目を集計');
+    eq(ji.hesitation_themes, [{ theme: 'pricing', count: 1 }, { theme: 'schedule', count: 1 }], 'JI: Loku内の迷いを本文なしで集計');
+    eq(ji.evidence.conversation_events, 2, 'JI: 会話イベント再送で重複しない');
+    ok(ji.caveat.includes('推定注目度'), 'JI: 視線と断定しない注意書き');
+
+    eq((await post('/api/attn/conversation-event', { event_id: 'ce_bad', friend_id: 'f_ji1', theme: 'pricing', message: '生の質問' })).status, 400, 'JI: 生の会話本文を拒否');
+    eq((await post('/api/attn/conversation-event', { event_id: 'ce_bad2', friend_id: 'f_ji1', theme: 'medical_condition' })).status, 400, 'JI: 未定義・機微テーマを拒否');
+    eq((await getH('/api/attn/journey-intelligence?page_slug=seitai-lp-a', { 'x-tenant-id': 't_2' })).status, 403, 'JI: 他テナント集計を拒否');
+
+    const weekly = await (await get('/api/attn/weekly-report?page_slug=seitai-lp-a')).json();
+    ok(weekly.delivery_ready && weekly.report.generated_from === 'aggregated_facts', 'JI: 週次自動配信可能な事実payload');
+    ok(weekly.report.lines[0].includes('LP訪問 3件') && weekly.report.lines[0].includes('成果 1件'), 'JI: 週次文面に主要ファネルを掲載');
+
+    eq((await post('/api/attn/weekly-subscription', { subscription_id: 'studio_weekly', page_slug: 'seitai-lp-a', channel: 'loku', delivery_target_ref: 'owner_room_1' })).status, 200, 'JI: 週次自動報告を購読');
+    const run1 = await (await post('/api/attn/run-weekly-reports', { now: '2026-08-04T00:00:00Z' })).json();
+    eq(run1.created_count, 1, 'JI: cron実行で週次payloadを自動生成');
+    eq(run1.week_key, '2026-08-03', 'JI: 週次キーは月曜開始日で安定');
+    const run2 = await (await post('/api/attn/run-weekly-reports', { now: '2026-08-04T12:00:00Z' })).json();
+    eq(run2.created_count, 0, 'JI: 同じ週の再実行は配信を重複生成しない');
+    const outbox = await (await get('/api/attn/report-outbox')).json();
+    ok(outbox.deliveries.length === 1 && outbox.deliveries[0].status === 'ready', 'JI: Loku既存配信が受け取れるoutbox');
+    const foreignOutbox = await (await getH('/api/attn/report-outbox', { 'x-tenant-id': 't_2' })).json();
+    eq(foreignOutbox.deliveries.length, 0, 'JI: 他テナントは週次outboxを読めない');
+  });
 }
 
 const LOOPS = Number(process.argv[2] || 5);
