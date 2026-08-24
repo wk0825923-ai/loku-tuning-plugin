@@ -168,23 +168,53 @@
 
   <!-- 層B -->
   <div class="layer b">
-    <div class="layer-head"><div class="tag">B</div><h3>Loku本体／社長（奥村航稀）の協力が要るもの</h3><span class="owner">担当：Loku本体（奥村社長への依頼）</span></div>
-    <div class="layer-sub">Daiya側だけでは完成できない。1件ずつ依頼し、社長判断待ちの間は層Cの準備に回る。</div>
+    <div class="layer-head"><div class="tag">B</div><h3>Loku本体／社長（奥村航稀）の協力が要るもの</h3><span class="owner">担当：Loku本体（社長依頼はpending・下の再現マップで自力進行を優先）</span></div>
+    <div class="layer-sub">Daiya側だけでは完成できない前提だったが、Loku既存機能で代替できる経路が見つかったため、下記3件の社長依頼は<b>保険（pending）</b>に格下げする。まずは既存機能での再現マップを進め、詰まった時だけ依頼を起こす。</div>
+
+    <div class="block-label" style="margin-top:18px"><span class="material-symbols-outlined">alt_route</span>既存Loku機能での再現マップ（社長依頼せずに進める経路）</div>
     <ul class="item-list">
       <li>
-        <div class="it">予約リンクへの anon_id パラメータ通過</div>
-        <div class="id">現状の予約リンクは <code class="inline">l.oku-ai.co.jp/r/&lt;id&gt;</code> 固定形式。ここに anon_id をクエリまたはstateとして通し、友だち追加完了後に回収できるようにする改修が必要。</div>
-        <div class="ask-box"><b>依頼の一文：</b>「予約リンク（l.oku-ai.co.jp/r/&lt;id&gt;）に、LP側で発行したanon_idをパラメータとして付けて渡し、友だち追加完了時にそのanon_idを一緒に受け取れるようにしていただけますか。」</div>
+        <div class="it">① LIFF（登録済）でanon_id×userId結合</div>
+        <div class="id">友だち追加時のfriend_id払い出しWebhookを新設しなくても、既に登録済みのLIFFエンドポイントを経由すれば、LIFF起動時に取得できるLINEのuserIdと、LP側で発行済みのanon_idをその場で結合できる。層Bの2件目（friend_id払い出しWebhook）の代替経路になる。</div>
       </li>
       <li>
-        <div class="it">友だち追加時の friend_id 払い出しWebhook</div>
-        <div class="id">友だち追加が成立した瞬間に、上記で渡した anon_id と新規発行された friend_id のペアをこちら（Loku Tuning側の結合API）へ通知するWebhookが必要。これが来ないと anon_id→friend_id結合（層Aの結合API）が発火しない。</div>
-        <div class="ask-box"><b>依頼の一文：</b>「友だち追加が成立したタイミングで、そのfriend_idと直前に受け取ったanon_idのペアを、こちらが指定するエンドポイントにWebhookで送っていただけますか（本文はJSONで {anon_id, friend_id, added_at} の3項目のみで構いません）。」</div>
+        <div class="it">② トラッキングURL（uid=LINE→LP再訪の実名捕捉）＋流入経路＋MCP友だち管理</div>
+        <div class="id">Loku既存のトラッキングURL機能はuidパラメータ付きでLPへ再訪させられるため、LINE配信→LP再訪の経路で実名（friend_id）側からLP行動を捕捉できる。予約リンクへのanon_idパラメータ通過（層Bの1件目）を待たずとも、流入経路の記録とMCP友だち管理を組み合わせれば同等の帰属が取れる可能性がある。</div>
       </li>
       <li>
-        <div class="it">AI配信（撃つ側）への因果セグメント受け渡し</div>
-        <div class="id">画面3「送る承認箱」で店主が承認した下書きを、Loku本体の実配信（LINE一斉/個別送信機能）に渡して実送信させる経路。現状は「送信キューに乗せる」までがLoku Tuning側の責任範囲で、実送信はLoku本体が担う。</div>
-        <div class="ask-box"><b>依頼の一文：</b>「店主が承認済みにした下書き（friend_id・本文・送信予定タイミング）を渡すので、それをLINE配信として実際に送る窓口（APIかWebhook）を用意していただけますか。」</div>
+        <div class="it">③ MCP APIキー配信（Bearer lk_）</div>
+        <div class="id">送る承認箱の下書きをLoku本体の実配信に渡す経路（層Bの3件目）も、新規Webhookを依頼する前に、既存のMCP APIキー（Bearer lk_）配信経路で送信キューから直接LINE配信を叩けないかを先に検証する。</div>
+      </li>
+    </ul>
+
+    <div class="block-label" style="margin-top:18px"><span class="material-symbols-outlined">help</span>残確認2点（再現マップを進める上でのブロッカー）</div>
+    <ul class="item-list">
+      <li>
+        <div class="it">LIFFエンドポイントのホスト方法</div>
+        <div class="id">①の結合をLoku Tuning側で完結させるには、LIFFエンドポイント（結合ロジックを載せるページ）をどこにホストするか（Loku Tuning側のドメインで持てるか／Loku本体側のみか）が未確認。</div>
+      </li>
+      <li>
+        <div class="it">MCPのアクティブアカウント固定の罠</div>
+        <div class="id">MCP経由の操作はアクティブアカウント固定で動く仕様（おく社内ルール教科書でも既知の注意点）。③のAPIキー配信・送信経路をモニター店舗ごとに正しく向けられるか、アカウント切替の運用が未確認。</div>
+      </li>
+    </ul>
+
+    <div class="block-label" style="margin-top:18px"><span class="material-symbols-outlined">pending</span>社長依頼（保険・pending扱い）</div>
+    <ul class="item-list">
+      <li>
+        <div class="it">〔pending〕予約リンクへの anon_id パラメータ通過</div>
+        <div class="id">現状の予約リンクは <code class="inline">l.oku-ai.co.jp/r/&lt;id&gt;</code> 固定形式。②のトラッキングURL経路で代替できなかった場合のみ依頼する。</div>
+        <div class="ask-box"><b>依頼の一文（保険）：</b>「予約リンク（l.oku-ai.co.jp/r/&lt;id&gt;）に、LP側で発行したanon_idをパラメータとして付けて渡し、友だち追加完了時にそのanon_idを一緒に受け取れるようにしていただけますか。」</div>
+      </li>
+      <li>
+        <div class="it">〔pending〕友だち追加時の friend_id 払い出しWebhook</div>
+        <div class="id">①のLIFF経路で結合が成立すれば不要になる想定。LIFF経路で詰まった場合のみ依頼する。</div>
+        <div class="ask-box"><b>依頼の一文（保険）：</b>「友だち追加が成立したタイミングで、そのfriend_idと直前に受け取ったanon_idのペアを、こちらが指定するエンドポイントにWebhookで送っていただけますか（本文はJSONで {anon_id, friend_id, added_at} の3項目のみで構いません）。」</div>
+      </li>
+      <li>
+        <div class="it">〔pending〕AI配信（撃つ側）への因果セグメント受け渡し</div>
+        <div class="id">③のMCP APIキー配信経路で送信キューから直接叩けなかった場合のみ依頼する。</div>
+        <div class="ask-box"><b>依頼の一文（保険）：</b>「店主が承認済みにした下書き（friend_id・本文・送信予定タイミング）を渡すので、それをLINE配信として実際に送る窓口（APIかWebhook）を用意していただけますか。」</div>
       </li>
     </ul>
   </div>

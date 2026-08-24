@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ピラティススタジオ（検証用ダミーLP）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { margin:0; font-family: -apple-system, "Hiragino Kaku Gothic ProN", sans-serif; background:#ffffff; color:#222; line-height:1.7; }
+  section, article { padding: 48px 24px; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 28px; }
+  h2 { font-size: 22px; border-left: 6px solid #7a8b6f; padding-left: 12px; }
+  .hero { background:#f4f1ea; }
+  .cta-btn { display:inline-block; padding:12px 28px; background:#7a8b6f; color:#fff; border-radius:6px; text-decoration:none; }
+  .note { font-size: 12px; color:#777; }
+</style>
+</head>
+<body>
+
+<!-- ============ ここから data-box あり版セクション（明示ボックス） ============ -->
+<section class="hero" data-box="hero">
+  <h1>ピラティススタジオ（検証用ダミーLP・data-box明示版）</h1>
+  <p>体験レッスン受付中。インストラクター在籍・完全予約制。</p>
+  <a class="cta-btn" href="#cta">体験予約はこちら</a>
+</section>
+
+<section data-box="problem">
+  <h2>こんなお悩みありませんか</h2>
+  <p>デスクワークでの肩こり・腰の張り・姿勢の崩れが気になる方向けのレッスンです。</p>
+</section>
+
+<section data-box="pricing">
+  <h2>料金プラン</h2>
+  <p>体験レッスン：1回分の料金は店舗にお問い合わせください。月会費プランあり。</p>
+  <p class="note">※効果には個人差があります（誇大表現は使用していません）。</p>
+</section>
+
+<section id="cta" data-box="cta">
+  <h2>体験レッスンの予約</h2>
+  <a class="cta-btn" href="#">LINEで予約する</a>
+</section>
+
+<!-- ============ ここから data-box なし版セクション（自動分割の検証用） ============ -->
+<article>
+  <h2>スタジオの雰囲気</h2>
+  <p>少人数制で一人ひとりの体の状態に合わせてレッスンを進めます。</p>
+</article>
+
+<article>
+  <h2>インストラクター紹介</h2>
+  <p>資格を持つインストラクターが在籍しています。</p>
+</article>
+
+<section>
+  <h2>よくあるご質問</h2>
+  <p>Q. 運動未経験でも参加できますか。A. はい、未経験の方も多く参加されています。</p>
+</section>
+
+<footer style="text-align:center; padding:32px; font-size:12px; color:#999;">
+  検証用ダミーLP（実在店舗ではありません）
+</footer>
+
+<!--
+  タグ読み込み（type=module・data属性で注入）。
+  data-site = collectのpage_slugに相当。data-endpoint = /api/attn/collect の実URL。
+  実サーバーに繋がなくても、コンソールでエラーが出ないこと・IntersectionObserver等の
+  初期化ログで動作確認できることを目的にした検証ページ。
+-->
+<script type="module" src="./loku-attn.js" data-site="test-pilates-lp" data-endpoint="http://localhost:8787/api/attn/collect"></script>
+
+</body>
+</html>
