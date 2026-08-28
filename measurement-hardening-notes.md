@@ -1122,3 +1122,35 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **根拠URL（S/A）**：Brave「Fingerprinting Protections」Wiki（S一次） https://github.com/brave/brave-browser/wiki/Fingerprinting-Protections ／ Brave privacy-updates「Fingerprint randomization」 https://brave.com/privacy-updates/3-fingerprint-randomization/ ・「Fingerprinting defenses 2.0」 https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/ ／ Mozilla Hacks「Introducing State Partitioning」（S一次） https://hacks.mozilla.org/2021/02/introducing-state-partitioning/ ／ Firefox Support「Total Cookie Protection and website breakage FAQ」（S一次） https://support.mozilla.org/en-US/kb/total-cookie-protection-and-website-breakage-faq ／（現物A）index.html 指紋API全走査=0件・456行 anon_id=Math.random・464行 同一オリジン相対collect・app.mjs 384行 UA=bot除外専用。
 - **検証方法**：本番Loku実データで Brave/Firefox（指紋防御・状態分割ON）流入のユニーク客が同一セッション内で水増ししないか＋将来フォールバックID実装時に指紋非依存か（メイン領分・P7〜P27の境界テスト群と同時）。**優先度＝低（現状免疫・将来設計の歯止め）**。
 - **位置づけ**：第35回（CNAME/GPC）・第38回（バウンス防御）と同じ「同一オリジン＝多重防御に同時免疫」系譜の**指紋防御(farbling)＋状態分割(TCP)版**。CNAME(35・DNS偽装)→バウンス(38・リダイレクト中継)→今回(41・指紋/状態分割)と、“計測を延命する裏道/横断追跡”が順に潰される中で潮流は一貫「回避策でなく素の設計＝同一オリジン＋指紋非依存＋関与計測」。**法的可否なし（farbling/TCPは純計測技術・GPCのような尊重義務は伴わない）。** コードは触っていない。
+
+---
+
+## 追加観点（2026-08-28・目付第42回巡回からの還流／P1への追加観点・新種P番号は起こさない・コード無変更）
+
+### 【P1 追加観点】値のマージは max（P1）＝CRDTのmax-register性で遅着・順不同に免疫。残る抜けは「event-time が payload に無い＝“いつ起きたか”の座標がサーバ受信時刻で刻まれ、遅着が不可視」
+
+**前提**：以下は実装照合表（P0-P3済）・P1（単調増加マージ）・P22（死活）・P23（差分）・P27（保持期間/ロールアップ）とは**重複しない**。テーマはビート2「リアルタイム/ストリーミングの遅着(late-arriving)・順序保証」（第39回“次々点指名”のcarryover）。**新規P番号は起こさない＝P1の射程（＝遅着・順不同への耐性）そのものの深掘りゆえ P1追加観点**。コードは触っていない。
+
+- **現象①（免疫＝当たり・過剰批判しない）**：collect（`handoff-demo/app.mjs` 364行〜）は値を全て `Math.max` でマージ＝`active_sec`（429行）・box視線 `active_view`/`engagement`/`revisits`（441-445行）。会話イベントは `event_id` 重複除去（577行）、タグ発火も重複除去（192-193行）。**＝可換(commutative)・結合的(associative)・冪等(idempotent) の3条件を満たす max-register＝CRDTの強い結果整合性**（δ-CRDT収束証明 arXiv 2006.09823・A）。よって**「起きた順」と「届いた順」が食い違っても・at-least-once配送で同じバッチが二度来ても、数字は同じ答えに収束する＝設計の当たり**。効果台帳が時間で区切らず生から毎回計算する設計（第39回P27で確認）も、この免疫を強めている（時間窓で締めないので遅着で締め後にズレる事故が起きない）。**＝Flink/Dataflow級の順序保証エンジン・ウォーターマークは足さなくてよい＝「何を足さないか」の守り（第41回系譜）。**
+
+- **残る本物の抜け（＝P1追加観点）**：max が守るのは**値（高さ）**であって**“いつ”ではない**。
+  - **(a) 時刻がサーバ受信時刻**：`last_seen_at`（431行）・`started_at`（393行）は `Date.now()`＝**processing time**。payloadに**client event-time（実際に端末で起きた時刻）が一切無い**。＝深夜に端末ロック→LINE内WKWebView凍結→翌朝フラッシュ、の来訪が「昨日の来訪」でなく「今朝の来訪」として時間帯集計に落ちる。保持期間purge（78行が `last_seen_at` を見る）も遅着で寿命が延び、消すべき期間が残る（第39回P27の裏面）。
+  - **(b) 遅着が不可視**：Lokuの得意技「黙って消さず件数を見せる」（bot-report/suspect_bot）の対象に**遅着だけが入っていない**＝何時間遅れて届いたかを測る術（client_ts/flushed_at）が無い。
+  - **(c) 先着＝先起きの仮定**：帰属を「最初に届いた値で固定」＝`target_id`/`change_id`/`measurement_phase`（399-401行）・流入 `entry_*`（402-411行）。遅着で順が入れ替われば後の面の名札が先に付きうる（1セッション内で施策群を差し替えない設計＝398行の意図ゆえ被害は限定的だが、event-timeがあれば“貼り直し”を証明可能）。
+
+- **業界の裏書き（S一次）**：GA4 Measurement Protocol は遅着イベントの実時刻を `timestamp_micros` で持たせるが**72時間より古いと72時間前に強制丸め**、さらに**セッションの流入元(source/medium/campaign)を継がせるのはより厳しい24時間ルール**（Google公式・S一次）＝**「端末が実時刻を積む」＋「サーバが許容遅延の窓を持つ」の二段が世界標準**であり、Lokuの「先着ID固定」も同じ天井に直面する（実名アンカー friend_id が恒久ゆえ merge/P9 で後埋め救済できるが、後埋めも“起きた順”を知らないと精度が落ちる）。
+
+- **対策案（採否・しきい値・実装・QAはDaiya/メイン領分。目付は数字も作らない・コードも触らない）**：
+  - **(a) event-time を1〜2フィールド積む**：端末フラッシュ時に `event_ts`（実時刻）＋任意で `flushed_at` を payload に載せ、サーバは**時間帯/日次/週次の集計は event_ts で・受信管理は Date.now() で**の二本持ち。P1のmaxマージ・P27 purgeはそのまま（`last_seen_at` は受信時刻のまま運用ログとして残す）。
+  - **(b) 遅着を可視化**：`受信 − event_ts` がしきい値（例：数時間）超のバッチを**黙って畳まず件数カウンタで見せる**（bot-report と同じ器）＝店主に「先週分が◯件、遅れて今週届いた」と説明可能にする＝計測の信頼担保。
+  - **(c) 順序保証エンジンは足さない**：maxマージ（P1）＋`event_id` 重複除去は維持。**CRDT性で数字は既に免疫**（現象①で証明）＝ウォーターマーク/ソートキュー/exactly-once配送のような重装備は主戦場（軽量・非エンジニア運用）に不要。実装コストは(a)(b)の“時刻1点”に絞る。
+
+- **検証方法**：同一 anon で「event_ts=昨日・受信=今日」の遅着バッチを作り、①時間帯別集計が event_ts で昨日に落ちるか（受信時刻に引きずられないか）②遅着カウンタが1件立つか③maxマージ（P1）を巻き戻さず・P27 purge境界を誤らせないか④先着帰属(399-401行)が event-time で貼り直せるか、をE2Eで確認（メイン領分・1スタジオ目本番化時・P7〜P27境界テスト群と同群）。
+
+- **根拠URL（S/A）**：Apache Flink公式「Timely Stream Processing / Streaming Analytics」（S一次・event time/processing time/watermark/bounded out-of-orderness） https://nightlies.apache.org/flink/flink-docs-stable/docs/concepts/time/ ／ Google「The Dataflow Model」VLDB 2015（S一次・査読論文） https://dl.acm.org/doi/10.14778/2824032.2824076 ／ Google公式「Send Measurement Protocol events」（S一次・timestamp_micros 72h/engagement_time_msec） https://developers.google.com/analytics/devguides/collection/protocol/ga4/sending-events ／ Simo Ahava「Session Attribution With GA4 Measurement Protocol」（A・24hセッション帰属を一次挙動で検証） https://www.simoahava.com/analytics/session-attribution-with-ga4-measurement-protocol/ ／「Verifying Strong Eventual Consistency in δ-CRDTs」arXiv 2006.09823（A・可換/結合/冪等の収束証明） https://arxiv.org/pdf/2006.09823 ／（現物A）app.mjs 364/393/399-411/429/431/441-445/577/192-193/78行・read 2026-08-28。
+
+- **優先度**：中〜低（**数字は免疫＝壊れていない**。“時刻のにじみ”が効くのは①週次レポートの日付境界②因果の帰属（どの週の打ち手の成果か）③保持期間purgeの境界。実名アンカーが恒久ゆえ後埋めが軽い＝実装コスト小。判断はDaiya）。
+
+- **申し送り**：event-time保持＝“いつアクセスしたか”の保存＝APPI/保持期間(storage-limitation)論点に触れうる＝**見廻り(lp-mimawari)へ**（遅着バッファ窓の法的扱い）。「遅着・順不同バッチ」の負のテスト観点＝**番人(qa-auditor)へ**。ChatGPT Atlas撤退(8/9・OpenAI公式一次)＝AIブラウザ勢力図シグナル＝**物見(intel-scout)へ**。
+
+- **位置づけ**：第35回(CNAME/GPC)・第38回(バウンス)・第41回(farbling/TCP)と同じ「**現物は素の設計ゆえ免疫＋残る1点を将来ガード化**」パターンの4例目。今回は「免疫の理由をCRDT性という**原理**で言語化」できたのが収穫＝免疫の範囲（値は守る/時刻は守らない）を正しく引くことが次の実装判断を軽くする。P1(値のmaxマージ)・P22(装置の死活)・P23(差分)・P27(保持/ロールアップ)と同じ“受け口の時間軸”一族だが、P1の射程（遅着耐性）の深掘りゆえ**新種を起こさずP1追加観点**（P0-P27 grep+全読で既存種の主題に含まれないこと確認・seed-sprawl回避を新機構でない確認の上で継続）。コードは触っていない。
