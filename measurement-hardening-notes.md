@@ -1154,3 +1154,36 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **申し送り**：event-time保持＝“いつアクセスしたか”の保存＝APPI/保持期間(storage-limitation)論点に触れうる＝**見廻り(lp-mimawari)へ**（遅着バッファ窓の法的扱い）。「遅着・順不同バッチ」の負のテスト観点＝**番人(qa-auditor)へ**。ChatGPT Atlas撤退(8/9・OpenAI公式一次)＝AIブラウザ勢力図シグナル＝**物見(intel-scout)へ**。
 
 - **位置づけ**：第35回(CNAME/GPC)・第38回(バウンス)・第41回(farbling/TCP)と同じ「**現物は素の設計ゆえ免疫＋残る1点を将来ガード化**」パターンの4例目。今回は「免疫の理由をCRDT性という**原理**で言語化」できたのが収穫＝免疫の範囲（値は守る/時刻は守らない）を正しく引くことが次の実装判断を軽くする。P1(値のmaxマージ)・P22(装置の死活)・P23(差分)・P27(保持/ロールアップ)と同じ“受け口の時間軸”一族だが、P1の射程（遅着耐性）の深掘りゆえ**新種を起こさずP1追加観点**（P0-P27 grep+全読で既存種の主題に含まれないこと確認・seed-sprawl回避を新機構でない確認の上で継続）。コードは触っていない。
+
+---
+
+## 【2026-08-29・第43回巡回＝ビート1「計測精度の敵」単軸＝Safari以外の“プライバシー・ブラウザ”第2弾＝Firefox RFP（Resist Fingerprinting）/ FPP（Fingerprinting Protection）への免疫確認＋レターボックスの接触点1個＋守るべきガード2本】＝新種P番号なし・P8/P12（可視ゲート）＋P3/P5（指紋非依存）への追加観点（目付還流・コード無変更）
+
+**前提**：以下は**新種P番号を起こさない＝既存 P8/P12（可視・注視ゲート＝`document.visibilityState==='visible'&&hasFocus`＋箱の coverage/centerY 判定）／P3・P5（anon_id 指紋非依存・同一オリジン設計）への“追加観点”**。テーマは「ビート1＝計測精度の敵の未踏サブ＝Safari以外ブラウザ第2弾＝Firefox の指紋対策 RFP/FPP」（第41回で Brave farbling／Firefox TCP=状態分割を扱い、第41/42回で“次点/次々点指名”された宿題(b)「Firefox RFP＝Brave farbling相当のSafari以外」の直行消化）。**追記前に本ファイル全読＝P0〜P27（P4/P24 の欠番含む）＋P35 を grep し、RFP/FPP のランダム化・偽装・レターボックスが既存種の機構に無いことを確認**。現物照合＝index.html 指紋API全走査で該当0件・唯一の寸法読みは 345行 `window.innerHeight`・456行 anon_id=Math.random・464行 同一オリジン相対＝**Lokuはほぼ免疫（接触点は letterboxing の1個のみ）ゆえ新種でなくP8/P12＋P3/P5への注記に留める**（第35回CNAME/GPC・第38回バウンス・第41回farbling・第42回event-time と同じ「免疫確認＋将来ガード」パターンの5例目。ただし**“完全免疫（0接触点）”でなく“ほぼ免疫＋決定的な微小接触点1個”は本パターン初**）。**コードは触っていない。** 採否・実装・QAはDaiya／メイン領分。
+
+- **現象①（S一次＝Firefox FPP＝ランダム化・farbling相当）**：`privacy.fingerprintingProtection`＝canvas・フォント・ハードウェア情報を「サイト（eTLD+1）×セッション」ごとに微randomize（Braveのファーブリングと同思想）。**FF145（2025-11）で canvas ランダム化が本流出荷**（canvas 読み戻しにランダムデータを注入・セッションごとに変化）・フォント指紋防御をモバイルへ拡大・非標準フォントは描画に不使用。プライベートブラウジング等で有効化される既定寄りの防御。
+
+- **現象②（S一次＝Firefox RFP＝標準化・偽装）**：`privacy.resistFingerprinting`＝全員を generic な同一値に見せる Tor 由来パッチ束。**タイムゾーンを UTC に固定**（bug 1330890・spoofTimezone 既定true）・**言語を en-US**・**画面解像度/UA を偽装**・canvas ノイズ・**レターボックス（後述）**。**RFPは通常のFirefoxでは既定オフ＝Torブラウザと手動ONの利用者のみ**（bug 1330882・letterboxing はTorで既定ON・Firefoxは既定オフ）。
+
+- **現象③（S一次＝RFP レターボックス＝唯一の接触点）**：letterboxing＝ウィンドウ/画面の正確な寸法（高エントロピー指紋）を隠すため、**コンテンツ幅・高さを 200×100 のマス目に量子化し余白（灰色帯）で埋める**。**RFP有効時 `window.innerWidth`/`innerHeight` は丸めた値を返す**（`screen.width/height` も `innerWidth/innerHeight` を報告）。Torは2015〜既定、Firefoxは2019〜移植（bug 1330882/1407366）。
+
+- **現物確認（目付がgrep・過剰批判せず“既に堅い部分”を切り分け・25回超連続）＝Lokuはほぼ免疫（接触点1個）＝当たり**：
+  - (a) `index.html` を `getContext/toDataURL/AudioContext/webgl/getParameter/enumerateDevices/hardwareConcurrency/deviceMemory/Intl/DateTimeFormat/timeZone/getTimezoneOffset/screen/navigator.language/navigator.userAgent/navigator.plugins` で全走査＝**指紋API該当0件**＝**FPPのランダム化にも RFPのタイムゾーン/言語/UA/画面偽装にも、ズラす対象が存在しない**（免疫）。
+  - (b) anon_id は `'anon_'+Math.random().toString(36).slice(2,10)`（456行）＝**Math.randomは指紋対策の対象外**（FPP/farbling でズラされない）。collect は `/api/attn/collect` 同一オリジン相対（464行）。
+  - (c) **唯一の寸法読み＝345行 `var vh=window.innerHeight`**。これが箱の可視判定に使われる（354-362行：`interBot=Math.min(r.bottom,vh)`／`coverage=interH/(Math.min(r.height,vh)||1)`／`centerY=((interTop+interBot)/2)/vh` の注視ゾーン ZONE_LO..ZONE_HI 判定）。＝**RFP レターボックスが innerHeight を200×100に丸めると、この可視・注視ゲートが Firefox RFP/Tor 客に限り最大±100px 系統ズレしうる唯一の接触点**。
+  - (d) **だが壊れない3理由**：(i) `innerHeight` を**絶対pxしきい値でなく“比率”**で使う（coverage も centerY/vh も vh で割る）＝丸めが分母分子で相殺されやすい。(ii) 丸めは**決定的（毎tick同じ値）＝ランダムに揺れない＝匿名IDや active_sec の水増しは起きない**（canvasのランダムノイズとは質が違う“静かな系統ズレ”）。(iii) RFP自体が**既定オフ＋主戦場はiOS/LINE＝WKWebView（Firefoxでない）**＝実露出ほぼゼロ。
+  - (e) `app.mjs` 384行の `user-agent` 読みは既知botのUA除外（P2）専用＝RFPのUA偽装でUA文字列がズレても影響は「bot-UA一致判定」のみ（正規客は素通り・第41回と同結論）。
+
+- **対策案＝直すものは無い＝“守るべき現行設計”のガード2本（コードは触らない・新種P番号なし・採否はDaiya/メイン領分）**：
+  - **(a) 指紋APIベースの anon_id 予備を将来も足さない**：localStorage不能時のフォールバックに canvas/audio 等の**指紋をIDに使う**と、FPP/farbling で毎セッション化け＝“同じ人が毎回別人”＝ユニーク客水増し。要るなら `crypto.randomUUID()` 等の**非指紋乱数**に限る（＝第41回 Brave farbling ガードの Firefox FPP版・P3/P5 の指紋非依存ガード再確認）。
+  - **(b) 可視・注視しきい値に viewport の絶対px を足さない**：注視ゾーンや可視判定を「画面上◯◯px〜◯◯px」の**絶対px**で固定すると、RFP レターボックスの200×100丸めで Firefox RFP/Tor 客**だけ**ゾーン境界が系統ズレ＝その層の engagement（読了率）＝タグ発火が偏る。**現物345-362行は既に相対比率設計ゆえ免疫＝この設計を維持するのがガード**（P8/P12 可視ゲートの追加観点）。
+
+- **相互参照（再種化しない）**：Firefox の状態分割（TCP）と同一オリジン collect の免疫は**第41回で既に確認済**＝今回は再種化せず相互参照に留める（TCPは第三者コンテキストのみ・collect同一オリジンは無傷）。Brave farbling（第41回）と Firefox FPP は同思想ゆえ現象①は第41回の裏書き。
+
+- **根拠URL（S/A）**：Mozilla Support「Resist Fingerprinting」 https://support.mozilla.org/en-US/kb/resist-fingerprinting （S一次・egress遮断のため検索スニペット確認）／Mozilla「Firefox's protection against fingerprinting」 https://support.mozilla.org/en-US/kb/firefox-protection-against-fingerprinting （S一次）／Bugzilla #1330882「set new windows to rounded dimensions 200×100（tor 19459・letterboxing）」 https://bugzilla.mozilla.org/show_bug.cgi?id=1330882 （S一次）／Bugzilla #1407366「(letterboxing) resistFingerprinting=true」 https://bugzilla.mozilla.org/show_bug.cgi?id=1407366 （S一次）／Bugzilla #1330890「Use UTC timezone when resistFingerprinting=true」 https://bugzilla.mozilla.org/show_bug.cgi?id=1330890 （S一次）／gHacks「Firefox gets some new fingerprint protections（FF145 canvas randomization）」 https://www.ghacks.net/2025/11/11/firefox-gets-some-new-fingerprint-protections/ （A→traced）／Fingerprint.com「Can Letterboxing Prevent Browser Fingerprinting?」 https://fingerprint.com/blog/can-letterboxing-prevent-browser-fingerprinting/ （A→traced）／（現物A）index.html 指紋API全走査=0件・345行 vh=window.innerHeight・354-362行 coverage/centerY 比率・456行 anon_id=Math.random・464行 同一オリジン相対collect・app.mjs 384行 UA=bot除外専用（grep/read・2026-08-29確認）。
+
+- **検証方法**：本番Loku実データで Firefox RFP/Tor 流入（既定オフゆえ極少）の①指紋非依存匿名IDが同一セッション内で水増ししないか（将来フォールバックID実装時）②レターボックスで innerHeight が丸められても可視・注視ゲート（coverage/centerY 比率）が壊れず読了率＝タグ発火が層で偏らないか（メイン領分・P8/P12/P7〜P27 の境界テスト群と同群）。**優先度＝低（現状ほぼ免疫・接触点1個も決定的微小・RFP既定オフで実露出ほぼゼロ・将来設計の歯止め）**。
+
+- **申し送り**：LINE Agent i／ミニアプリタブ Agent AI＝LINE内でAIが本人に代わって予約を取る面＝**決断面のAI内側化が主戦場LINEへ構想前進**（2026-07-02 15周年発表会）＝法規制（AI代理予約の本人同意・なりすまし・LINE内/DM内予約でのLP表示射程）は**見廻り(lp-mimawari)へ**（第36/40回申し送りの継続）。「Firefox RFP/Tor 流入」の負のテスト観点＝**番人(qa-auditor)へ**。LINE「Life on LINE with AI Agent」＝IG Map/Meta Business Agent/TikTok GO/AI予約代行と同方向の“発見→会話→取引”内側化潮流のLINE版＝**物見(intel-scout)へ**。
+
+- **位置づけ**：第35回(CNAME/GPC)・第38回(バウンス)・第41回(farbling/TCP)・第42回(event-time)と同じ「**現物は素の設計ゆえ免疫＋残る点を将来ガード化**」パターンの5例目。今回の収穫＝**免疫には“完全免疫（0接触点＝第41回Brave）”と“ほぼ免疫＋決定的な微小接触点1個（今回RFP letterboxing）”があると分かった**＝RFPだけは他の指紋対策と違い「指紋APIでない“寸法”という、正規の可視計測が実際に使う数」を丸めるゆえ、免疫の境界に薄い接触点が初めて1個引けた。ただし比率設計＋決定的丸め＋既定オフで実害ほぼ無＝**新種を起こさずP8/P12＋P3/P5追加観点**（P0-P27＋P35 grep+全読で既存種の主題に含まれないこと確認・seed-sprawl回避を新機構でない確認の上で継続）。コードは触っていない。
