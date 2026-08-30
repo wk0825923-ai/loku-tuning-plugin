@@ -1187,3 +1187,45 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **申し送り**：LINE Agent i／ミニアプリタブ Agent AI＝LINE内でAIが本人に代わって予約を取る面＝**決断面のAI内側化が主戦場LINEへ構想前進**（2026-07-02 15周年発表会）＝法規制（AI代理予約の本人同意・なりすまし・LINE内/DM内予約でのLP表示射程）は**見廻り(lp-mimawari)へ**（第36/40回申し送りの継続）。「Firefox RFP/Tor 流入」の負のテスト観点＝**番人(qa-auditor)へ**。LINE「Life on LINE with AI Agent」＝IG Map/Meta Business Agent/TikTok GO/AI予約代行と同方向の“発見→会話→取引”内側化潮流のLINE版＝**物見(intel-scout)へ**。
 
 - **位置づけ**：第35回(CNAME/GPC)・第38回(バウンス)・第41回(farbling/TCP)・第42回(event-time)と同じ「**現物は素の設計ゆえ免疫＋残る点を将来ガード化**」パターンの5例目。今回の収穫＝**免疫には“完全免疫（0接触点＝第41回Brave）”と“ほぼ免疫＋決定的な微小接触点1個（今回RFP letterboxing）”があると分かった**＝RFPだけは他の指紋対策と違い「指紋APIでない“寸法”という、正規の可視計測が実際に使う数」を丸めるゆえ、免疫の境界に薄い接触点が初めて1個引けた。ただし比率設計＋決定的丸め＋既定オフで実害ほぼ無＝**新種を起こさずP8/P12＋P3/P5追加観点**（P0-P27＋P35 grep+全読で既存種の主題に含まれないこと確認・seed-sprawl回避を新機構でない確認の上で継続）。コードは触っていない。
+
+---
+
+## 【2026-08-30・第44回巡回＝ビート3「決断面の移動」＝非reach_path角度＝新種P28】決断面プラットフォームとの"計測契約"のサイレント破断検知 — 外部の決断面（GBP/Instagram/LINE）がリンク/URL仕様/APIバージョンを変えると、collectは200のまま source/reach_path の構成比が黙ってズレる＝P22の"死活監視"では見えない"生きている装置の意味ズレ"を、構成比・unknown率の分布シフト＋外部changelogアンカーで検知する（目付還流・コード無変更）
+
+**前提**：新規種**P28**。テーマは第43回宿題(2)「必ずビート3・非reach_path角度」の直行消化＝宿題が名指しした角度②「決断面プラットフォームのAPI/リンク仕様変更で計測契約が黙って壊れる問題」。**追記前に本ファイル全読＝P0〜P27（P4/P24欠番）＋P35をgrep**し、既存種の機構に無いことを確認。特に**P22（装置の死活＝データが来ない/丸ごと拒否される）とは検知器も害の型も直交**（後述・非重複節）。**コードは触っていない。** 採否・実装・QAはDaiya／メイン領分。
+
+**害の型（新象限）**：P20=分子の汚染／P21=分母の欠落／P2=非人間／P3=縦の連続性／P22=装置の死活（沈黙・拒否）＝いずれも「Loku内部の穴」。**P28＝"外部の決断面との計測契約"が相手都合で一方的に変わり、装置は生きたまま（collect 200・拒否ゼロ・値もクリーン）"意味のズレた構成比"を出し続ける**＝**内部でなく"境界（外部契約）"の破断**＝既存象限のどれとも直交。
+
+- **現象（S一次×3＋A＝4つの決断面が別々に"契約は相手の時計で変わる"を実証）**：
+  - **① Instagram アプリ内ブラウザは referrer ヘッダを剥がす（A・複数実装者が同一観測に収束・機構はMDN S）**：IGのアプリ内ブラウザはプライバシーのため `Referer` を送らない＝GA4/自前計測とも「IGから来た」の証跡（document.referrer）が空になり、**UTMが無ければ Direct/Unassigned へ落ちる**。回避定石＝**UTMはURL内に載るのでヘッダ剥がしを生き延びる**（IG計測ブログ群が口を揃える）。＝**referrer依存の source 判定は"相手のブラウザ仕様"に人質**。
+  - **② LINE は決断面のリンク仕様・アプリ内ブラウザ仕様を点リリースで変える（S一次 LINE Developers）**：`line://` スキームと LIFF v1形式 `line.me/R/app/{liffId}` は**廃止予定（乗っ取り攻撃対策・ただし廃止日は未設定＝日付なしの宙吊り）**→現行は `https://liff.line.me/{liffId}` / `https://miniapp.line.me/{liffId}`。さらに**LINE 26.7.0 で LIFFブラウザのヘッダ仕様を変更**（最小化ボタン→閉じるボタン等）＝**決断面の"ホスト名"と"アプリ内ブラウザ挙動"が点リリースで動く**＝referrerホスト名（liff.line.me vs miniapp.line.me vs line.me/R）で面を分けている集計は、廃止・移行のたびにバケツが黙って割れる/移る。
+  - **③ Meta Graph API はバージョン期限で決断面のAPI契約を切る（S一次 Meta）**：バージョンは次版の2年後に期限切れ・**期限切れ版へのリクエストは HTTP 400 Bad Request（サブコード付き）**。一部変更は"migration"として全版横断で最低90日窓（App Dashboard > Settings > Migrations）。v20は2026-09-24廃止予定。＝**外部の決断面APIから母数（IG面の予約/導線）を突合する経路は、相手のバージョン時計で黙って400化しうる**（GBP突合＝見廻り/メイン領分だが、契約破断の型は同じ）。
+  - **④ GBP は公式 Change Log と Deprecation schedule（sunset-dates）を持ち、決断面リンク（予約リンク＝Place Actions API）はバージョン管理＝Q&A APIは2025-11終了（S一次 Google）**：決断面（予約ボタン等）の生成・取得APIが**明示の廃止時計**を持つ＝相手は予告して切るが、計測側が時計を見ていなければ黙って壊れる。
+
+- **現物確認（目付がgrep＝"契約破断がどこで沈黙するか"を射抜く・過剰批判せず）**：
+  - (1) **`sourceLabel(sess)`（app.mjs 244-253行）＝流入元判定の連鎖**：`utm?.source`（245行・**URL内ゆえ頑丈**）→無ければ `new URL(sess.referrer).hostname`（249-250行・"外部の決断面が決めるホスト名"に人質）→無ければ `entry_query→'organic_search'`（252行）→`'direct_or_unknown'`（253行）。**＝決断面が(あ)referrerを剥がす（IG）(い)ホスト名を変える（LINE liff→miniapp）(う)リダイレクトを噛ませると、249-250行が黙って別バケツ/'referral'/フォールスルー**＝collectは200・例外なし・値もクリーン＝**誰も気づかない構成比のズレ**。
+  - (2) **reach_path enum（P11/P5追加観点 第2〜6弾＝lp/richmenu/miniapp_tab/ai_answer/ig_map/unknown）も同じ referrer/entry 由来**＝決断面のリンク仕様が変わると、該当バケツが黙って unknown へ落ちる/別バケツへ移る。
+  - (3) **これはP22（装置の死活）では原理的に見えない**：collectは受信し続け（heartbeat緑）・拒否も出ない（400/404/403カウンタ動かず）＝P22の2つの検知器（沈黙・拒否件数）はどちらも無反応。**"生きている装置が意味のズレた値を出し続ける"＝P22の射程外**。
+  - (4) 既存に**"source/reach_path の構成比が前週比でどう動いたか""unknown率が跳ねたか"を店主/実装者に見せるビューは無い**＝分布シフトが不可視。
+
+- **対策案（射程を絞る・採否はDaiya/メイン判断・コードは触らない）**：
+  - **① source/reach_path を"外部との版付き契約"として扱い、構成比＋unknown率を監視**：面別 source/reach_path の**構成比（前N窓比）**と**unknown/direct_or_unknown率**を店主レポに出し、**あるバケツが急に0へ潰れる／unknown率が跳ねる＝"客が減った"でなく"契約が変わった疑い"**として旗立て（P22②「黙って消さず可視化」の"意味ズレ"版）。＝スキーマドリフト検知の分布監視（Great Expectations/dbt tests/Monte Carlo "silent data downtime"）を自前 source 判定に適用。
+  - **② UTM優先を"設計の背骨"として明文化＝referrerホスト名を面判定の主役にしない**：現物245行は既にUTM優先（URL内ゆえヘッダ剥がし・ホスト名変更に免疫）＝**この順序を崩さない**のがガード。決断面（LINE/IG/GBP）へ出す誘導リンクに `lt_src`/UTM を必ず載せ、**referrerホスト名は"補助"に留める**（IGのreferrer剥がしを前提に設計＝現物の m3層A `lt_src/lt_ad`→utm正規化 415-424行が既に正しい方向）。
+  - **③ 外部changelogアンカーを台帳に固定**：GBP Change Log/sunset-dates・Meta App Dashboard Migrations＋版廃止時計・LINE URL scheme廃止ページ を**"計測契約の外部アンカー"としてsources/watchlistに定点登録**し、**予告された廃止日を答え合わせトリガー化**（相手が予告して切るものは、こちらが先回りできる＝P28の"人が判断する"入口）。
+
+- **根拠URL（機構＝S/A、現物＝目付grep）**：
+  - IG アプリ内ブラウザ referrer剥がし＝MDN「Referer header: privacy and security concerns」 https://developer.mozilla.org/en-US/docs/Web/Security/Referer_header:_privacy_and_security_concerns （S＝機構）／IG計測実装者の同一観測（A→traced・flyn.to/cometly/graphed が"IGはreferrerを剥がしDirect/Unassignedへ・UTMはURL内ゆえ生存"で収束）
+  - LINE URL scheme廃止＝「LINE URL scheme of 'line://' is deprecated」 https://developers.line.biz/en/news/2020/03/25/line-url-scheme-deprecation/ （S一次・廃止日未設定）／LIFF release notes（26.7.0 LIFFヘッダ仕様変更） https://developers.line.biz/en/docs/liff/release-notes/ （S一次）
+  - Meta Graph API 版廃止＝期限切れ版→400 Bad Request・migration 90日窓（S一次 Meta developer docs／A補強 ayrshare/singhamandeep）
+  - GBP Change Log／Deprecation schedule（sunset-dates）／Place Actions API https://developers.google.com/my-business/content/change-log ／ https://developers.google.com/my-business/content/sunset-dates ／ https://developers.google.com/my-business/reference/placeactions/rest （S一次）
+  - 起源＝UTM/Urchin（2002 UTM・Google2005買収→GA・URLにパラメータを載せサーバログ/referrerの限界を超える）（B→traced）
+  - スキーマドリフト/data observability＝Monte Carlo "silent data downtime"（B・起源／P22と共通アンカー）／Great Expectations・dbt tests・contract testing（A/B）
+  - 現物：app.mjs 244-253行 sourceLabel（UTM優先→referrer hostname→organic_search→unknown）・415-424行 lt_src/lt_ad→utm正規化・reach_path enum（本ファイル P11/P5第2〜6弾）（grep/read・2026-08-30確認）
+- **検証方法**：実機E2E（メイン領分・1スタジオ目本番化時・P7〜P27境界群と同群）。①IG流入（referrer剥がし）でUTM有り→正しく`instagram`、UTM無し→`organic_search`/`unknown`に**正直に**落ち、勝手に`instagram`へ寄せないか ②LINEホスト名変更（liff→miniapp）を模した referrer で該当バケツが黙って割れず、構成比シフトが旗立つか ③unknown/direct率の分布シフト旗が**正常に静かな面（元々流入0）で誤発火しないか（負のテスト）** ④外部changelogの廃止日を答え合わせトリガーに載せた項目が、日到来時にレポで注意喚起されるか ⑤構成比監視ログに個人情報が紛れない（面ラベル・時刻・件数・率のみ）か。
+- **優先度＝中**——サイレント契約破断は"率"でなく**"どの面から来たかの意味そのもの"を偽り**、店主が「効いていた面を"枯れた"と誤判断して施策を殺す／別要因の増減を面のせいにする」に直結。効くのは(1)referrer人質を設計で外す（UTM背骨）(2)構成比/unknown率の分布シフトで"契約変更"を"客減"と取り違えない(3)相手の廃止時計を先回りアンカー化。**採否・しきい値・実装・QAはDaiya／メイン領分。コードは触っていない。**
+- **非重複（新種判断の核）**：**P22＝装置の死活＝"データが来ない/丸ごと拒否される"（沈黙・拒否件数）＝検知器はheartbeat＋拒否カウンタ＝"バイト届いてるか"**。**P28＝"バイトは届く・拒否も無い・値もクリーン、だが外部の決断面が契約（リンク/URL/API仕様）を変えたので意味の構成比が黙ってズレる"＝検知器は構成比/unknown率の分布シフト＋外部changelogアンカー＝"意味が今も同じか"**＝**P22と検知器も害の型も直交**（P22の背景 data observability を共有するが、P22は"silent data downtime"の"downtime（沈黙）"側、P28は"silent"の"wrong-but-flowing（流れるが誤り）"側）。**reach_path各弾（P11/P5・20/23/27/30/36/40）＝面を"分類する"／P28＝その分類が外部契約変更で黙って壊れていないかを"監視する"メタ層**＝分類器とその健全性監視は直交。P20（分子の汚染＝汚いキー）/P21（分母の欠落＝拒否した人間）とも別（P28は値はクリーン・誰も拒否されない）。P26（来歴検証＝出所が本物か）とも別（P28は出所は本物だが"面ラベルの意味"が外部都合でズレる）。**P0-P27＋P35 grep+全読で確認＝新機構ゆえ新種P28（P4/P24欠番は維持・次はP29）**。
+- **⚠️申し送り**：
+  - **見廻り(lp-mimawari)**：`line://`廃止は**乗っ取り攻撃対策＝セキュリティ動機**／IG referrer剥がしは**プライバシー動機**＝"決断面へ出す誘導リンクにUTM/lt_srcを載せる"設計の**匿名性・同意の線引き**（URLにどこまで載せてよいか）は見廻り/Daiya領分。
+  - **番人(qa-auditor)**：上の検証①〜⑤を境界テストへ。特に**③負のテスト（静かな面での分布シフト誤発火なし）**と**①IG referrer剥がし時に勝手にinstagramへ寄せない正直ラベリング**を重視。
+  - **物見(intel-scout)**：data-contract/observability専業（Trackingplan/Monte Carlo）の市場と、決断面プラットフォーム（GBP/IG/LINE）の"changelog駆動で計測が壊れる"潮流＝計測ガバナンス2026の本流＝継続鉱脈。
+- **位置づけ（テーマローテーション＝第43回宿題「必ずビート3・非reach_path」直行）**：直近7回(38-44)＝ビート1×3(38,41,43)/ビート2×2(39,42)/ビート3×2(40,44)＝ビート3補充。**新種は第27回(P27・2026-08-25)以来"6回ぶり"＝間の5回(38-43)は意図的にadded-observationで抑制＝反sprawl規律を維持した上で、外部契約破断という真に直交な機構にのみP28を起こした**（P26/P27と同じ"新機構だけ新種"判断）。テーマ履歴＝farbling/TCP(41)→event-time(42)→Firefox RFP(43)→**計測契約のサイレント破断(44)**。reach_path鉱脈（面の分類）に戻らず、その健全性監視というメタ層＝非reach_path角度を厳守。コードは触っていない。
