@@ -1347,3 +1347,37 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 **優先度：低〜中**（現時点で主戦場JPは①②とも未実運用＝早期警報段階。beauty名指しゆえ日本上陸時に中へ引き上げ）。
 
 **反sprawl確認**：P0-P29＋P35 grep全読。決断面移動という象限は P28 が既に確保済＝本件は「LP来訪不在＝session不在」というP28の未記述サブ象限の追記＝新機構でなく追加観点。物見申し送り＝Google agentic booking / Reserve with Google 500社 / LINE Connect ONE は「決断面の内側化」の業界潮流。見廻り申し送り＝音声AIの"名乗り"表示・代行予約の景表法/特商法上の扱い（規制論点）。採否/実装/QAはDaiya/メイン領分。
+
+---
+
+## 追加の種（2026-09-04・目付第49回巡回からの還流）
+
+**前提**：以下は**新規P番号を起こさない**。既実装 **P2（bot除外・UA＋挙動＝実装照合表で✅済み）** への**追加観点 第3弾**（第18回=抽象／第22回=同業OSS実数＋エージェンティックブラウザ命名、に続く）。今回は**第22回で名指しした脅威の"答え合わせ更新"**＝(1)ChatGPT Atlas撤退で勢力図が再編（Comet+Atlasの70%二強→Comet＋Chrome拡張型へ拡散）(2)UA層の素通り率が数字化（2026＝ルールベースUAフィルタの回避率60%超）(3)挙動層の物差しに業界の命名しきい値「Impossible Speed（人間には無理な速さ／honeypot）」が加わった、の3点で第22回を更新する。**第22回（Comet48.12%/Atlas21.33%・"高密度＋滞在0＋スクロール0"）と重複させない＝今回は"撤退による勢力図再編＋UA回避率の数字＋速すぎ側の追加"が新規。コードは触っていない。** テーマ＝第48回宿題(2)「直近8回B1×3/B2×3/B3×2＝次はビート1が最有力・bot除外の答え合わせ（第24/26/39/44/45/46/47/48で連続carryover）」の直行消化。
+
+### 【P2への追加観点 第3弾（新種ではない）】エージェンティックブラウザ勢力図の答え合わせ更新＝Atlas撤退で"ブラウザ名で数える"道が死に、UA層の穴が数字化（回避率60%超）＝挙動層(suspect_bot)が唯一の恒久防御、かつ挙動は「止まりすぎ」だけでなく「速すぎ（Impossible Speed）」の両端で見る
+
+- **現象①＝勢力図の答え合わせ＝ChatGPT Atlas 撤退で"二強"が崩れ、脅威はスタンドアロン・ブラウザから"普通のChromeの中の拡張"へ拡散（ビート1・S一次→traced）**：
+  - **OpenAIが ChatGPT Atlas を2026-08-09に終了**（2026-07-09/10告知・ローンチから約9か月＝292日）。**Atlasのエージェント機能は"消えた"のでなく ChatGPT本体（Chrome拡張＋デスクトップのブラウザモード）へ移設**（OpenAI Help Center「Evolving Atlas into ChatGPT for browser-based agentic work」＝OpenAI公式一次。egress遮断ゆえ複数二次一致でtrace採用）。
+  - **答え合わせの結論＝第22回の「Comet48.12%＋Atlas21.33%＝2製品で約70%」という"二強"像は再編**（HUMAN Security 2026年4月時点の内訳）：**Comet 48.12%／Claude Chrome Extension 17.33％／ChatGPT Agent 8.55%**＝ブラウザ型エージェントで観測トラフィックの約71%。Atlasの21%は本体（ChatGPTの拡張/デスクトップ）へ吸収されたと読める。
+  - **⚠️新しい重要事実＝"エージェント・ブラウザを名前で列挙して弾く"手は死んだ**：Atlas撤退が示すのは**脅威が"専用ブラウザ"（まだしも名札で識別しうる）から"普通のChromeに載る拡張（Claude for Chrome/ChatGPTの拡張）"へ移る**流れ＝**もはや"どのブラウザか"では区別できない**（普通のChromeのUA・住宅IP・実JS実行）。＝第22回の「第1層(UA)も第2層(IP帯)も素通りし第3層＝挙動だけが最後の砦」が**さらに強く確定**（"既知エージェントブラウザ名リスト"を作る誘惑も否定）。
+- **現象②＝UA層の穴が"数字"になった（ビート1・A/B→traced）**：2026時点で**高度botはルールベースUAフィルタを60%超の率で回避**（HUMAN Security脅威レポート・GA4 bot除外解説群経由）。「実ブラウザUAを偽装／住宅プロキシ経由／パッチ済みheadless Chromeで来る相手は、GA4のようなUA照合には"本物の客"として現れる」。＝第22回が「名札を偽る相手には無力」と定性で言った所に**"60%超の回避率"という数字が付いた**（Lokuの `BOT_UA_RE`＝固定約10語も同じ穴を持つ＝UA層は"素直に名乗る良性bot"止まり、が数字で裏書き）。
+- **現象③＝挙動層の物差しに業界の命名しきい値が加わった（ビート1・B→traced）**：GA4/GTM実務の2026定石は**多層防御＝GA4＋サーバログ＋クライアント検知スクリプト＋スコアAPI**。挙動検知の具体的物差しとして**「Impossible Speed」＝人間には無理な短時間の操作（例：フォーム送信が1.8秒未満）を旗にする**＋**honeypot（人間に見えない隠しリンク＝踏んだら自動化）**＋**reCAPTCHA v3スコアをイベントストリームへ流す**。加えてHUMANは**エージェントの挙動＝「多数の操作を短い時間窓に圧縮＝高密度PV・フォーム連投・サイト横断」**と明記。
+- **現物確認（目付がgrep・過剰批判せず"既に持つ強み"を名指し）**：
+  - Loku の P2 は依然**UA入口除外（`BOT_UA_RE`・handoff-demo/app.mjs 19行）＋挙動フラグ `suspect_bot`（397行でセット・262行で計上停止・449-450行でタグ発火させず実名導線に乗せない隔離）＋`GET /api/attn/bot-report`（915-918行）で除外件数を可視化**＝第1層(UA)と第3層(挙動)を持ち、"黙って消さない"点は同業より一段誠実（＝当たり・第22回の評価を維持）。
+  - **今回の新論点＝挙動層は現状"止まりすぎ側"に寄っている**：Lokuの人間らしさ入力＝`active_sec`（428-429行でmaxマージ＝P1）・箱ごと読了率・スクロール深度＝これらは**「関与のムラ・迷い・滞在」＝"止まっている/読んでいる"側の人間くささ**を測る。第22回対策案④も「高密度＋滞在0＋スクロール0」＝**"滞在0（止まりすぎ）"が主語**。だが現象③のエージェントは**"高密度・フォーム連投・速すぎ"＝逆に動きすぎ／速すぎ側**でも来る＝**「Impossible Speed（人間には無理な速さ・短時間の連打）」という上端のしきい値が挙動層に欠けている**。
+- **根拠URL（S/A/B・egress遮断のため検索スニペット原文引用＋複数二次一致でtrace）**：
+  - OpenAI Help Center「Evolving Atlas into ChatGPT for browser-based agentic work」（S一次・撤退と機能移設の公式）https://help.openai.com/en/articles/20001371-evolving-atlas-into-chatgpt-for-browser-based-agentic-work ／ 補強（撤退日8/9・告知7/9）MacRumors https://www.macrumors.com/2026/07/10/openais-chatgpt-atlas-browser-shutting-down/ ・Tech Edition https://www.techedt.com/chatgpt-atlas-to-shut-down-on-9-august-as-openai-moves-browser-features-into-chatgpt ・Wikipedia https://en.wikipedia.org/wiki/ChatGPT_Atlas
+  - HUMAN Security「State of Agentic Traffic — April 2026」（A→traced・内訳Comet48.12%/Claude Chrome Ext17.33%/ChatGPT Agent8.55%・ブラウザ型で約71%）https://www.humansecurity.com/learn/blog/state-of-agentic-traffic-april-26/
+  - UA回避率60%超（HUMAN脅威レポート経由・A/B→traced）＝GA4 bot除外解説群：Specificity「2026 Precision Audit」https://specificityinc.com/digital-marketing/how-to-identify-bot-traffic-in-google-analytics-the-2026-precision-audit/ ／ adsafee「GA4 Bot Filtering: How It Works & Where It Fails」https://adsafee.com/blog/en/google-analytics-bot-filtering/
+  - Impossible Speed（<1.8秒）/honeypot/reCAPTCHA v3スコア注入（B→traced）：Specificity（上記）／reCAPTCHA v3 docs（S一次・0.0〜1.0スコア）https://developers.google.com/recaptcha/docs/v3
+  - 現物: loku-tuning-plugin/handoff-demo/app.mjs 19/262/386/397/428-429/449-450/915-918行
+- **対策案（射程を絞る・新種P番号は起こさない・採否はDaiya/メイン判断）**：
+  - **①【第22回から継続・強化】"エージェントブラウザ名リスト"を作らない**：Atlas撤退が証明したとおり脅威はブラウザ名で列挙できない（拡張化・本体吸収で流動）。**第1層(UA)の強化は"素直に名乗る良性bot"の鮮度維持まで**に留め、**エージェント検知は挙動層に一本化**する（誤った方向＝UA/ブラウザ名の追いかけっこに労力を割かない）。
+  - **②【新・本命】挙動フラグ `suspect_bot` の判定を"両端"にする**：現状の**「滞在0＋スクロール0＝止まりすぎ」**（下端）に加え、**「Impossible Speed＝短時間窓に不自然な高密度の collect/イベント＝速すぎ・詰めすぎ」**（上端）を明示条件に追加。Lokuは既に**`active_sec`（実クロック滞在）と箱別読了・スクロール深度**を持つ＝**"人間の関与にはムラ・間・迷いがある"を両端から測れる**＝速すぎ/詰めすぎ側の入力も既存データで賄える。＝**素のPV計測より、この"ふるまいで見分ける"波に構造的に強い**（reCAPTCHA v3の系譜＝起源掘り第49回）。
+  - **③【任意】honeypot 的な"人間に踏まれない仕掛け"**：人間には見えない隠し要素/経路への collect を `suspect_bot` の補助信号にする案（実装の重さと主戦場LINE内WebViewでの副作用は要検討＝メイン判断）。
+  - **④【第22回から継続】第2層＝クラウド/データセンターIP帯の隔離**（VPN許可リスト併用で全弾き回避）＝住宅IPで来るエージェントには効かないが、素朴なサーバ発botには効く。**IP判定は送信元IPを条件に使う＝見廻り申し送り（下記）。**
+- **検証方法**：実機/ユニットE2E（メイン領分・1スタジオ目本番化時・P7〜P28の境界テスト群と同群）。①**負のテスト＝速すぎ判定で"本物のヘビー閲覧客/短時間に何度も箱を切り替える回遊客"を誤隔離しない**か（Impossible Speedのしきい値は人間の下限より十分下に置く＝reCAPTCHA v3の"binary判定は誤爆多"教訓を踏襲）②止まりすぎ（滞在0＋スクロール0）と速すぎ（高密度・短時間窓）の両端でエージェント来訪が `suspect_bot` へ隔離され `bot-report` に件数が残るか③正規のモバイル実機客（LINE→LP・迷い/間/ムラあり）が素通りするか④UA偽装エージェントが第1層を素通りしても第3層で捕まるか⑤P0離脱二段/P1単調増加(active_sec 428-429)/P2既存隔離と二重に走らず冪等か。
+- **優先度：中〜低（P2のenrichment）**。エージェンティックブラウザは撤退・拡張化で"UA/IPで数える"手が完全に無効化＝**挙動層の質だけが数字の信頼度を守る**ため②は中（現状の"止まりすぎ"片端だけだと速すぎエージェントを取りこぼす）、①③④は精度refineで低〜中。実装・QA・採否・優先度はメイン領分／Daiya。
+- **⚠️見廻り（lp-mimawari）へ申し送り**：④第2層のIP判定は**送信元IPアドレスを条件に使う**＝個人情報/プライバシー（IPの扱い・保存期間）の論点（第18/22回申し送りの再掲・継続）。加えて honeypot／reCAPTCHA v3スコア取得は**外部サービスへの信号送出・同意設計**が絡みうる＝可否は法規制領分。
+- **⚠️物見（intel-scout）へ申し送り**：ChatGPT Atlas撤退（スタンドアロンAIブラウザ→本体吸収）＝「AIブラウザは"製品"でなく"OS/本体の機能"へ収斂する」業界潮流の一例（Claude for Chrome拡張・ChatGPTデスクトップのブラウザモードも同型）。
+- **位置づけ（テーマ＝ビート1 bot除外の答え合わせ・単軸）**：第48回宿題(2)(a)を直行消化。テーマ履歴＝決断面移動(第48)→**bot除外答え合わせ(第49)**。交差フロンティア(P13〜P18)・reach_path各弾には戻らず。新種は起こさず第22回P2追加観点の"答え合わせ更新"に留める（第44回P28以来、新種なしを5回維持＝seed-sprawl規律）。起源掘りは reCAPTCHA v3（2018・関門→ふるまいの点数化）を選び、"なぜ挙動層が最後の砦か＝人間の完璧でなさ(遅さ・迷い・ムラ)が最後の署名／だが人間を真似る相手には点数方式も脆い"の歴史的根拠とした（第22回"botの自己申告"起源の続編＝名乗り→ふるまい→ふるまい模倣、の第三幕）。
