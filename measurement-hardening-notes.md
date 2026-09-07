@@ -1413,3 +1413,36 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **検証方法（負のテスト・メイン領分）**：①**UTM無し・referrer＝google/instagram の来訪が推測で"instagram"へ寄らずunknown/referralで立つ**負のテスト（広告/SNS経由を自然流入や特定SNSに化けさせない＝"数字を作らない"の回帰）。②source構成比の分布シフト監視が**GBPカルーセル展開のような"施策外の緩やかなズレ"を拾える**か。③LP外完結（カルーセル→GBP予約/電話）を**session不在＝分母欠落として正直に見せる**（店の実予約総数との差分可視化・第48回射程）。実機/ユニットE2E＝1スタジオ目本番化時・P7〜P28境界群と同群。
 - **優先度：中（早期警報＝面がどこに移っても測るという定義に直結／JP展開時期は未確定ゆえ実装は監視設計から）**。**コードは触っていない。**
 - **位置づけ（テーマ＝ビート3 決断面の移動・非reach_path角度・単軸／新種を起こさない規律）**：第50回宿題(2)(a)「直近ビート2が最厚(4)＝ビート2回避・最有力ビート3の非reach_path別角度＝決断面のUI変化検知＝P28別実例」を直行消化。テーマ履歴＝配送保証(第50)→**GBP Social Media Updatesカルーセル(第51)**。**P0-P29＋P35 を grep＋全読し、新機構でなく既存P28（決断面プラットフォームとの計測契約サイレント破断）の新しい"具体例"＋P11/P13の off-LP unknown 射程内**＝**第44回P28以来7回連続で新種P番号を起こさず（45/46/47/48/49/50/51）**＝反sprawl規律を維持（reach_path各弾20/23/27/30/36/40には戻らず、その健全性監視というメタ層＝非reach_path角度を厳守）。起源＝Google Universal Search（2007・店の社会的証明まで自分の面へアグリゲートする20年重力の最新形）。採否/実装/QAはDaiya/メイン領分。
+
+## 追加観点（2026-09-07・目付第52回巡回からの還流）
+
+### 【P0＋P19 追加観点・第52回巡回（2026-09-07）／送信取りこぼしに“回線状態（オフライン離脱）”の軸を足す＝主戦場iOSは救済の業界標準（Background Sync API）を構造的に持てない天井＝P1部分免疫の境界を正しく引く】新種P番号なし
+
+- **現象（S/A＝離脱送信は“電波がある前提”で組まれ・平常時でも約2割落ち・オフラインは救済不能）**：
+  - **(1) sendBeaconは“撃ちっ放し”＝電波なし時の配送は仕様上ベストエフォート（S一次）**＝`navigator.sendBeacon()` は「ユーザーエージェントが送信キューに載せられたら true」を返すだけで成功/失敗コールバック無し。ペイロード上限64KiB超は false（＝P19の射程）。だが**「電波が無い時どう振る舞うか」は仕様に明記が無く実装依存**＝キューに載っても（true でも）ネット復帰しないままページ破棄で消える（MDN=S）。
+  - **(2) 平常時でもモバイル離脱送信は約2割落ちる（A実測）**＝Nic Jansma（Akamai・boomerang作者）実測で**離脱系4イベント全登録＋sendBeaconでも到達≈82.9%**（残り約17〜30%は端末側で落ちる）。Speed Kit / Volument 独立実測も「beacon対応を名乗るブラウザの約30%がページ閉時に配送失敗」と同水準。モバイルの**スワイプ終了/別アプリ切替でコールバック不発**も既知。この平常欠測の上に主戦場特有の**移動中オフライン離脱**が積み増しになる。
+  - **(3) 救済の業界標準（Background Sync API）はSafari/WebKit/iOS未対応＝主戦場で構造的に使えない（caniuse S）**＝オフライン失敗を**オンライン復帰まで預かって自動再送**するのが Background Sync API（Service Worker＝ページより長生きの常駐係が復帰を待ち指数バックオフで再送）。`workbox-google-analytics` は「まさに計測の欠測補填」でこれを土台に使う定石（Chrome for Developers S/A）。だが**Safari/WebKit/iOSは2026時点で未対応・実装見込みも無し**＝iOS上の全ブラウザ（Chrome for iOS含む＝全部WebKit）で使えない。
+  - **(4) クライアント側は“回線状態そのもの”も主戦場iOSで盲（S）**＝`navigator.connection.saveData`／Network Information API（回線種別・省データ検知）も**Safari/iOS未対応**（Chrome/Android系のみ・MDN S）＝Lokuは離脱前に「今オフライン/回線弱」をiOSで事前検知して先撃ちする窓すら持てない。サーバ側 `Save-Data` リクエストヘッダだけが唯一届く窓。
+- **現物確認（目付がgrep・過小評価も過剰評価もしない）**：(1) `flush()`（index.html 469-473行）は `navigator.sendBeacon(FLUSH_ENDPOINT, Blob)` を `try/catch` で**1回撃つのみ**・返り値未チェック（＝P19未実装の既知テンション）・online/offline/再送処理なし。(2) 撃つタイミングは `visibilitychange(hidden)`＋`pagehide`（475-476行）のみ＝**セッション途中の定期ネット送信は無い**（`tick()` 342行＝端末内カウンタ更新だけ・ネット送信しない・`setTimeout(tick,TICK=200)` 367行）。(3) ＝**「送信タイミング正・ペイロード非溢れ・なのに電波なし」のオフライン離脱はP0（いつ送るか）にもP19（溢れfallback）にも入らない射程外**。
+- **免疫の境界（P1が与える“部分免疫”＝過小評価しない）**：受け口は**単調増加マージ（P1＝値は高い方を採る・冪等）**ゆえ途中スナップショットが何度飛んでも巻き戻らない。そして `visibilitychange(hidden)` は**最終離脱だけでなく毎回のタブ切替（LINEトーク切替・ホーム復帰）で発火**＝**セッション中に一度でもオンラインでタブ切替すればそのスナップショットは bank 済み＝後のオフライン離脱は“最後の差分”しか失わない**。＝完全消失は**「一度もオンライン切替せず・単一ビュー・オフライン終了」の狭い帯**に絞られる（主戦場のLP1枚完結×移動中でこそ厚くなりうる＝過信も禁物）。
+- **根拠URL（機構＝S一次、実測＝A、支持表明＝S）**：
+  - MDN「Navigator: sendBeacon()」（S一次・fire-and-forget/64KiB/キュー載せ true・電波なし時は非規定） https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
+  - Nic Jansma「Beaconing in Practice: An Update on Reliability and the Pending Beacon API」（A実測・4イベント登録でも到達≈82.9%） https://nicj.net/beaconing-in-practice-an-update-on-reliability-and-the-pending-beacon-api/
+  - Speed Kit「Unload beacon reliability: Benchmarking strategies for minimal data loss」（A→traced） https://www.speedkit.com/blog/unload-beacon-reliability-benchmarking-strategies-for-minimal-data-loss
+  - Volument「Navigator.sendBeacon() is broken」（A→traced・閉時失敗≈30%） https://volument.com/blog/sendbeacon-is-broken
+  - caniuse「Background Sync API」（S・Safari/iOS未対応） https://caniuse.com/background-sync
+  - Chrome for Developers「Retrying requests when back online（Workbox）」（S/A・workbox-google-analyticsが土台に使用） https://developer.chrome.com/docs/workbox/retrying-requests-when-back-online
+  - MDN「NetworkInformation」（S・Safari/iOS未対応） https://developer.mozilla.org/en-US/docs/Web/API/NetworkInformation
+  - MDN「Web Background Synchronization API」（S一次・deferred until stable connectivity） https://developer.mozilla.org/en-US/docs/Web/API/Background_Synchronization_API
+  - 現物: loku-tuning-plugin/index.html 469-476行（sendBeacon1回・二段離脱のみ・定期送信なし）／342/367行（tick=端末内のみ）
+- **対策案＝新機構でなくP0/P19/P22の射程内・“正直な天井”と“安い保険”の2本（採否/優先度はDaiya/メイン・コードは触らない）**：
+  - **(a) 正直な天井の注記（最優先・コード変更ほぼ不要）**＝完全性/死活メトリクス（P22の隣）に「オフライン離脱による欠測は主戦場で構造的に一定割合存在し、単一ビュー×移動中は丸ごと欠けうる」を天井として明記＝**完全性の低下を“客減/関与低下”と誤読させない・因果（causal.mjs）入力の偏り（移動中セグメントの系統的欠測）を店主に開示**。第42回event-time/第46回離脱9%天井/第48回LP外完結と同型の「測れないを認めて差分を見せる」の回線状態版。
+  - **(b) サーバ側 `Save-Data` リクエストヘッダの記録（安い保険）**＝クライアントは回線状態がiOSで盲ゆえ、collect受け口で `Save-Data` ヘッダを死活/欠測の文脈として1カウント残す（P22拒否カウンタと同じ棚）＝“省データ/低回線環境の来訪比率”の粗い窓（数字を作らず・存在の可視化のみ）。
+  - **(c) 自前再送キュー（localStorage/IndexedDB）は“軽率に足さない”歯止め**＝Background SyncがiOSに無いための代替だが、**P3（ITP7日揮発）でキューごと purge されうる＋未送信ペイロード常駐は同意再燃（見廻り領分）**＝救済が救済されない入れ子構造。足すなら「揮発前提の短命バッファ＋P1冪等前提」の設計レビューが先。
+- **検証方法（負のテスト・メイン領分・P7〜P28の境界テストと同群）**：①機内モード（オフライン）でLP1ビュー閲覧→アプリスワイプ終了で、**そのセッションが欠測しても後続オンライン来訪の集計/因果を汚さない**か（欠測＝ゼロで正直に立つ・他人の数字に混ざらない＝“数字を作らない”の回線状態版）②オンラインでタブ切替→その後オフライン離脱で、**P1マージにより切替時点スナップショットが残り巻き戻らない**部分免疫の回帰③`Save-Data` ヘッダ記録を足してもP0離脱二段/P1マージ/P20 allowlist/P26来歴と冪等か④自前キュー実験時は**ITP7日 purge 後に二重計上/孤児化しない**負のテスト。
+- **優先度**：**中〜低**——早期警報／実装は(a)天井注記が最優先で最軽量（コードほぼ不要）・(b)は数行・(c)は要設計レビューで後回し。実装・QA・採否はDaiya／メイン領分。**コードは触っていない。**
+- **非重複**：**新種P番号なし**。P0（離脱二段＝いつ送るか）/P19（返り値false→fetch fallback＝ペイロード溢れ）の**機構はそのまま、「回線状態（オフライン）」という第3の軸と、P1が与える部分免疫の境界注記を足すだけ**。P0〜P28＋P35 を grep＋全読し、「オフライン離脱/Background Sync/回線状態」が既存種の機構に無いことを確認（第28回獲得「新機構なら新種／既存機構の正しさ・射程を原理で裏書き＝追加観点」＝seed-sprawl回避を維持）。直近＝44=新種P28・45=P21/P9/P15追加・46=P12低電力追加・47=P22/P25/P23追加・48=P28別実例・49=P2追加・50=P1/P0/P19追加・51=P28別実例・**52=P0/P19追加**＝第44回P28以来**8回連続新種なし**。第42回event-time（maxマージ=CRDTだから正しい）と同じ「機構が正しいがゆえの免疫」の“回線状態”版（免疫確認第5型＝部分免疫の境界を正しく引く）。
+- **⚠️番人(qa-auditor)へ申し送り**：上の検証①②③④を境界テストへ。特に**①オフライン欠測が後続オンライン来訪の集計・因果を汚さない負のテスト（欠測＝ゼロで正直に立つ）**と**②オンライン切替後のオフライン離脱でP1マージがスナップショットを保持する部分免疫の回帰**の両輪。完全性/死活メトリクスが「オフライン欠測の天井」を“客減”と取り違えず注記付きで見せるかも。
+- **⚠️物見(intel-scout)へ申し送り**：業界潮流＝**離脱送信の到達率は計測業界が10年かけても8割台で頭打ち＝業界は“1発完璧”を諦め「多重化＋冪等受け口＋再送キュー」の3点セットへ**。Background Sync API（オフライン再送の標準）はPWA体験のために生まれ計測補填は副産物ゆえ、AppleがiOSに載せない＝計測目的の再送も巻き添えで不可能＝「計測のためだけの機構は主要ブラウザで後回し」の慢性的弱さの一例。次世代の Pending Beacon / fetchLater（WebKit未搭載＝watchlist）が“配送をブラウザに預ける”次の一手。
+- **⚠️見廻り(lp-mimawari)へ申し送り**：オフライン救済で自前再送キュー（localStorage/IndexedDB）に未送信ペイロードを常駐させる案が出た場合、**“未送信の計測データの端末内保持”が同意設計の論点**になりうる（P3のITP7日揮発が図らずも保持期間の上限として働く側面あり）。「オフライン欠測を再送キューで埋める」判断が出た時は法規制レビュー必須（第35回GPC・第41回farblingの延長）。
+- **位置づけ（テーマローテーション＝第51回宿題「(2)(a)ビート1の未踏サブ」の直行消化）**：第51回(ビート3/GBPカルーセル=P28別実例)からローテーションし、ビート1の未踏サブへ。AFP(32)/CNAME・GPC(35)/consent(29)/タイマー(26)/bot挙動(22)/beacon溢れ(18-19)/広告ブロッカー(24)/真正性(37)/バウンス(38)/farbling・TCP(41)/Firefox RFP(43)/低電力(46)/bot答え合わせ(49)以外＝**「モバイル特有の送信取りこぼしの回線状態の軸（オフライン離脱）」は未踏サブ**（P0/P19は“いつ送るか・ペイロード溢れ”で回線状態は未踏）。直近11回(42-52)＝ビート1×4(43,46,49,52)/ビート2×4(42,45,47,50)/ビート3×3(44,48,51)。起源掘り＝なぜBackground Sync APIが生まれたか（Webの送信は「ページ生存×オンライン」の二重前提→モバイルで両方壊れた→sendBeacon2014が“ページが死ぬ半分”を、Service Worker+Background Sync2015が“電波が無い半分”を担当→AppleがiOSに後者を載せず主戦場は片半分を構造的に持てない＝第42回event-time起源と同構図「素朴な前提が壊れた所に発明・Lokuの主戦場はその発明を持てない天井」）。
