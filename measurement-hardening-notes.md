@@ -1536,3 +1536,53 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 5. `causal.mjs`が引き続きカレンダー日を参照しない（将来 date bucketing を足したら鳴る番犬＝物理窓維持の回帰）。
 
 **優先度**：低〜中（現物は免疫・実害は"将来の店主向け暦日表示/ロールアップ追加"に限局・(a)規律明文化が最軽量で最優先・日本DST無しで最悪ケースは元々不在）。反sprawl＝P0-P29+P35 grep全読、event-time（第42回=P1追加観点「いつ起きたか」）に対し本項は「その時刻を"どの暦日/どの時計"のバケツに落とすか」＝P1（時刻→集計）の姉妹面＝新機構でなくP1追加観点＝第44回P28以来11回連続新種なし（45-55）。
+
+---
+
+## 追加の種（2026-09-11・目付第56回巡回からの還流）
+
+**前提**：以下は実装照合表（P0-P3済）・P5〜P28・P35とは**重複しない**が、**新種P番号は起こさない＝P0（離脱二段flush）＋P7（bfcache復帰）＋P8（先読み活性化）への追加観点**。テーマ＝ビート1「計測精度の敵」の未踏サブ＝**ページ遷移の新しい生死イベント `pageswap` / `pagereveal`（クロスドキュメント・ビュートランジション）**。反sprawl＝P0-P29+P35 grep全読＋notebook/還流ノート全文で `pageswap`/`pagereveal`/`view transition` を確認（0件＝完全に未接触の領域）。テーマローテーション＝ビート3（決断面UI変化）の井戸が4回連続枯れ（53/54/55/56の実探索で新規S/A一次無し＝GBPは二次のみP28再掲・LINE同意簡略化は既に白・TikTok/Threads/Blueskyは恒常link-in-bio解説のみ）ゆえ、逸脱ルール③の最有力(a)B3を実探索で空振り確認→次点(b)ビート1未踏サブへ正しく退避。**コードは触っていない。**
+
+### 【P0＋P7＋P8 追加観点・第56回巡回（2026-09-11）／ページ遷移の新イベント pageswap / pagereveal への免疫確認＋「復帰計上は合図1本」の前ガード】新種P番号なし
+
+- **現象（機構＝S・複数一次一致）**：HTML仕様に**ページ遷移の新しい2イベント**が加わった。
+  - `pageswap`＝**出ていくページ（outgoing document）**で発火。ビュートランジション対象**でない**遷移（＝**クロスオリジン**＝別ドメインへの移動、または`@view-transition`規則に合わない遷移）では **`pagehide` の直前**に鳴る。対象**である**（＝同一オリジン内の遷移）時は、旧ページのスナップショットを撮り終えるまでページを隠すのを遅らせてから鳴る。**いずれの場合も `pagehide`・`visibilitychange`(hidden) はその後に必ず来る**（＝`pageswap`は“pagehideより手前に足された早めの合図”）。
+  - `pagereveal`＝**入ってくるページ（incoming document）**で、初期化**または“再活性化（reactivation）”**の直後・最初の描画機会の前に発火。**新規にネットワークから読む時だけでなく、bfcache（戻る/進むの冷凍解凍）からの復帰・prerender（先読み）からの活性化でも発火する**。
+  - 両イベントは「クロスドキュメント・ビュートランジション」（＝別HTML文書へのハード遷移でも滑らかな画面遷移を出す仕組み。旧新2文書はJSで通信できないため、この2イベントの発火タイミングと`sessionStorage`を介して協調する）を両ページで協調させるための合図。
+  - **主戦場対応状況＝Safari 18.2・Chrome 126・Edge 126（いずれも2024年後半）で搭載済み**＝2026年現在は主要ブラウザで出揃い。**＝省データ(第46)/Background Sync(第52)のような「主戦場iOSに構造的に無い」タイプではなく、「有るが Loku が聞いていないから無害」タイプ**（免疫の質が異なる＝“非対応ゆえ非該当”でなく“依存していないゆえ免疫”＝第41 Math.random非使用・第26 dtベースと同じ「正しい設計ゆえ免疫」系統）。
+
+- **根拠URL（機構＝S・実装者/実例＝A）**：
+  - WebKit「WebKit Features in Safari 18.2」（S・pageswap/pagereveal搭載を明記・2024-12） https://webkit.org/blog/16301/webkit-features-in-safari-18-2/
+  - MDN「Window: pageswap event」（S・pagehideとの発火順・PageSwapEvent.viewTransition/activation・egress遮断のため検索スニペット複数一致でtrace） https://developer.mozilla.org/en-US/docs/Web/API/Window/pageswap_event
+  - Chrome for Developers「Cross-document view transitions for MPA」（S・same-origin cross-document毎発火・`pagereveal`はbfcache/prerender活性化でも発火・pageswapは非対象時pagehide直前・egress遮断のため同上trace） https://developer.chrome.com/docs/web-platform/view-transitions/cross-document
+  - W3C「CSS View Transitions Module Level 2」（S・仕様） https://www.w3.org/TR/css-view-transitions-2/
+  - WebKit「Two lines of Cross-Document View Transitions code …」（S・MPAでの2行導入・全ブラウザ到達） https://webkit.org/blog/16967/two-lines-of-cross-document-view-transitions-code-you-can-use-on-every-website-today/
+
+- **現物照合（目付がgrep）**：
+  - 現物 loku-attn.js（`index.html`内SDK雛形）の離脱送信は `visibilitychange`(hidden)＋`pagehide`＋`sendBeacon`（P0・475-476行）。**`pageswap`/`pagereveal` のハンドラは一切無い**（notebook・還流ノート全文grep＝0件）。
+  - P7（bfcache復帰＝`pageshow`の`event.persisted`）・P8（先読み＝`document.prerendering`/`prerenderingchange`）は還流ノートに設計済み・実装は本番化時（メイン領分）。`pagereveal` はこの2つと**同じ“復帰の瞬間”に重なる第3の合図**。
+
+- **免疫の判定と、唯一の接点**：
+  - **① P0離脱送信＝構造的免疫**。Lokuは `pagehide`/`visibilitychange`(hidden) を合図にしており、`pageswap` は**それより手前に鳴るだけで pagehide は必ず後から来る**＝新イベントが増えても離脱フラッシュは無傷。かつ**主戦場の主要離脱「LP→LINE」はクロスオリジン（別ドメイン）＝ビュートランジション対象外＝`pageswap`すら絡まない**。二重に非該当。
+  - **② 唯一の接点＝`pagereveal` の“復帰重複”**。`pagereveal` は bfcache復帰・prerender活性化でも発火するため、将来P7/P8を実装する際に **`pageshow`(persisted)（P7）・`prerenderingchange`（P8）と `pagereveal` を<u>別々に</u>「新ビュー計上」に使うと、1回の復帰で合図が2つ鳴り“新ビュー2件”に膨れる**（＝Plausible PR#5082が踏んだ「bfcache復帰を握り潰す（過少）」の**逆＝二重発火（過剰）**）。
+
+- **対策案（前ガード＝実装より先に言語化・コードは触らない）**：
+  - (a) **【最優先・最軽量】復帰計上の合図を1本に統一する規律を明文化**：将来P7/P8を実装する時、復帰の“新ビュー計上＋per-viewカウンタ0リセット”のトリガーは **`pageshow`(persisted) を正準（canonical）** とし（最も広く支持・bfcacheの標準合図）、`pagereveal` を**同じ計上に重ねて登録しない**（`pagereveal` を使うなら`pageshow`と排他に切り替える）。＝1回の復帰＝1回の計上を保証。
+  - (b) **P0は現状維持**：離脱送信を `pageswap` へ移し替えない（`pagehide`/`visibilitychange`主が主戦場で最頑健＝第22 P0裏書き「fetch keepaliveへ安易に乗り換えない」と同型の“合図を替えない”歯止め）。`pageswap` は同一オリジン遷移でしか付加価値が無く、主戦場の主要離脱はクロスオリジンゆえ利得ゼロ。
+  - (c) **将来LPを同一ドメインMPA＋ビュートランジション化する場合の回帰確認だけ用意**：滑らか遷移は“見た目”の層で、下敷きの文書生死（旧文書破棄→新文書読込）は変わらない＝「1文書遷移＝1ビュー」の等号は保たれるはず、を実機で裏取り（下記検証方法）。
+  - ※ P1（単調増加マージ）は冪等ゆえ、仮に復帰pingが二度来ても active_sec/box_stats は巻き戻らないが、**“ビュー件数”そのものの二重計上は P1では吸収されない**（P1はビュー内の値のマージ・ビュー数の重複除去ではない）＝だから (a) の合図一本化が要る、が芯。採否・優先度の判断はDaiyaに委ねる。
+
+- **検証方法（メイン/番人領分・1スタジオ目本番化時・P7〜P19実機照合と同群）**：
+  1. **負のテスト＝復帰の二重計上**：LP→別ページ→「戻る」でbfcache復帰した時、`pageshow`(persisted) と `pagereveal` が両方発火しても**新ビュー計上は1件のみ**（合図一本化が効いている証拠）。
+  2. **P0離脱の無傷回帰**：LP→LINE（クロスオリジン）離脱で `pageswap` が絡まず、従来どおり `visibilitychange`(hidden)＋`pagehide`＋sendBeacon で締まる。
+  3. **同一ドメインMPA＋ビュートランジション時**：同一オリジンのページ間遷移で `pageswap`→（遷移）→hidden/pagehide→次ページ`pagereveal` の順で、**1遷移＝旧1ビュー締め＋新1ビュー開始**に落ち着く（ビュー数が膨れない）。
+  4. **prerender活性化との衝突**：先読み（P8）から活性化した時、`prerenderingchange` と `pagereveal` の二重で初期化/計上が二度走らない。
+  5. 再訪頻度（P15）・のべ来訪回（P16/P17）・因果台帳の分母が、復帰二重計上で過大にならない（1〜4の帰結の台帳側確認）。
+
+- **優先度**：**低〜中**。現物P0は完全免疫（実害ゼロ）・危険は**未来のP7/P8実装時の二重計上に限局**＝(a)の合図一本化規律を実装前に引けば誤差は生まれる前に潰せる＝**最も安い前ガード**。反sprawl＝新機構でなくP0/P7/P8の射程に「新ライフサイクルイベント（pageswap/pagereveal）」軸を追加＝第44回P28以来12回連続新種なし（45-56）。
+
+- **⚠️見廻り(lp-mimawari)へ申し送り**：(1) Instagram `CONFIRMED_EVENT_UPDATE` メッセージタグ廃止（2026-04-27）＝IG/Messenger自動DMがUtility Templates/Marketing Messages APIへ移行必須＝comment-to-DM予約導線（第55回watchlist）の同意/自動送信の法規制・Metaポリシー適合論点。(2) LINEミニアプリ「チャネル同意の簡略化」の粒度（user ID取得の同意はスキップ・プロフィール取得/メッセージ送信は各ミニアプリで都度同意）＝同意設計の論点。法的判断・採否はDaiya/見廻り領分。
+
+- **⚠️番人(qa-auditor)へ申し送り**：P7/P8実装時の境界テスト群に「`pagereveal`×`pageshow`(persisted)×`prerenderingchange` の三重発火で復帰が**1件のみ**計上されるか（二重計上しないか）」を追加。同一ドメインLPを将来ビュートランジション化した場合の「1文書遷移＝1ビュー」回帰も同群で。
+
+- **起源（origins.md 記録済）**：なぜ `pageswap`/`pagereveal` は作られたか＝**ハード遷移（別HTML文書への普通のページ移動）では旧ページのJSと新ページのJSが一切通信できない**（旧は死に新はまっさら）ため、当初 View Transitions はSPA（同一JS文脈の擬似遷移＝`document.startViewTransition`）でしか使えなかった。それを普通の複数ページサイト(MPA)へ広げるには、旧が死ぬ直前に一度喋れる窓(`pageswap`)と新が描かれる前に一度喋れる窓(`pagereveal`)が要った＝**JS接続の無い2文書を発火タイミングだけで協調させる最小の仕掛け**。無かった時代はハード遷移のたびに画面が白くフラッシュ＝「Webはアプリより野暮ったい」の一因。ITP(第4)・sendBeacon・Background Sync(第52)に続く「発明が“不便”を埋めるために生まれた」型で、今回は“ハード遷移の断絶”というWebの根っこの制約を埋める発明＝計測から見た要点は「見た目は滑らかでも下敷きの文書は依然“死んで生まれ変わる”＝pagehide/pageshowの意味は不変」。
