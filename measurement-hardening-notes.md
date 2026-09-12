@@ -1586,3 +1586,45 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **⚠️番人(qa-auditor)へ申し送り**：P7/P8実装時の境界テスト群に「`pagereveal`×`pageshow`(persisted)×`prerenderingchange` の三重発火で復帰が**1件のみ**計上されるか（二重計上しないか）」を追加。同一ドメインLPを将来ビュートランジション化した場合の「1文書遷移＝1ビュー」回帰も同群で。
 
 - **起源（origins.md 記録済）**：なぜ `pageswap`/`pagereveal` は作られたか＝**ハード遷移（別HTML文書への普通のページ移動）では旧ページのJSと新ページのJSが一切通信できない**（旧は死に新はまっさら）ため、当初 View Transitions はSPA（同一JS文脈の擬似遷移＝`document.startViewTransition`）でしか使えなかった。それを普通の複数ページサイト(MPA)へ広げるには、旧が死ぬ直前に一度喋れる窓(`pageswap`)と新が描かれる前に一度喋れる窓(`pagereveal`)が要った＝**JS接続の無い2文書を発火タイミングだけで協調させる最小の仕掛け**。無かった時代はハード遷移のたびに画面が白くフラッシュ＝「Webはアプリより野暮ったい」の一因。ITP(第4)・sendBeacon・Background Sync(第52)に続く「発明が“不便”を埋めるために生まれた」型で、今回は“ハード遷移の断絶”というWebの根っこの制約を埋める発明＝計測から見た要点は「見た目は滑らかでも下敷きの文書は依然“死んで生まれ変わる”＝pagehide/pageshowの意味は不変」。
+
+## 追加観点（2026-09-12・目付第57回巡回からの還流／P21＋P25＋causal.mjs への追加観点・新種P番号は起こさない・コード無変更）
+
+**前提**：以下は実装照合表（P0-P3済）・P5〜P28・P35・各追加観点とは**重複しない**が、**新種P番号は起こさない＝P21（consent拒否の匿名分母）＋P25（小セル抑制）＋causal.mjs（因果の入力純度）への追加観点**。テーマ＝ビート2「計測・分析技術」の未踏サブ＝**GA4／Googleの「モデル化コンバージョン（modeled/estimated conversions）＝欠測を機械学習で推計して見える総数に混ぜる定石」への免疫確認**。反sprawl＝P0-P29+P35 grep全読＋還流ノート全文で `modeled/modeling/estimate/impute/conversion modeling` を確認（0件＝完全に未接触の領域）。テーマローテーション＝ビート3（決断面UI変化）の井戸が5回連続枯れ（53/54/55/56/57の実探索で新規S/A一次無し＝GBPはChat終了/WhatsApp/Reserve with Googleの二次のみP28再掲・LINEは8/26同意簡略化で既に白）ゆえ、逸脱ルール③の最有力(a)B3を実探索で空振り確認→次点(b)ビート2未踏サブへ正しく退避。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P21＋P25＋causal.mjs 追加観点・第57回巡回（2026-09-12）／“欠測を推計で埋めない（数字を作らない）”設計の免疫確認＋前方ガード】新種P番号なし
+
+**現象**：GA4／Google広告の「モデル化コンバージョン（コンバージョン・モデリング）」は、同意拒否・クッキー無しで**観測できなかった客の成約を、同意した客の行動パターンから機械学習で推計し、観測分と“合算”して1つの総数として表示**する。ハザードが3点で確定：
+- (1) **観測分と推計分が既定で非分離**＝大半のGA4レポートで1つの総数に混ざり、“実測 vs 推計”を並べるトグルが既定に無い（clickport/prooflytics A→traced）。
+- (2) **BigQuery（生書き出し）に推計分が出ない**＝ダッシュボードと生データが食い違い、その差分こそが推計の層（Google確認の引用・clickport A→traced）。
+- (3) **精度の公表値が無い**＝GA4挙動モデルの精度は非公表。よく引かれる「70%回復」は2021 Google Ads blog（S一次）の広告側の数字でGA4挙動モデルの精度ではない。発動閾値も非公開（目安1日1,000アクティブ＋同意700だが正確値非公表）。
+
+**根拠URL**：
+- https://blog.google/products/marketingplatform/360/conversion-modeling-through-consent-mode-google-ads/ （S一次・「70%超回復」の出所）
+- https://plausible.io/blog/consent-mode-ga4-modeled-data （A・OSS計測側の解説）
+- https://clickport.io/blog/ga4-consent-mode-modeling （A→traced・非分離/BigQuery非出力/精度非公表）
+- https://prooflytics.io/blog/ga4-modeled-conversions-explained （A→traced）
+- https://www.searchenginejournal.com/the-conversion-setup-errors-that-break-smart-bidding/584671/ ＋ https://consently.net/blog/conversion-modeling-consent （A→traced・「モデル化データ→Consent Mode→スマート入札に供給・観測+推計の混合総数で入札が最適化を続ける」＝起源＝推計の本当の客は入札機械）
+
+**現物の状態（免疫確認・grep根拠）**：
+- `handoff-demo/app.mjs` / `handoff-demo/causal.mjs` / `index.html` に `model|modeled|estimate|impute|synthetic|fabricate` の参照は **grep 0件**＝Lokuは推計を一切足さない。
+- 効果台帳の率は**必ず母数を同伴**＝`outcome_rate: visitors ? Math.round(bookedFriends.size / visitors * 10000) / 100 : null`（app.mjs 322-323行・母数0なら率でなく `null`→表示は「-」341行）／`booked_rate: r.n ? Math.round(r.booked / r.n * 100) : 0`（1028行・nを割る＝母数0で率を出さない）。
+- change-outcomes は baseline/treatment を**実 friend_id の集合メンバーシップ**で数える（1042-1049行）＝観測のみ・推計なし。
+- 同意拒否者は `identity{consented}`（app.mjs 51行）・`opt_out`（60行）・`profiling_opt_out`（65,198行）でタグ/プロファイリング/配信から外すが、**来訪者数（分母＝anons.size 315行）には“来たが計測拒否”として正直に残す**＝GA4が「同意拒否者の成約を推計で埋める」のと正反対＝P21（consent拒否の匿名分母）そのもの。
+- 因果（causal.mjs 245行）は**物理的に観測した箱エンゲージメント**（`eng = Number(be?.[k]) || 0`・21-30行）から離脱を導出＝埋めるべき“機械”を持たない。
+
+**免疫の型（第9型）**：「欠測を推計値(ML)で埋めて可視の総数にこっそり混ぜる」設計への免疫を、Lokuは「欠測をunknownで正直に立て・率にn同伴・因果入力は観測イベントのみ」で持つ。第54（Privacy Sandbox＝乗らなかったのは偶然でなく設計）の“捏造しない版”。**核心＝推計の本当の客はスマート入札（自動入札は完全な数がないと最適化が壊れる）であって店主ではない**＝Lokuの受け手は真実が要る店主ゆえ**埋める動機が構造的に不在**＝「数字を作らない」は禁欲でなく顧客が違うことの必然。
+
+**守るべきガード（対策案・番犬）**：
+1. **効果台帳（cause-outcomes/change-outcomes）と因果（causal.mjs）の入力は観測イベント（friend_id×視線×予約）のみ**とし推計/モデル値を混ぜない。将来 “modeled/estimated conversions” 相当を足すなら、**observed/modeled を必ず分離フラグで別表示し、可視の総数に黙って混ぜない＝混ぜた瞬間に鳴る赤テスト（禁止テスト＝番犬）**（第50配送保証・第54 Privacy Sandbox で確立した将来ガードの再利用）。
+2. 同意拒否の欠測は**P21の匿名分母**で「来訪はしたが計測拒否」と正直に立て、率には必ず**P25の小セル床＋n同伴**を効かせ、推計で埋めない。
+3. 店主がGA4を併用する場合の位置づけ＝**GA4は推計で膨らむ／Lokuは混ぜない観測の底値（基準線）**＝「GA4－Loku の差 ≒ 推計の層」。正直な数（Loku）が“少なく見える”理由を店主に説明できるようにする（店主教育の論点＝Daiya領分）。
+
+**検証方法**：`model|modeled|estimate|impute|synthetic` grep 0件の回帰／率が母数0時に `null`→「-」表示で捏造率(100%等)を出さない負のテスト／同意拒否者が分母には残るが profiling には乗らない回帰／将来モデル値を足すテストブランチで「observed/modeled 非分離なら赤」の番犬。
+
+**優先度**：低（現物は既に免疫＝grep 0件＋率にn同伴＋母数開示＋観測のみの因果。番犬の明文化が最軽量・最優先）。しきい値・実装・QA・店主向け説明の設計はDaiya／メイン領分。
+
+- **⚠️見廻り(lp-mimawari)へ申し送り**：Consent Mode v2 の全面強制＋2026-04モデル閾値厳格化はEEA/UK中心＝**日本主戦場での同意取得の要否・「推計で埋めた数を店主レポに出すこと」自体の景表法/優良誤認の観点**はDaiya/見廻り領分の法的判断。
+
+- **⚠️番人(qa-auditor)へ申し送り**：品質チェックに「**効果台帳・因果の入力に観測外の推計値が混ざっていないか（`model|estimate|impute` grep 0件・率にn同伴・母数0で率を出さない）**」を1項目として提案。小Nで最も暴れる箇所。
+
+- **起源（origins.md 記録済）**：なぜ“欠測を推計で埋める（コンバージョン・モデリング）”は生まれたか＝2020年前後、①3rdクッキー廃止 ②GDPR型同意拒否 の二方向で広告の観測データに穴が開き、そのまま出すと報告上コンバージョンが急落（実際は売れているのに数字だけ落ちる）。Googleは2021年、同意客の行動から不同意客の成約を機械学習で推計して埋める仕組みを導入。なぜ“今この形”か＝単なる見栄えでなく**スマート入札（自動入札）が“完全な数”を前提に動く**から＝欠けた数では入札AIの学習が偏り広告費最適化が壊れる＝推計は**入札機械を止めないための燃料**として設計された。統計学の**欠損値補完（imputation）の広告・大N前提版**。無かった時代＝測れた分だけ出し穴は「不明」で残した。Lokuへの回答＝Lokuの因果は物理観測した実名×視線イベントだけを入力にし埋めるべき“機械”を持たない＝**補完の動機そのものが構造的に不在**＝「数字を作らない」は流行への逆張りでなく、受け手が入札AIでなく店主だから成り立つ設計の必然（第54「乗らなかったのは設計」の捏造しない版）。
