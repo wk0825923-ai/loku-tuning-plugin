@@ -1628,3 +1628,33 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **⚠️番人(qa-auditor)へ申し送り**：品質チェックに「**効果台帳・因果の入力に観測外の推計値が混ざっていないか（`model|estimate|impute` grep 0件・率にn同伴・母数0で率を出さない）**」を1項目として提案。小Nで最も暴れる箇所。
 
 - **起源（origins.md 記録済）**：なぜ“欠測を推計で埋める（コンバージョン・モデリング）”は生まれたか＝2020年前後、①3rdクッキー廃止 ②GDPR型同意拒否 の二方向で広告の観測データに穴が開き、そのまま出すと報告上コンバージョンが急落（実際は売れているのに数字だけ落ちる）。Googleは2021年、同意客の行動から不同意客の成約を機械学習で推計して埋める仕組みを導入。なぜ“今この形”か＝単なる見栄えでなく**スマート入札（自動入札）が“完全な数”を前提に動く**から＝欠けた数では入札AIの学習が偏り広告費最適化が壊れる＝推計は**入札機械を止めないための燃料**として設計された。統計学の**欠損値補完（imputation）の広告・大N前提版**。無かった時代＝測れた分だけ出し穴は「不明」で残した。Lokuへの回答＝Lokuの因果は物理観測した実名×視線イベントだけを入力にし埋めるべき“機械”を持たない＝**補完の動機そのものが構造的に不在**＝「数字を作らない」は流行への逆張りでなく、受け手が入札AIでなく店主だから成り立つ設計の必然（第54「乗らなかったのは設計」の捏造しない版）。
+
+## 追加観点（2026-09-13・目付第58回巡回からの還流／P0＋P19＋P22 への追加観点・新種P番号は起こさない・コード無変更）
+
+### 【P0＋P19＋P22 追加観点・第58回巡回（2026-09-13）／iOS「低データモード（Low Data Mode）」への免疫確認＋前方ガード（第10型免疫）】新種P番号なし
+
+**前提**：新種は起こさない＝第44回P28以来14回連続で新種なし（45〜58）。**追記前に本ファイル全読＝P0〜P29（P4/P24欠番）＋P35をgrep**し、「Low Data」既存0件・「Save-Data」9件（データセーバー一般＝別文脈）を確認。本項はP0（離脱時フラッシュ）／P19（sendBeacon返り値未使用）／P22（装置の死活＝ビーコン到着心拍）の射程内の追加観点。**コードは触っていない。** 採否・実装・QAはDaiya／メイン領分。
+
+**現象（ビート1・S一次）**：iOS（13以降・2019）の**低データモード**は、データ節約のためシステムが**discretionary/background（急がない・自動・裏の）通信を後回し/停止**する（Background App Refresh停止・自動更新/自動再生停止・写真同期停止・ストリーム品質低下）。一方**ユーザー起点の前面タスクは優先して通す**（Apple公式サポート 102433・S一次）。開発者向けには `URLSession` の `isDiscretionary`、Network framework の `allowsConstrainedNetworkAccess`（既定true）/`allowsExpensiveNetworkAccess` で通信を「後回し可」と分類し、OSがそれを見て止める（WWDC19 Session 712・S→traced）。
+**さらに**：**SafariはWebページに低データ状態を一切通知しない**＝Save-Dataヘッダ非送信・`prefers-reduced-data` 実質非対応（MDN・S／http.dev B→traced）。＝JS/CSS/サーバから「この訪問者は低データモードか」を検知する標準手段が無い（主戦場のiOS Safari/LINE内WKWebViewで信号が来ない）。
+
+**なぜ免疫か（現物）**：loku-attn.js の送信は `navigator.sendBeacon(FLUSH_ENDPOINT,…)` のみ（index.html 473行）、発火は `visibilitychange`(hidden) 主＋`pagehide` フォールバック（475-476行）。**周期的バックグラウンド送信・keepalive fetch・Background Sync・再送キューを一切持たない**＝低データモードが止める“後回し通信”を**そもそも使っていない**。sendBeacon-at-visibilitychange は「離脱という前面操作に紐づく前面通信」＝低データモードの止める discretionary/background 区分に構造的に入らない＝**第10型免疫**（第46 低電力／第52 オフライン離脱に続く“端末状態が送信可否を裏で決める”家系の第3例で、同じ一手＝前面1発sendBeaconで効く）。
+
+**残る穴（増幅器であって新種でない）**：
+1. **P19（返り値未使用）**：現物は sendBeacon の返り値（キューに載れば true／載らねば false）を見ておらず失敗時の再送も無い。低データモードのユーザーは弱電波/データ上限近接のセルラー（＝主戦場 広告→LP→LINE の中心）に偏りやすく、悪条件で false 返却＝**黙って落ちる確率が上がる**。低データモードは“新しい穴”でなく**既存P19の当たりやすさを上げる増幅器**。
+2. **原因ラベルが付かない**：Safariが低データ状態を通知しない以上、取りこぼしは「どのセッションが低データだったか特定不能＝原因不明の減り」として現れる。
+
+**守るべきガード（番犬・現状は既に満たしている）**：
+1. 送信は現状どおり**離脱時sendBeacon 1発（前面）に限定**し、周期的バックグラウンド送信・keepalive・Background Sync・重い再送キューを足さない。**足すなら**低データ/低電力/オフラインの三敵に対する取りこぼし率を計測すること（足した瞬間に低データ層で系統的に取りこぼす＝設計変更時の見張り点）。
+2. **sendBeacon の返り値を見て false を数える**（P19対策の再掲）＝原因（低データ）は特定できなくても“落ちた量”は正直に可視化できる。
+3. 欠測は**P22のビーコン到着心拍で全体率として見張り、個別セッションに“低データ推定フラグ”を捏造しない**（数字を作らない＝信号が来ない以上、推測でタグ付け・水増ししない）。
+
+**検証方法**：現物grep `isDiscretionary|Background Sync|setInterval.*beacon|keepalive` が 0件の回帰／sendBeacon が false を返す条件（大ペイロード・弱電波シミュレーション）での false カウンタの負のテスト／送信経路が visibilitychange+pagehide の前面2点に限定されている回帰。
+
+**優先度**：低（現物は既に免疫＝送信が前面1発・後回し通信ゼロ。返り値falseカウンタの明文化＝P22心拍への相乗り＝が最軽量で有用）。しきい値・実装・QAはDaiya／メイン領分。
+
+- **根拠URL**：Apple Support「Use Low Data Mode」 https://support.apple.com/en-us/102433 （S一次・本体egress遮断＝検索経由trace・要旨確定）／WWDC19 Session 712「Advances in Networking, Part 1」 https://wwdcnotes.com/documentation/wwdc19-712-advances-in-networking-part-1/ （discretionary/allowsConstrainedNetworkAccess・S→traced）／MDN sendBeacon https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon （S・離脱時定石）／MDN Save-Data https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Save-Data ・prefers-reduced-data https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-data （Safari非対応・S）／http.dev「Save-Data」 https://http.dev/save-data （Safari not supported・B→traced）／Ctrl.blog「Safari's Beacon API problems」 https://www.ctrl.blog/entry/safari-beacon-issues.html （A・可視遷移でのみ発火）／Huli「64KiB Limitation of sendBeacon」 https://blog.huli.tw/2025/01/06/en/navigator-sendbeacon-64kib-and-source-code/ （A・false返却＝P19根拠）
+
+- **⚠️番人(qa-auditor)へ申し送り**：品質チェックに「送信経路に後回し通信（isDiscretionary/Background Sync/周期送信/keepalive）が混ざっていないか＝端末状態（低電力/オフライン/低データ）で系統的に取りこぼさないか」＋「sendBeacon返り値のfalseカウント有無」を回帰項目として提案。
+
+- **起源（origins.md 記録済・57件目）**：なぜ低データモードは生まれたか＝従量制/上限付きモバイル通信でアプリが裏で通信して「気づいたらギガが尽きる」不安が蔓延・従来はアプリごと手動オフで煩雑→2019 iOS13でAppleが「このネットワークでは節約」の1トグルでOSが横断的に後回し通信を止める仕組みを導入。“今この形”の理由＝OSが essential(前面)/discretionary(後回し) の線引きを一元的に持ち、アプリは isDiscretionary/allowsConstrainedNetworkAccess で分類して従う責任分担。Lokuへの回答＝OSが引いた「前面は最後まで通す／後回しは止める」の境界線上で、sendBeacon-at-visibilitychange は前面側に構造的に居る＝端末の節約設定が来ても崩れない（sendBeaconが“離脱時でも通る前面通信”として設計された歴史と同じ思想の上に乗っている）。
