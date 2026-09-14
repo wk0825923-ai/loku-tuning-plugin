@@ -1658,3 +1658,40 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **⚠️番人(qa-auditor)へ申し送り**：品質チェックに「送信経路に後回し通信（isDiscretionary/Background Sync/周期送信/keepalive）が混ざっていないか＝端末状態（低電力/オフライン/低データ）で系統的に取りこぼさないか」＋「sendBeacon返り値のfalseカウント有無」を回帰項目として提案。
 
 - **起源（origins.md 記録済・57件目）**：なぜ低データモードは生まれたか＝従量制/上限付きモバイル通信でアプリが裏で通信して「気づいたらギガが尽きる」不安が蔓延・従来はアプリごと手動オフで煩雑→2019 iOS13でAppleが「このネットワークでは節約」の1トグルでOSが横断的に後回し通信を止める仕組みを導入。“今この形”の理由＝OSが essential(前面)/discretionary(後回し) の線引きを一元的に持ち、アプリは isDiscretionary/allowsConstrainedNetworkAccess で分類して従う責任分担。Lokuへの回答＝OSが引いた「前面は最後まで通す／後回しは止める」の境界線上で、sendBeacon-at-visibilitychange は前面側に構造的に居る＝端末の節約設定が来ても崩れない（sendBeaconが“離脱時でも通る前面通信”として設計された歴史と同じ思想の上に乗っている）。
+
+## 追加観点（2026-09-14・目付第59回巡回からの還流／P0＋P19＋P4＋P2 への追加観点・新種P番号は起こさない・コード無変更）
+
+### 【P0＋P19＋P4＋P2 追加観点・第59回巡回（2026-09-14）／iOS 27・Safari 27 安定版の答え合わせ（fetchLater/Background Sync未搭載＝sendBeacon据え置き）＋Notify Me（ブラウザ自身の自動再訪）へのP2免疫確認（第11型免疫）】新種P番号なし
+
+**前提**：新種は起こさない＝第44回P28以来**15回連続で新種なし**（45〜59）。**追記前に本ファイル全読＝P0〜P29（P4/P24欠番）＋P35をgrep**し、「Notify Me」既存0件・「fetchLater」は種としては P4（欠番・未実装トリガー）としてのみ言及を確認。本項は P0（離脱時フラッシュ）／P19（sendBeacon返り値未使用）／P4（fetchLaterへの置換検討＝WebKit実装待ちの休眠種）／P2（bot・非人間の除外）の射程内の追加観点。テーマ＝ビート1「計測精度の敵」＝**宿題の最重要持ち越し「iOS 27/Safari 27 安定版=2026-09-14=最短の答え合わせトリガー」が本日点火**。約30回続いた「版動かず据え置き」が版動でついに決着。**コードは触っていない。** 採否・実装・QAはDaiya／メイン領分。
+
+**現象(a)・S一次（版が動いた）**：**iOS 27 / Safari 27 の安定版が本日2026-09-14に一般公開**（Apple公式リリース＝版が実際に動いた）。安定版27の新機能は customizable `<select>`／スクロールアンカリング／WebAssembly JSPI／`:heading` 等が中心（WebKit公式beta告知＝「58新機能・525修正・大半は既存機能の挙動を正しくする品質向上」）。**離脱送信の官製代替は依然ゼロ**＝
+- `fetchLater()`（離脱時にブラウザが都合のいい時に確実に送る予約送信）は **Safari 27安定版でも未搭載**（caniuse／web-features-explorer＝「Chromiumは2025-04出荷済／WebKitはstandards-positions支持表明＋実装bug open」）。
+- **Background Sync API も Safari 未対応が継続**（lambdatest／caniuse）／pending beacon も同様。
+- ＝主戦場iOSには「離脱の瞬間に前面で1発投函する `sendBeacon`」より堅い官製の選択肢が今なお存在しない。
+
+**現象(b)・A（機構・複数一致）**：Safari 27の目玉「**Notify Me**」（Apple Intelligenceで自然言語指定→ブラウザが定期的にページを見に行き変化を通知）が正式搭載。頻度は最短1時間〜日/週/月（実務は1日1回級に保守的）・要Apple Intelligence（iPhone 15 Pro以降）・**EU/中国は非提供＝日本（主戦場）は提供対象**。技術的な要＝**背景チェックは「生HTMLを読むだけ＝完全描画でない／JSで後から作った値は比較対象に無いことがある」＝生HTML取得であってJavaScriptの実行・描画を伴わない**（PageCrawl.io／MacRumors 複数一致）。
+
+**なぜ免疫か（現物）**：
+- (a) 離脱送信＝loku-attn.js は `navigator.sendBeacon(FLUSH_ENDPOINT,…)`（index.html 473行）＋発火は `visibilitychange`(hidden)主＋`pagehide`（475-476行）のみ＝**fetchLater/Background Sync という“後で送る官製キュー”を使っていない**＝Safariに来ていない以上、乗り換え先が無い＝**P0の現行設計を変える理由が今回も生じない**（版が動いても据え置きが正解）。
+- (b) Notify Me＝Lokuの計測は loku-attn.js が**JSとして初期化→tick()で滞在/視線を積む→離脱時sendBeacon で受け口(app.mjs)へ投函**する流れ。**JSを一切動かさないNotify Meの自動再訪は初期化にも到達せず受け口へ1件も届かない**＝“人でない自動再訪”が のべ来訪回(P15/P16)・reach・分母(anons.size 315行) を水増しできない＝**P2（非人間の除外）が「除外ロジックを働かせるまでもなく、そもそも入ってこない」形で成立**＝第11型免疫（第46低電力／第52オフライン／第58低データ＝“端末状態→送信可否”家系に続く、“ブラウザの新挙動→JS非実行ゆえ計測に届かない”型）。
+
+**Lokuの構造的優位（翻訳の核）**：サーバログ型や「HTML埋め込み1pxピクセル」型の計測なら、Notify Meの生HTML取得で**幽霊訪問が水増しされうる**のに対し、Lokuは**“JSが走って人が視線を置いた”を条件に測る**からその混入経路を持たない＝ブラウザAI時代の“非人間トラフィック増”局面で**相対的に有利**。「人が能動的に見た瞬間だけを数える」定義（実名×視線）が、ブラウザが能動的に動く時代に自動的に“非人間を弾く境界線”として働く。
+
+**守るべきガード（番犬・現状は既に満たしている）**：
+1. 離脱送信は fetchLater 等の**“未Safari実装API”へ早合点で乗り換えない**（版が動いた本日、安定版27でも未搭載を確定＝乗り換えれば主戦場iOSで離脱データが丸ごと消える）。WebKitが実装した時に初めてP4（sendBeacon→fetchLater置換検討）を再開する。
+2. **計測はJS(sendBeacon)経由に一本化し、LP生HTMLに計測ピクセル(img/1px beacon)やHTML直書きのイベント送信タグを足さない**＝足すとNotify Meの生HTML取得で非人間の幽霊訪問が水増しされうる（P2の唯一の残り穴＝現状は経路を持たず免疫）。
+3. sendBeacon の返り値 false を数える（P19の再掲）＝端末状態/悪条件での取りこぼし量を正直に可視化。
+4. Notify Me が将来**JS実行版へ進化**した時、または**生HTML内のサブリソース(img/pixel)を取得する**ことが判明した時は P2 を再評価（watchlist継続）。
+
+**検証方法**：現物grep `fetchLater|Background Sync|registerSync` が 0件の回帰／LP生HTMLに `<img>` 系計測ピクセル・HTML直書き送信タグが無いことの回帰／sendBeacon false カウンタの負のテスト（P19再掲）。
+
+**優先度**：低（現物は既に免疫＝離脱はsendBeacon一本・計測はJS経由一本＝Notify Meの生HTML取得に触れる経路が無い）。しきい値・実装・QA・店主向け説明はDaiya／メイン領分。
+
+- **根拠URL**：Apple Developer「Safari 27 Release Notes」 https://developer.apple.com/documentation/safari-release-notes/safari-27-release-notes （S一次・版動／本体はJSレンダのため検索スニペット＋二次一致でtrace）／caniuse「fetchLater」 https://caniuse.com/wf-fetchlater （A・Safari未対応）／web-features explorer「Limited availability」 https://web-platform-dx.github.io/web-features-explorer/limited-availability/ （A）／LambdaTest「Background Sync on Safari」 https://www.lambdatest.com/web-technologies/background-sync-safari （A・未対応）／wpt-interop #1069 https://github.com/web-platform-tests/interop/issues/1069 （A）／MacRumors「iOS 27: All the New Safari Features」 https://www.macrumors.com/guide/ios-27-safari/ （A・機能/機構）／MacRumors「Safari can monitor a webpage」 https://www.macrumors.com/2026/06/08/safari-monitor-webpage-notify-updates/ （A→traced・bot負荷懸念）／Macworld「macOS 27 Safari Notify Me」 https://www.macworld.com/article/3159801/my-fingers-already-love-this-macos-27-safari-feature.html （B→traced）／PageCrawl.io「Safari Notify Me: How It Works」（生HTML読み取り・JS非実行の機構＝スニペット原文／egress遮断でtrace）。
+
+- **⚠️番人(qa-auditor)へ申し送り**：品質チェックに「計測送信がJS(sendBeacon)経由に一本化されているか＝LP生HTMLに計測ピクセル(img/1px beacon)やHTML直書き送信タグが混ざっていないか（＝Notify Me等のブラウザ自動再訪＝生HTML取得で非人間トラフィックを水増ししないか）」＋「fetchLater/Background Syncへ未実装のまま乗り換えていないこと」を回帰項目として提案。
+
+- **⚠️見廻り(lp-mimawari)へ申し送り**：Safari 27のクリックID剥がし拡大（si/twclid/Threads）・IP層アド網遮断・CDP(Segment/Tealium)のフィンガープリント分類（第三者WebKitソース解析＝B→traced／Apple公式ノートは非明言）＝計測タグ/CDP運用の適法・ポリシー適合の論点。法的判断・採否はDaiya/見廻り領分。
+
+- **起源（origins.md 記録済・58件目）**：なぜ「ブラウザ自身のページ監視（Notify Me）」は生まれたか＝在庫再入荷/値下げ/予約枠/チケット販売を待つ人が同じページを手で何度も再読み込みする不便（＝時間の浪費・見逃し不安）を解消するため。従来はVisualping/Distill等の監視SaaSに月額を払う層がいた（Notify Meはそれを置き換える）。“今この形”の理由＝Apple Intelligence（オンデバイス言語モデル）で「入荷したら教えて」と自然言語で監視条件を指定・変化を要約通知できるようになった＝“自然言語で頼める”が核。負荷/プライバシー配慮から**生HTMLを読むだけ・JS非実行・保守的頻度・オンデバイス**の控えめ設計を選択。Lokuへの回答＝Notify Meがあえて“JSを動かさない”設計を選んだことがLokuの盾＝Lokuは“JSが走って人が視線を置いた”を測るからこの自動再訪は入り口に届かない＝**「人の能動を軸に据えた設計は、機械の能動が増えても崩れない」**（sendBeaconが「離脱という前面操作は通す」設計だったのと同じ思想）。
