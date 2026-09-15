@@ -1695,3 +1695,24 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **⚠️見廻り(lp-mimawari)へ申し送り**：Safari 27のクリックID剥がし拡大（si/twclid/Threads）・IP層アド網遮断・CDP(Segment/Tealium)のフィンガープリント分類（第三者WebKitソース解析＝B→traced／Apple公式ノートは非明言）＝計測タグ/CDP運用の適法・ポリシー適合の論点。法的判断・採否はDaiya/見廻り領分。
 
 - **起源（origins.md 記録済・58件目）**：なぜ「ブラウザ自身のページ監視（Notify Me）」は生まれたか＝在庫再入荷/値下げ/予約枠/チケット販売を待つ人が同じページを手で何度も再読み込みする不便（＝時間の浪費・見逃し不安）を解消するため。従来はVisualping/Distill等の監視SaaSに月額を払う層がいた（Notify Meはそれを置き換える）。“今この形”の理由＝Apple Intelligence（オンデバイス言語モデル）で「入荷したら教えて」と自然言語で監視条件を指定・変化を要約通知できるようになった＝“自然言語で頼める”が核。負荷/プライバシー配慮から**生HTMLを読むだけ・JS非実行・保守的頻度・オンデバイス**の控えめ設計を選択。Lokuへの回答＝Notify Meがあえて“JSを動かさない”設計を選んだことがLokuの盾＝Lokuは“JSが走って人が視線を置いた”を測るからこの自動再訪は入り口に届かない＝**「人の能動を軸に据えた設計は、機械の能動が増えても崩れない」**（sendBeaconが「離脱という前面操作は通す」設計だったのと同じ思想）。
+
+## 追加観点（2026-09-15・目付第60回巡回からの還流／causal.mjs＋P25＋鉄則「数字を作らない」への追加観点・新種P番号は起こさない・コード無変更）
+
+### 【causal.mjs＋P25＋鉄則「数字を作らない」追加観点・第60回巡回（2026-09-15）／ビート2「計測・分析技術」＝A/Bテストの“覗き見問題(peeking problem)”への免疫確認＋質的confidenceを統計的有意と偽らないガード】新種P番号なし
+
+**前提**：本追記は**新規P番号を起こさない**。既存の `causal.mjs`（因果の入力純度・第54/57で還流）＋**P25（小セル抑制＝率にn同伴）**＋鉄則「数字を作らない」への**追加観点**。追記前に本ファイル全読＝`有意/significance/p-?value/信頼区間/peeking/逐次/sequential` を主題に持つ既存種が無いこと、および P0〜P29＋P35（P4/P24欠番）のいずれも「A/Bの仮説検定・早止め・確度の水増し」を主題化していないことを確認した。テーマは第59回宿題「次回の最有力＝B2未踏サブ（B2は第57=最後・B1が58/59で版動2連続ゆえ回避）」の直行消化。**コードは触っていない。**
+
+**現象（業界＝S/A一次）**：伝統的な固定サンプルA/Bテストは「事前に決めたサンプル数に達するまで結果を見ない」前提でp値・有意水準が設計されている。ところが途中で覗いて“有意に見えた瞬間に止める”（＝覗き見問題 peeking / optional stopping）と、本来5%の偽陽性が**26〜40%超まで膨張**する（Evan Miller「How Not To Run An A/B Test」A＝「10回覗くと1%有意は実質5%有意」／arXiv:1512.04922 Johari-Pekelis-Walsh-Bhat「Peeking at A/B Tests / Always Valid Inference」S・KDD2017／「毎バッチ覗いてp<0.05で止めると実際は26.1%」）。業界の対処＝**逐次検定 sequential testing / always-valid inference**（Optimizely「Stats Engine」＝mSPRT＋FDR制御・Stanford共同 S/A vendor一次／GrowthBook v2.1 Sequential Testing＝anytime-valid p値・confidence sequences＋「最小メトリクス合計に達するまで結果を隠す」早覗き防止 A・OSSツール一次）。**ベイズも免疫でない**＝outcome-based optional stopping（見て止める）はベイズでも偽陽性を膨らませる（alexmolas 2025-10 A／arXiv:1602.05549 S）＝ベイズの利点は「どのサンプル数でも P(B>A) を今その瞬間の確率として解釈できる」ことであって「いつ止めても頻度論的誤り率が守られる」ことではない（“解釈可能”≠“妥当に止められる”）。小トラフィックの現実＝「1,000セッション/variant/月＋30CV/variant/月」が下限・800訪問/月では20%改善検出に4〜6か月＝低トラフィックは有意検定が届かず「質的調査（実測滞在・セッション録画・離脱アンケ）で摩擦を直せ」が定石（convert.com A）。
+
+**現物（Loku）＝免疫の根拠**：`grep -rniE '有意|significance|p-?value|p値|信頼区間|confidence interval|統計的' index.html handoff-demo/*.mjs` ＝**0件**。`causal.mjs` の `confidence` は入力（exit_type/reached_depth/box_engagement）から**ルールで一意に決まる質的ラベル(high/medium/low)**（42-63行）＝**頻度論的な仮説検定を持たない＝途中で覗いて膨らむp値そのものが存在しない**＝**覗き見問題に構造的に免疫（第12型免疫＝“検定を持たないゆえの免疫”＝第7型「業界が賭けた機構の生死」/第11型「そもそも入ってこない」に続く新分岐＝“土俵に上がらないゆえの免疫”）**。効果台帳も観測値＋n同伴（P25小セル床）で、有意判定で早止めする設計を持たない。GrowthBookの「最小合計に達するまで隠す」ガードはLokuのP25（薄いセルは率を出さず件数だけ／率にn同伴）と同思想＝業界の先取り。
+
+**loku-attn.js / app.mjs / causal.mjs への対策案（＝守るべきガード。実装・採否・しきい値はDaiya/メイン領分）**：
+1. **質的confidenceを統計的確度に言い換えない**：店主向けUI（strategy.html等）で `causal.mjs` の `confidence`(high/medium/low) を「統計的に有意」「95%の確率で効果あり」等の頻度論的確度に化けさせない。＝業界が10年かけて捨てた“偽りの精度(false precision)”を輸入しない。small N（1スタジオ）で「有意です」と見せると、店主はまぐれ（4件に1件はノイズ）を本物と誤認して施策判断を誤る。＝confidenceは“目安のラベル”として提示。（最軽量・最優先＝運用規律の明文化のみ）
+2. **将来A/B比較を足すなら覗き見を禁じる**：効果台帳をLPのvariant間比較(A/B)に使う改修をするなら、固定サンプルの覗き見（勝ってたら即止め）を禁じ、①always-valid/逐次法(mSPRT/confidence sequences)か②事前サンプル数固定＋待つ、のいずれか＋**必ずn同伴**。ベイズ P(B>A) を足す場合も「見て止める」を許すと免疫でない＝この一線を禁止テスト（番犬）で守る。
+3. **観測値＋因果ラベル＋nで“断定せず示す”を維持**：業界の逐次検定“軍拡競争”に乗らず、Lokuは「勝った/負けた」を仮説検定で断定しない道（＝小Nの正解であり覗き見問題の最強免疫）を維持。
+
+**検証方法（メイン/番人領分の回帰）**：①現物grep `有意|significance|p-?value|信頼区間|confidence interval` 0件の回帰 ②`confidence` が数値の確度でなく列挙ラベル(high/medium/low)であることの型テスト（第57「observed/modeled非分離なら赤」の番犬の隣接） ③将来A/B比較機能を足したら「固定サンプルを途中覗きで早止め」する分岐が存在すれば赤テスト ④効果台帳の率表示にn（分母）が同伴し、薄いセルは率を出さない回帰（P25）。
+
+**優先度＝低**（現物は既に免疫。(1)の運用規律明文化が最軽量・最優先）。**コードは触っていない。** 採否・優先度・しきい値・実装・QAはDaiya／メイン領分。統計的妥当性＝計測精度の領分ゆえ法規制の申し送りなし（見廻り領分ではない）。
+
+出典：evanmiller.org/how-not-to-run-an-ab-test.html（A）／arXiv:1512.04922・dl.acm.org/doi/10.1145/3097983.3097992（S）／support.optimizely.com Statistical analysis methods overview・optimizely.com Stats Engine story（S/A）／docs.growthbook.io/statistics/sequential（A）／alexmolas.com 2025-10-30・arXiv:1602.05549（A/S）／convert.com/blog/a-b-testing/ab-testing-stats（A）。2026-09-15確認。
