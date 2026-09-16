@@ -1716,3 +1716,38 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 **優先度＝低**（現物は既に免疫。(1)の運用規律明文化が最軽量・最優先）。**コードは触っていない。** 採否・優先度・しきい値・実装・QAはDaiya／メイン領分。統計的妥当性＝計測精度の領分ゆえ法規制の申し送りなし（見廻り領分ではない）。
 
 出典：evanmiller.org/how-not-to-run-an-ab-test.html（A）／arXiv:1512.04922・dl.acm.org/doi/10.1145/3097983.3097992（S）／support.optimizely.com Statistical analysis methods overview・optimizely.com Stats Engine story（S/A）／docs.growthbook.io/statistics/sequential（A）／alexmolas.com 2025-10-30・arXiv:1602.05549（A/S）／convert.com/blog/a-b-testing/ab-testing-stats（A）。2026-09-15確認。
+
+## 追加観点（2026-09-16・目付第61回巡回からの還流／P7＋P0 への追加観点・新種P番号は起こさない・コード無変更）
+
+### 【P7＋P0 追加観点・第61回巡回（2026-09-16）／ビート1「計測精度の敵」＝bfキャッシュの“適格性(eligibility)”はP7復帰計上の前提条件＝資格を落とすとP7（数え漏らし）とは逆向きの水増しへ反転】新種P番号なし
+
+**前提**：本追記は**新規P番号を起こさない**＝第44回P28以来**17回連続で新種なし（45〜61）**。既存の **P7（bfキャッシュ復帰時の新ビュー計上＋per-viewカウンタリセット・pageshow/persisted）** と **P0（離脱時flush＝visibilitychange(hidden)＋pagehide・unload/beforeunload不使用）** への**追加観点**。追記前に本ファイル全読＝P0〜P29＋P35（P4/P24欠番）をgrepし、既存のP7は「ページが**既に**bfキャッシュ適格である前提で“復帰の瞬間(pageshow persisted)をどう数えるか”」を主題にしており、**その一段上流＝“そもそも冷凍に入れる資格(eligibility)を保てているか／資格を落とす改修を番犬で止める”は未主題**であることを確認した。テーマは第60回宿題「B3を再最有力・ただし新鮮S/A主役があるか先に実探索→空振りなら次点(b)＝ビート1未踏サブ（WebView新ライフサイクル/BFCache on iOS等）」に従い、B3実探索が7回連続枯れ（53-59＋今回）ゆえ次点(b)へ逸脱した直行消化。**コードは触っていない。** 採否・実装・QA・しきい値はDaiya／メイン領分。
+
+**現象（機構＝S/A一次）**：ブラウザは「戻る/進む」を高速化するため離脱ページを破棄せず**丸ごと冷凍してメモリに保管（bfキャッシュ／WebKitでは Page Cache）**するが、**冷凍を許すページには“資格審査”がある**：
+- **`unload`/`beforeunload` ハンドラの登録**＝desktopのChrome/Firefoxは即**失格**（冷凍しない）。**モバイルのChrome/Safariは `unload` 付きでも一応冷凍を試みる**（unloadがモバイルでは元来ほぼ不発＝壊れるリスクが低いため）＝**主戦場iOSは desktop より資格審査が緩い**が、混在するdesktop/Chromium流入では即失格＝挙動が割れる（WebKit「Page Cache II – The unload Event」S／frontendchecklist・nitropack B→traced）。
+- **`Cache-Control: no-store` 応答**＝伝統的に失格。**Chromeは2025-26で「no-storeでも安全なら冷凍する」方向へ緩和**（機微データ配慮でタイムアウトを10分→**3分**に短縮・fetch/XHR応答が no-store／特定API使用なら依然失格）。**WebKit/Safariは挙動が別**（Safariは以前から no-store ページも冷凍する報告＝Apple Dev Forums 730319）＝**資格審査はブラウザごとに違う**（Chrome for Developers「Enabling bfcache for Cache-Control: no-store」S）。
+- **open接続**＝**WebSocketは失格要因から緩和**（Safariは entry時に接続を切って冷凍に入れる方式へ＝WebKit standards-positions #648 S）。
+- **`pagehide` は冷凍互換**＝登録しても資格を失わない（＝`unload`の正しい後継）。
+
+**現物（Loku）＝適格性の根拠**：`grep -nE "unload|beforeunload|pagehide|visibilitychange|pageshow|Cache-Control|no-store" index.html` ＝離脱送信は **`visibilitychange`(hidden)主＋`pagehide`フォールバック＋`navigator.sendBeacon`**（index.html 461・473・475-476行）、**462行に「beforeunload/unloadはモバイルで壊滅するため使わない」と明記**＝**`unload`/`beforeunload` 不使用＝bfキャッシュ適格を維持**。`Cache-Control: no-store` は index.html にも app.mjs（handoff-demo/app.mjs）にも**0件**。持続WebSocket/EventSource等の冷凍を阻む接続も現物になし。＝**現物は既にbfキャッシュ適格**＝“戻る”は冷凍/解凍の高速パスに乗れる状態。
+
+**なぜ重要か（P7との関係＝穴の“向き”が資格で反転する）**：
+- **資格あり＋pageshow(persisted)未対応**＝“戻る”は冷凍復帰で `load`/`DOMContentLoaded` 再発火せず＝計測が**数え漏らし**（GA4も「2ページ見たのに1pv」）＝**これが既存P7が塞ぐ穴（過少）**。
+- **資格なし（＝上記のどれかで失格）**＝“戻る”が**毎回フル再読み込み**＝`load`再発火＝匿名ID/tick/セッションが取り直され＝**同一人物の続き来訪が“別の新規来訪”に化けて二重計上（過剰）**＝**P7とちょうど裏表の穴**。
+- ＝**適格性はP7が発火する前提条件**。資格を失うとP7の pageshow(persisted) はそもそも鳴らず、代わりに identity層（P9名寄せ）に「フル再読込＝新規initを同一人物へ再結合する」負荷が丸ごと乗る。**資格を保てば往復は冷凍で1来訪に収まり、名寄せ負荷も減る**。
+
+**loku-attn.js / app.mjs / LP応答ヘッダ への対策案（＝守るべき番犬。実装・採否・しきい値はDaiya/メイン領分）**：
+1. **`unload`/`beforeunload` を足さない**（現状466-476行は不使用＝維持）。特に「本当に離れますか？」の離脱防止ダイアログ（`beforeunload`）や `unload`での最終送信を“良かれと思って”足すと、desktop/Chromium流入で即失格＝“戻る”がフル再読込に化ける。離脱送信は現行の `pagehide`＋`visibilitychange`＋sendBeacon（冷凍互換）を維持。
+2. **本番LPのHTML応答に `Cache-Control: no-store` を付けない**（現状0件＝維持）。付けると（Safari/Chromeで挙動は割れるが）冷凍タイムアウト短縮や失格の可能性＝“戻る”水増しの入口。動的LPで no-store が要る場合も、計測の観点では「冷凍資格を落とす副作用」を認識した上でDaiyaが採否判断。
+3. **冷凍を阻む持続接続を計測目的で常設しない**（現状なし＝維持）。
+4. **P7（pageshow/persisted復帰計上）を入れる時は“資格あり”が前提**＝適格性を先に確認してからP7を設計（資格がなければP7は永遠に鳴らず、代わりにP9名寄せで“フル再読込の新規init”を同一人物へ再結合する設計が要る）。
+
+**検証方法（メイン/番人領分の回帰）**：①現物grep `unload|beforeunload` が離脱送信経路に**0件**の回帰（`pagehide`/`visibilitychange`のみ）②本番LPのHTML応答ヘッダに `Cache-Control: no-store` が無いことの実機確認（curl -I 等）③（P7実装時）“戻る”で bfキャッシュ復帰した往復が **1来訪**として数えられ、フル再読込による新規init＝別来訪への化けが起きない負のテスト④（Chromium流入の診断補助）`performance.getEntriesByType('navigation')[0].notRestoredReasons` で復帰不成立の理由を自己診断（**Chromium専用＝Safariでは読めない**＝主戦場は実機観察が最終審級）。
+
+**優先度＝低**（現物は既に適格＝“既に正しい設計を将来の改修から守る番犬”。(1)(2)の運用規律明文化＝「離脱送信にunload/beforeunloadを足さない・LPをno-store化しない」が最軽量・最優先）。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。適格性＝純・計測精度の領分ゆえ法規制の申し送りなし（見廻り領分ではない）。
+
+- **根拠URL**：WebKit「WebKit Page Cache I – The Basics」 https://webkit.org/blog/427/webkit-page-cache-i-the-basics/ （S一次・機構）／WebKit「WebKit Page Cache II – The unload Event」 https://webkit.org/blog/516/webkit-page-cache-ii-the-unload-event/ （S一次・unloadと冷凍可否＝適格性の起源）／WebKit standards-positions #648「WebSocket BFCache integration（Disconnect on entry）」 https://github.com/WebKit/standards-positions/issues/648 （S一次・open接続の緩和）／Chrome for Developers「Enabling bfcache for Cache-Control: no-store」 https://developer.chrome.com/docs/web-platform/bfcache-ccns （S・no-store緩和/3分タイムアウト・egress遮断で検索経由trace）／Chrome for Developers「bfcache notRestoredReasons API」 https://developer.chrome.com/docs/web-platform/bfcache-notrestoredreasons （S・自己診断API）／Apple Developer Forums thread 730319（Safariが no-store でも冷凍する報告・B→traced）／jangwook.net「One listener costs you the back button: six bfcache probes」（2026・A・実装者棚卸し）／melin「visibilitychange Not Working in Safari」2026-07-01（A・P0補強）／oneuptime「Make Browser Beacons More Reliable During Navigation」2026-08-11（A・flush=チェックポイント）。2026-09-16確認。
+
+- **⚠️番人(qa-auditor)へ申し送り**：品質チェックに「(a)LP本体HTML応答に `Cache-Control: no-store` が無いか (b)離脱送信経路に `beforeunload`/`unload` を足していないか（＝bfキャッシュ資格を落として“戻る”をフル再読込＝別来訪へ水増ししないか） (c)P7復帰計上を入れた時にP1単調増加マージと衝突せず“戻る1回＝1来訪”に収まるか」を回帰項目として提案。
+
+- **起源（origins.md 記録済・60件目）**：なぜ `unload` は bfキャッシュの“敵”になり、その解決として `pagehide`/`pageshow(persisted)` がわざわざ発明されたのか＝古いWebの「ページの一生は load で始まり unload で終わる＝離れる＝破棄」という素朴な世界観が、bfキャッシュ（破棄せず冷凍）の登場で壊れた＝「離れるが破棄されない（また戻る）」ページで unload を鳴らすのは意味的に嘘＝ブラウザは「unloadを律儀に鳴らす（冷凍を諦める）」か「冷凍優先（unload鳴らさず）」の板挟みに（WebKit「Page Cache II – The unload Event」がこの矛盾を正面から論じた）。解決＝HTML5が `pagehide`（隠れる/冷凍される時）と `pageshow` に `event.persisted`（冷凍からの復帰か）を持たせ、「破棄」と「冷凍」を別の合図に分けた＝資格を失わずに離脱処理も復帰処理も書ける。Lokuへの回答＝現物462行「beforeunload/unloadは使わない」の選択が、実は“モバイル不発対策”と“bfキャッシュ資格維持”の一石二鳥だった＝unloadこそが bfキャッシュに意味を壊された当のイベントであり、避ける＝主戦場で最後まで測れて（pagehideは冷凍互換で鳴る）かつ“戻るが速い”資格も守れる。2026-07-18に掘った「bfキャッシュ復帰の数え直し(P7)」の起源が“戻る入口”の話だったのに対し、今回は“そもそも冷凍に入れる資格”の起源＝一段上流。「人の一生を破棄でなく一時退避で描く」設計思想は、離脱を“終了”でなく“途中経過”として扱うLokuのP1単調増加マージと同じ精神。
