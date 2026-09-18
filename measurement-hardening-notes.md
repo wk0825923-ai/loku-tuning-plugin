@@ -1774,3 +1774,32 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **放置すると店主の数字のどこが狂うか**：もし流入元判定をUTMでなくクリックIDに頼る設計へ変えると、主戦場で**クリックIDが剥がれて流入元が“不明/direct”に落ち、実際は広告経由なのに“自然流入”に化ける**＝広告チャネルの成約が過少に見え、店主が「効いている広告」を切る誤誘導へ。現物はUTM最優先ゆえこの穴に落ちていない。
 - **検証方法（メイン/番人領分）**：①`sourceLabel` にクリックIDのみ（UTM無し）のセッションを流し、流入元が entry_source へ正しくフォールバックし“direct”に潰れないか ②将来クリックID参照を足した場合に鳴る負のテスト（UTM最優先が崩れていないかの回帰）③1スタジオ目本番でSafari/LINE内流入のsource構成比が“direct過多”に偏らないか実測。
 - **優先度**：**番犬（実装変更なし・運用規律の明文化・P5免疫の再確認）**。採否・優先度の判断はDaiyaに委ねる。
+
+
+## 追加観点（2026-09-18・目付第63回巡回からの還流）＝ビート1「計測精度の敵」＝Safari 27「Safari MCPサーバー」＝AIエージェントが本物Safariを運転しページJSを実行する新チャネル＝新種P番号なし・P2への追加観点 第4弾（コード無変更）
+
+**前提**：WebKit「Features in Safari 27.0」正式記事の掲載（第62回持ち越しの答え合わせ点火＝版動トリガー）で精読した結果、計測に関わる目玉は **Safari MCPサーバー** ただ1つ。以下は実装照合表（P0-P3済）・P2（bot除外＝UA `BOT_UA_RE`／挙動 `suspect_bot`）・既存P番号（P5-P29/P35）とは**重複しない、P2への追加観点 第4弾**（第18回=抽象／第22回=同業OSS実数＋エージェンティックブラウザ命名／第49回=Atlas撤退による勢力図再編＋UA回避率60%＋Impossible Speed、に続く）。**新規P番号は起こさない＝“botの見破り”という機構はP2の射程内**（第44回P28以来19回連続新種なし＝45-63）。**追記前に本ファイル全読（P0〜P29+P35 grep＋通読）**し、P2の既存3観点いずれも「AIエージェントが名乗らずに本物ブラウザを運転する」「`navigator.webdriver` を読む」は主題化していないと確認＝P2追加観点 第4弾。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P2 追加観点 第4弾・第63回巡回（2026-09-18）／AIエージェントが運転する“本物ブラウザ”への備え＝`navigator.webdriver` という“タダで立つ札”を拾う一手＋非WebDriver運転には挙動層が最後の砦】新種P番号なし
+
+- **現象**：Safari 27に **Safari MCPサーバー**（AIとツールを繋ぐ共通規格MCPのサーバー）が同梱され、AIエージェント（Claude Code/Codex等）が**本物のSafariの窓**をクリック/入力/スクロール/`evaluate_javascript`（ページ内でJS実行）/DOM取得/ネットワーク監視/スクショまで操作できる（16ツール）。第59回のNotify Me（生HTMLだけ読む＝JS非実行＝“そもそも入ってこない”第11型免疫）とは**正反対の型**＝**本物のブラウザが描画しJSを実行する＝loku-attn.jsが実際に発火し sendBeacon も飛ぶ**（例えると：ロボットが本物の来店客と同じドアから入り店内を歩くので、防犯カメラには“人”として映る）。
+  - **なぜ今は実害ゼロ（二重の歯止め）**：(1)これは**開発者が自分のサイトをデバッグする道具**＝Safari開発者設定で「リモート自動化と外部エージェントを許可」を**手動でON**にした端末でしか動かない＝消費者トラフィックの経路ではない＝主戦場（美容/スタジオ×日本ローカルのLP）への実来訪比率は現時点ゼロ相当。(2)Apple公式版は**隔離されたWebDriver自動化セッション**を運転＝ページから `navigator.webdriver === true` に見える＝**名乗る自動化**（胸に“自動運転中”の札）。
+  - **残る監視点（将来）**：第三者製ドライバ（AppleScript経由で“ログイン済みの本物Safari”を運転する類＝例 achiya-automation/safari-mcp）は `navigator.webdriver` を**立てない**＝札を提げない＝挙動でしか見破れない。かつエージェント型ブラウザ全体は成長継続（HUMAN Security 2026-06実測：Comet47.13%/Claude Chrome拡張24%＝Atlas抜き2位/Atlas16.5%・「UA・クッキー・セッションが人間そっくりで通常の分析ツールは人と区別できない」）。**Apple公式チャネルの登場＝“実ブラウザbot”の土壌がプラットフォーム側から整い始めた早期警報。**
+- **根拠URL（S/A・egress遮断のため独立2媒体以上のスニペットでtrace）**：
+  - WebKit「WebKit Features for Safari 27.0」 https://webkit.org/blog/18325/webkit-features-for-safari-27-0/ （S・掲載確認・機能数58→83・計測系の追加はMCPサーバーのみ／fetchLater等の新配送APIなし）
+  - WebKit「Introducing the Safari MCP server for web developers」 https://webkit.org/blog/18136/introducing-the-safari-mcp-server-for-web-developers/ （S）
+  - The New Stack「Apple just turned Safari into something AI agents can control」 https://thenewstack.io/safari-mcp-platform-infrastructure/ （A・**WebDriver隔離セッションを運転**／16ツール／要開発者設定「Allow remote automation and external agents」を明言）
+  - 9to5Mac 2026-09-17 https://9to5mac.com/2026/09/17/webkit-blog-breaks-down-whats-new-with-safari-27-for-developers-including-mcp-support/ （A→traced・`evaluate_javascript`でページ内JS実行／DOM・network・screenshot）
+  - HUMAN Security「State of Agentic Traffic – June 2026」 https://www.humansecurity.com/learn/blog/state-of-agentic-traffic-june-2026-browser-agent-tooling-for-developers-is-catching-on-fast/ （A・勢力図／人間そっくり）
+- **現物の現在地（2026-09-18 目付が確認）**：
+  - `handoff-demo/app.mjs` 19行 `BOT_UA_RE = /(bot|crawler|spider|scrapy|headlesschrome|puppeteer|playwright|phantomjs|python-requests|selenium)\b|curl\/|wget\//i` ＝**素直に名乗るbotのUA最小版**。**MCP経由の“本物Safari”はUA上は普通のSafari＝この入口フィルタを素通りする**。Perplexity/GPTBot/ChatGPT-User も現状**非該当**。
+  - 挙動フラグ `suspect_bot`（app.mjs 262行＝タグ発火抑止／397行＝クライアント申告受理／449-450行＝suspect_botはタグ非発火で隔離）＝二段目の砦。コメント17行が明記＝「ヘッドレス偽装は捕まらない＝SDK側の挙動フラグとの二段構え」。
+  - `index.html`（loku-attn.js相当）に **`navigator.webdriver` を読む処理は存在しない（grep 0）**＝Apple公式Safari MCP（WebDriver）が立てる**安価で高信頼の自動化フラグを取りこぼしている**。
+- **対策案（loku-attn.js / app.mjs・コードは触らない＝設計材料）**：
+  - **(1) loku-attn.js に `navigator.webdriver` を読む“自動化フラグ”を足す**：`if (navigator.webdriver === true) { /* flush payloadに suspect_bot=true 相当を同梱 */ }`。Apple公式Safari MCP（WebDriver隔離セッション）・その他WebDriver駆動（Selenium等）はここで**名乗り**を拾える＝入口UAフィルタを補完する第3の入口シグナル。
+  - **(2) UA自己申告層を `BOT_UA_RE` に追記候補**：`Perplexity`／`GPTBot`／`ChatGPT-User`／`ChatGPT` を粗い層として。名乗るエージェントだけでも入口で `bot_excluded`（bot-report）へ回して可視化（黙って消さない現行方針を維持）。
+  - **(3) 非WebDriver・非名乗りの“本物ブラウザ運転”（第三者AppleScriptドライバ等）には挙動層が最後の砦**：`suspect_bot`＝Impossible Speed（人間には無理な速さ）／滞在0・スクロール0／単位時間アクション上限（既存P2の挙動観点）を維持・強化。UA・fingerprint・JS実行がすべて本物ゆえ、**挙動でしか分離できない**という前提を明文化。
+  - ＝**この3点は「壊れているから直せ」でなく“計測の分母に人でない滞在を混ぜない”ための前ガード**（第59 Notify Me免疫・第61 bfキャッシュ適格性・第62 クリックID剥がしに続く“免疫を守る/穴を先に塞ぐ番犬化”の型）。
+- **放置すると店主の数字のどこが狂うか**：将来この経路が消費者側に開き実ブラウザ運転の来訪が主戦場に混ざると、**滞在秒・視線・因果の入力に“人でない滞在”が算入**され、店主に見せる「注目度」「効いた導線」の分母が水増しされる（例えると：通行人カウンターに配達ロボットの往復まで“お客さん”として足し込まれる）。特に `navigator.webdriver` という**タダで立つ札を読まずに捨てている**のは最も安い防御を見送っている状態。今は露出ゼロで実害なしだが、**“札を読む”一手を先に仕込めば、露出した日にコード改修なしで弾ける**。
+- **検証方法（メイン/番人領分）**：①`navigator.webdriver===true` の来訪が実名導線（タグ発火・配信対象）に乗らず bot-report へ回る負のテスト ②MCP/WebDriver駆動の実ブラウザ来訪が滞在・因果の分母に算入されない回帰 ③UA自己申告（Perplexity/GPTBot）が入口 `bot_excluded` に記録される単体テスト ④挙動層（Impossible Speed／滞在0）が非WebDriver運転を捕捉するか実機。
+- **優先度**：**低〜中**（現時点の露出ゼロゆえ実害なし。だが(1)`navigator.webdriver`読み取りは**低コストで即効の前ガード**＝最優先候補。(2)UA追記は軽量。(3)挙動層は既存の延長）。採否・優先度・しきい値・実装・QAはDaiya／メイン領分。**コードは触っていない。** 法規制面（AFP全セッション拡張時のクリックID通常モード剥がし＝同意/計測）は見廻りへ申し送り済み・本種は計測精度の領分。
