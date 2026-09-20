@@ -1826,3 +1826,31 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **⚠️見廻り(lp-mimawari)へ申し送り**：Agent iのAI代理予約＝本人同意・なりすまし・LINE内/DM内予約でのLP/特商法表示の射程（第36/40/41回申し送りの継続・商用化で現実味が増した）。
 - **⚠️番人(qa-auditor)へ申し送り**：「予約は入るが視線データが0/無い」乖離を“計測バグ/LP不良”と誤検知しない負のテスト（Agent i・AI予約・IG DM完結・RwGの4天井で乖離が“正常”と出るか）をQA境界テストに。
 - **位置づけ（テーマ転換・ビート3 決断面 単軸・久々の主役復帰）**：直近21回（43-63）はB1×11/B2×7/B3×3でB1最厚・B3が9連続空井戸（53-63）だった。今回B3を実探索し、**Agent i商用化（版動）で井戸が破れて主役に困らず**＝逸脱ルール③（B3を最有力→新鮮S/A主役があれば採用）が的中。テーマ履歴＝Safari MCP(63/B1)→**Agent i/LINE内AI予約代行(64/B3)**。交差フロンティア(P13〜P18)には戻らず。**第20/23/27/36/40回の reach_path 各弾に続く“第7弾”＝別の面（主戦場LINEのAgent i）・新論点（レコードなし天井でなく“視線0レコード天井”＝P2隔離とcausal汚染の二正面）で一段広げた**（第22/23/27回の“追加観点 第N弾”還流型をビート3で継続）。起源掘りは「なぜ客が操作するミニアプリの上にAIが操作する層が乗ったか＝スーパーアプリのプログラマブルな決断面がAI代行の前提」を選び、08-06（器）と08-09（主体交代）の間を埋めた。**新種は起こさず既存P11/P5への追加観点に留める（seed-sprawl回避・第44回P28以来20回連続新種なし＝45-64）。優先度＝中（主戦場LINEのど真ん中の穴ゆえ、周縁の各弾より現実味が高い）。採否・実装・QAはDaiya／メイン領分。コードは触っていない。**
+
+---
+
+## 追加観点（2026-09-20・目付第65回巡回からの還流）＝ビート2「計測・分析技術と競合の動き」＝autocapture（全クリック自動捕捉）vs 明示計測＝2026「telemetry engineering」への揺り戻し＝Lokuの明示設計が“正しい側”に居る確認（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**。ビート2の未踏サブ＝「autocapture（Heap/PostHog系の“1回タグを置けば全クリック・全ページ遷移を自動で撮り、イベント定義は後から”方式）vs 明示計測（explicit instrumentation）」を拾い、既存の **P5（広告→LP起源のUTM明示・クリックID非依存設計）／P11（決断面surface＝booking明示イベント）／鉄則「数字を作らない」** への**追加観点**に留める。実装照合表（P0-P3済）・session/engaged/bounce の指標定義（第18/19/21）・近似カウント/標本（第45）・配送保証（第50）・スキーマ進化（第53）・event-time（第42）・異常検知/Clarity AI要約（第47）・モデル化コンバージョン（第57）・覗き見/逐次検定（第60）・ad-blocker/first-party配信（第24）とは**重複させない**（autocapture“収集アーキテクチャ”＝“全部撮って後から定義” vs “明示で測る” の軸は上記いずれとも別鉱脈）。**追記前に本ファイル全読（P0〜P29+P35 grep＋通読）**し、autocapture が既存種の主題に無い（第567行の PostHog Sessions bounce 定義中に “no-autocapture” が受動的に登場するのみ・第794行 Clarity rage/dead click は第47異常検知で既記録）ことを確認。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P5＋P11＋鉄則「数字を作らない」への追加観点（新種ではない）】予約(booking)・流入元(sourceLabel/UTM)・視線(tick)を将来autocapture推論に寄せない前方ガード＝Lokuの明示計測設計を守る番犬
+
+- **現象（ビート2・A一次→traced）**：PostHog公式Docs（A一次）が autocapture の限界を明快に列挙し「**重要な行動（登録・購入・機能利用）は明示イベントで測れ**」と名指し。2026の業界潮流は「**tagging（タグ付け）→telemetry engineering（テレメトリ工学）**」＝“全部撮る”のノイズ・不確実性への揺り戻しで、重要イベントは明示へ。
+  - **PostHog公式Docsの具体（A一次）**：(1)「**autocaptureは信頼できる `user_signed_up` イベントを与えない＝登録は明示追跡が必須**（アクティベーション・継続・売上の測定に不可欠）」。(2)フロントのUI文言が変わると**ドリフト**（'Add to cart' を 'Add' に変えると `Clicked button with text 'Add'` と別イベント化）＝「重要な高価値行動は明示イベントの方が**はるかに信頼できる**」。(3)「**変わりにくい最重要行動（登録・購入・機能利用）には明示イベントを足せ**」。(4)pageview自動取得は**ページ読込イベントに依存＝SPA（単一ページアプリ）では取りこぼす**（URL/referrer/UTM/スクロール深度の自動付与も同根で不安定）。(5)**遷移直前の重要イベントは `send_instantly:true`＝beaconで確実配送**せよ。
+  - **起源（なぜautocaptureが生まれたか＝origins.md 64件目）**：Heap（2013）が「1回入れたら全部撮る・イベント定義は後から・過去データにも遡及」＝“撮り忘れの後悔（後から知りたいイベントは永遠に取れない）”を消すため。DOMが普遍・均一な面（全クリックにCSSセレクタ経路）＋ストレージ低廉化で「全部撮る」が経済的に成立（stacksync＝“本当の論争は哲学でなくエンジニアリング経済学”）。2010年代後半にMixpanel/Amplitudeも追随。→2026「重要イベントは明示へ」揺り戻し。
+- **現物確認（目付がgrep・“既に良い設計”を切り分け）**：Lokuの計測3本柱は**すべて明示設計**で、PostHogが「明示で測れ」と名指しした3領域とちょうど重なる＝**構造免疫**。
+  - **①予約**＝`POST /api/attn/booking`（app.mjs 429-435行）は**明示イベント**（汎用クリックからの推論でない）＝PostHog(1)「登録/購入は明示で」を満たす。
+  - **②流入元**＝`sourceLabel`（app.mjs 245行）は**UTM最優先の明示ラベル**（auto-pageviewからの推論でない）＝PostHog(4)「SPAでのpageview/UTM取りこぼし」から免疫。
+  - **③視線**＝`tick()`／box engagement（index.html）は**“注視”という単一目的の明示計測**（全DOMクリックの自動捕捉でない）＝PostHog(2)(3)のドリフト/ノイズから免疫。
+  - **④遷移直前の確実配送**＝index.html 473行 `navigator.sendBeacon(FLUSH_ENDPOINT, Blob([flushPayload()],{type:'application/json'}))` on pagehide＝PostHog(5)`send_instantly` 相当を**既に満たす**（＝維持すべき良い設計）。
+- **対策案（P5/P11/鉄則への追加観点＝新規種でない・“良い設計を守る番犬”）**：
+  - **① 明示計測の一線を固定**：予約(booking)・流入元(sourceLabel/UTM)・視線(tick) を、将来「**汎用クリック/pageviewから自動捕捉して推論する**」autocapture方式に**楽をして寄せない**。P5（UTM最優先・クリックID非依存）とP11（bookingは明示POST）を「明示計測を維持するガードレール」として明文化。
+  - **② UI文言変更ドリフトへの耐性を維持**：予約/CTAの計上を**ボタン文言やDOM構造でなく明示イベント名で**行う（現行がそう）＝ボタン文言を変えても予約が別イベント化して欠測/二重にならない。
+  - **③ 遷移直前の確実配送を維持**：pagehide時 `sendBeacon` 一発（既存P0/P19）＝PostHog `send_instantly` 相当を崩さない。
+  - ＝この3点は「壊れているから直せ」でなく**“計測アーキテクチャを明示のまま保つ”前ガード**（第24 first-party配信・第44 契約破断・第59 Notify Me免疫・第62 クリックID剥がしに続く“免疫/良い設計を守る番犬化”の型）。
+- **根拠URL（A/B）**：PostHog Docs「Send events」 https://posthog.com/docs/getting-started/send-events （A一次・egress遮断→allowed_domains検索でtraced・“autocapture won't give you a reliable user_signed_up event”）／PostHog Docs「Autocapture」 https://posthog.com/docs/product-analytics/autocapture （A一次→traced）／PostHog Tutorials「How to capture fewer unwanted events」 https://posthog.com/tutorials/fewer-unwanted-events （A→traced）／補強 userpilot「PostHog Autocapture in 2026」 https://userpilot.com/blog/posthog-autocapture/ （B→traced）・productquant「Autocapture Setup」 https://productquant.dev/blog/posthog-autocapture-setup/ （A/B→traced）／起源 stacksync「The Origin Story of Heap」 https://www.stacksync.com/blog/the-retroactive-analyst-the-origin-story-of-heap （B→traced）・heap.io「How AutoCapture Actually Works」 https://www.heap.io/blog/how-autocapture-actually-works （A→traced）
+- **放置すると店主の数字のどこが狂うか**：もし将来Lokuが「予約ボタンのクリックを自動捕捉して予約とみなす」autocapture方式に寄ると、(1)ボタン文言を変えた瞬間に予約が別イベント化して**数え落ち**（例えると：レジ係が“お会計ボタンの色”で売上を数えていて、ボタンを塗り替えた日から売上が0に見える）(2)汎用クリックのノイズが**予約数を水増し**(3)SPAでUTMが読込タイミングに依存し流入元が“direct/unknown”に化ける＝「どの広告から来たか」が壊れる。＝店主に見せる「予約数」「流入元」が両方砂上に。**今は明示設計ゆえ免疫だが、“楽なautocapture”への将来ドリフトを禁じる一線。**
+- **検証方法（メイン/番人領分）**：①予約/流入元/視線が明示イベント名で計上され、UI文言・DOM構造の変更で別イベント化・欠測・二重計上しない回帰（autocaptureドリフト型の負のテスト）②pagehide時 `sendBeacon` 一発の確実配送が維持されるか ③流入元が auto-pageview 推論でなく UTM 明示を最優先し続けるか（app.mjs 245行）④将来 autocapture 的な自動収集を足す場合も、予約/購入/流入元だけは明示を必須にする設計レビュー観点。
+- **⚠️番人(qa-auditor)へ申し送り**：autocaptureドリフト型の負のテスト＝booking/source/視線の明示イベントがUI文言・ボタンラベルの変更で壊れない回帰（予約ボタン文言を変えても予約計上が二重/欠測にならない）。
+- **⚠️物見(intel-scout)へ申し送り**：計測業界の2026「tagging→telemetry engineering」転換＝autocapture（2013 Heap）のノイズ・不確実性問題→重要イベントは明示へ揺り戻し＝業界潮流（Mixpanel/Amplitude/PostHog/Clarityの動きと併せて）。
+- **位置づけ（テーマ転換・ビート2 単軸）**：直近22回（43-64）はB1×11/B2×7/B3×4。前回64はB3（Agent i）＝今回は「B1/B3連続を避けB2未踏サブ」の宿題どおりB2へ。B2の既踏（近似カウント45/配送保証50/スキーマ53/event-time42/異常検知47/モデル化57/覗き見60/指標定義18-19-21）とは別軸＝“収集アーキテクチャ（全部撮る vs 明示）”。第24 ad-blocker/first-party・第47 Clarity異常報告とは非重複facet（reverse proxy/rage-clickは下段のみ）。**新種は起こさず既存P5/P11/鉄則への追加観点に留める（seed-sprawl回避・第44回P28以来21回連続新種なし＝45-65）。優先度＝低〜中（現物は既に明示設計で免疫＝“良い設計を守る番犬”ゆえ実害は将来ドリフト時に限局）。採否・実装・QAはDaiya／メイン領分。コードは触っていない。**
