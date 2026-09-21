@@ -1854,3 +1854,30 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **⚠️番人(qa-auditor)へ申し送り**：autocaptureドリフト型の負のテスト＝booking/source/視線の明示イベントがUI文言・ボタンラベルの変更で壊れない回帰（予約ボタン文言を変えても予約計上が二重/欠測にならない）。
 - **⚠️物見(intel-scout)へ申し送り**：計測業界の2026「tagging→telemetry engineering」転換＝autocapture（2013 Heap）のノイズ・不確実性問題→重要イベントは明示へ揺り戻し＝業界潮流（Mixpanel/Amplitude/PostHog/Clarityの動きと併せて）。
 - **位置づけ（テーマ転換・ビート2 単軸）**：直近22回（43-64）はB1×11/B2×7/B3×4。前回64はB3（Agent i）＝今回は「B1/B3連続を避けB2未踏サブ」の宿題どおりB2へ。B2の既踏（近似カウント45/配送保証50/スキーマ53/event-time42/異常検知47/モデル化57/覗き見60/指標定義18-19-21）とは別軸＝“収集アーキテクチャ（全部撮る vs 明示）”。第24 ad-blocker/first-party・第47 Clarity異常報告とは非重複facet（reverse proxy/rage-clickは下段のみ）。**新種は起こさず既存P5/P11/鉄則への追加観点に留める（seed-sprawl回避・第44回P28以来21回連続新種なし＝45-65）。優先度＝低〜中（現物は既に明示設計で免疫＝“良い設計を守る番犬”ゆえ実害は将来ドリフト時に限局）。採否・実装・QAはDaiya／メイン領分。コードは触っていない。**
+
+## 追加観点（2026-09-21・目付第66回巡回からの還流）＝ビート1「計測精度の敵＝主戦場LINE内アプリ内ブラウザの挙動」＝LINE 26.7.0でLIFFブラウザの離脱が「最小化(visibilitychange)」から「閉じる(pagehide)」寄りへ動いた＝P0＋P7＋P12＋P15への追加観点・新種P番号なし（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**。ビート1（計測精度の敵）＝主戦場のLINE内LIFFブラウザ（iOS WKWebView）のライフサイクルが版で動いた答え合わせ。sources.md（measure-notebook）に「LIFF release notes＝従来のLIFFライフサイクル監視(P0/P7)とも共用」の監視点として事前登録してあったものが、LINE 26.7.0のヘッダ仕様変更で点火した。既存の **P0（離脱二段flush＝visibilitychange(hidden)＋pagehide）／P7（bfcache/復帰の新ビュー計上）／P12（可視復帰リセット）／P15（来訪エピソード＝visit_count）** への**追加観点**に留める。実装照合表（P0-P3済）・第44回P28（26.7.0を**referrerホスト名バケツ**角度で既記録＝本追加観点は**別facet＝ライフサイクル/来訪定義**で非重複）・第56回 pageswap/pagereveal（P0/P7/P8）・第61回 bfキャッシュ適格性（P7/P0）とは重複させない。**追記前に本ファイル全読（P0〜P29+P35 grep＋通読）**し、26.7.0が「ライフサイクル（一時停止 vs 終了）」「のべ来訪回の数え方」の角度では未主題化（第44回はホスト名バケツのみ）と確認＝**第44回P28以来22回連続新種なし（45-66）**。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分、法規制/同意は見廻り領分。
+
+### 【P0＋P7＋P12＋P15 追加観点・第66回巡回（2026-09-21）／LINE 26.7.0でLIFFブラウザの離脱合図が「最小化=一時停止(visibilitychange・ページ生存)」から「閉じる=終了(pagehide・ページ破棄)」寄りへ動いた＝現物P0二段構えが両取りで離脱送信は免疫＋のべ来訪回の水増しガード】新種P番号なし
+
+- **現象（ビート1・S一次）**：LINE Developers（S一次）＝**LINEバージョン 26.7.0 以降、LIFFブラウザ（LINE内でLPやミニアプリを表示する画面＝iOS WKWebView）のヘッダ仕様を変更**＝(1)アクションボタンのアイコンとタップ時の挙動が変更（タップでドロップダウンメニュー表示）(2)**従来の「最小化」ボタンが削除され「閉じる」ボタンに置き換え**。
+  - **最小化**（LINE iOS 12.8.0＝2022導入）＝LIFFブラウザの表示を**サスペンド（一時停止）**して、その間にトークでメッセージ送信などができ、**最大化で続きから再開（レジューム）**＝**ページは生存**（WKWebViewを破棄せず背景保持＝`visibilitychange(hidden)`で一時停止・可視復帰で`visibilitychange(visible)`）。
+  - **閉じる**＝ページを**終了**＝`pagehide`が鳴りページ破棄＝**再オープンは新規読み込み（新規init・新セッション）**。
+  - ＝この変更で**離脱の主たる合図が visibilitychange(hidden)（一時停止）から pagehide（終了）寄りへ動いた**。
+- **現物照合（免疫の芯＝離脱送信は二段構えで両取り）**：
+  - index.html の**P0離脱フラッシュは二段構え**＝`document.addEventListener('visibilitychange', ()=>{ if(visibilityState==='hidden') flush(); })`（**475行・主**）＋`window.addEventListener('pagehide', flush)`（**476行・フォールバック**）。flush は `navigator.sendBeacon(FLUSH_ENDPOINT, ...)`（**473行**）。
+  - ＝**最小化なら visibilitychange(hidden) が鳴り（主）、閉じるなら pagehide が鳴る（従）＝どちらの合図でも flush が発火＝離脱直前データ（active_sec・箱別視線）は sendBeacon で飛ぶ＝構造免疫**。ヘッダのボタンがどちらに変わっても不変。
+  - 滞在秒 tick() は `pageVisible=(visibilityState==='visible')&&hasFocus`（346行）・active ゲート（381行）ゆえ**最小化中（hidden）は active_sec を積まない＝過大計上もしない**（GA4のengagement_timeも前面/可視のみ加算＝最小化で停止＝同思想・Thyngster A→traced）。
+  - ＝**離脱送信・滞在秒は 26.7.0 で崩れない＝維持すべき良い設計**（第59 Notify Me免疫・第61 bfキャッシュ適格性・第62 クリックID剥がしに続く“版/UIが動いても崩れない土俵に立っている”型のライフサイクル版）。
+- **新しく見張るべき穴＝のべ来訪回・ユニーク匿名IDの段差状の水増し（P7/P12/P15）**：
+  - 最小化→復帰は**同一ページが生き続ける＝1来訪の継続**（visibilitychange visible／P12が可視復帰を担当）。閉じる→再オープンは**新規読み込み＝別来訪・別セッション・（友だち追加前なら）別匿名ID**。
+  - ヘッダから最小化が消え「閉じる」が既定化した分、これまで**“最小化して戻る”客が“閉じて開き直す”に流れる**と、**visit_count（P15）・再訪率・新規/リピート比・ユニーク匿名IDが段差状に増えうる（水増し方向）**。これは active_sec を汚さない（可視ゲートは正直）が、**「何回来たか」「何人来たか」の分母を動かす**。
+- **対策案（コードは触らない・番犬＝守るべき一線の明文化）**：
+  1. **P0二段構えを片肺化しない前ガード**＝離脱送信を将来 `visibilitychange(hidden)` か `pagehide` の**片方だけに削らない**（主戦場「閉じる」中心での片肺化＝離脱直前データの数え落ち防止）。両方を聴き続ける番犬テスト。
+  2. **来訪定義シフトの注記**＝閉じる→再オープンを**別来訪として数える**（意味的に正しい）が、26.7.0ロールアウト前後で**ダッシュボードの来訪回/ユニークに段差**が出たら「計測バグ」でなく**「LINE 26.7.0による来訪定義の実挙動シフト」**と注記＝段差を数字操作で潰さない。
+  3. **P9 merge の負担増を受ける**＝友だち追加“前”に閉じて開き直すと匿名IDが2本に割れる→1 friend_idに束ねる（P9既存機構の適用範囲が広がるだけ・新機構不要）。
+  4. **実機確認**＝LINE内WKWebViewで「閉じる」時に `pagehide` か `visibilitychange(hidden)` の**少なくとも一方が鳴りflush発火**するか（メイン/番人領分）。
+- **放置すると（店主の数字のどこが狂うか）**：(1)離脱送信を片肺化すると「閉じる」中心の主戦場で離脱直前データが落ち、**滞在秒・視線が過少**。(2)閉じる化で来訪回・新規ユニークが**水増し**＝「同じ人の再訪」を「新しい人」と誤読＝**再訪率・新規/リピート比が狂う**。(3)その段差を「バグ」と誤認して数字を触ると**本物の来訪定義シフトを潰す**。
+- **番人(qa-auditor)へ**：ライフサイクル二段構えの負のテスト（片肺化を赤にする回帰／閉じる→再オープンの別来訪カウント是非のQA／実機で合図が鳴る確認）。**物見(intel-scout)へ**：スーパーアプリのアプリ内ブラウザUIが「最小化(畳む/多重化)」→「閉じる(単純化)」へ振り子＝Agent i/ミニアプリタブ（AIが裏で操作・タブ直着地）が主役化する文脈。**見廻り(lp-mimawari)へ**：今回法規制ネタなし。
+- **出典**：LINE Developers「LIFF Release notes」 https://developers.line.biz/en/docs/liff/release-notes/ （S一次・26.7.0 ヘッダ仕様変更＝最小化→閉じる・アクションボタン ドロップダウン化／egress遮断→allowed_domains検索で日英同一文言trace）／LINE Developers「Minimizing LIFF browser」 https://developers.line.biz/en/docs/liff/minimizing-liff-browser/ （S一次・最小化=サスペンド/最大化で再開・iOS 12.8.0導入→traced）／補強 Thyngster「GA4 User Engagement」 https://www.thyngster.com/unraveling-the-user-engagement-measurement-in-google-analytics-4/ （A→traced・engagement_timeは前面/可視のみ・最小化で停止）／melin「visibilitychange Not Working in Safari」 https://melin.vercel.app/blog/2026-07-01 （A→traced・最小化/タブ切替/アプリ切替では鳴る＝二段構えの必要性）／現物: index.html（P0二段 475-476行・sendBeacon 473行・可視ゲート tick 346/381行）。**新種P番号なし＝第44回P28以来22回連続（45-66）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
