@@ -1906,3 +1906,31 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **放置すると（店主の数字のどこが狂うか）**：お店が複数OAを別プロバイダで運用し1ミニアプリに束ねると、(1)**同じ常連客が窓口ごとに別friend_idに割れて「2人の新規」に化ける**＝再訪率が過少・新規/リピート比が新規寄りに水増し(2)**因果の分母が膨れてCVRが薄まる**(3)予約・タグ・同意が別friend_idに分散して**1人分のカルテが2冊に割れる**。高単価・比較検討型のスタジオほど、この「窓口違いの同一人物」を取り違えると打ち手判断を誤る。
 - **見廻り(lp-mimawari)へ**：複数OAをまたいで friend_id を束ねる場合、**プロバイダをまたいだ名寄せは同意・プロファイリングの射程が変わりうる**（利用者はA窓口には同意したがB窓口には未同意、がありうる）＝同意ゲートを friend_id 単位でなく「OA×friend_id」単位で踏襲すべきかの法規制論点。**番人(qa-auditor)へ**：上の検証方法①〜③を境界テストに追加（特に①の負のテスト＝別窓口の同一人物を2人の新規に丸めない）。**物見(intel-scout)へ**：2026のアイデンティティ解決は「決定的マッチ＋リアルタイム＋ファーストパーティ優先」が本流（CDP各社）＝Lokuのfriend_id思想と同家系＝業界動向として継続鉱脈／複数OA連携の純ニュース面（決断面/導線）も物見の領分。
 - **出典**：上記根拠URL群。**起源＝なぜLINEの利用者IDはプロバイダごとに別値か＝事業者どうしの名寄せ談合を防ぐscoped/pairwise識別子（プライバシー・バイ・デザイン）＝壁は両刃（利用者とLokuの倫理を守る側にありつつ、お店が複数プロバイダに跨ると自分の実名アンカーを分断する天井に化ける）＝origins.md 66件目**。**新種P番号なし＝第44回P28以来23回連続（45-67）＝P9への追加観点。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
+
+## 追加観点（2026-09-23・目付第68回巡回からの還流）＝ビート1「計測精度の敵＝主戦場のアプリ内ブラウザ(WKWebView)」＝離脱合図 visibilitychange 単独は背景化の相当割合を取りこぼす（外部実測）＝現物P0二段構えの裏付け＋主従の呼び名更新＋ハードキル残穴への低頻度ハートビート検討・新種P番号なし・コード無変更
+
+### 【P0 追加観点・第68回巡回（2026-09-23）／アプリ内WKWebViewで `visibilitychange` 単独が「確認された背景化」の実測39%を取りこぼす＝現物P0の visibilitychange＋pagehide 両取りは免疫だが、(a)461行コメントの"主/フォールバック"の格は主戦場では逆転し co-primary、(b)両合図とも無力な離脱（アプリ強制終了/クラッシュ/電源断＝JS不実行）は二段構えでも残穴＝任意の低頻度ハートビートが唯一の上限化手段】新種P番号なし
+
+**前提**：以下は実装照合表（P0-P3済）・P5〜P29・P35（P4/P24欠番）とは重複しない**P0への追加観点**。新種P番号は起こさない。**コードは触っていない。** テーマ選定＝前回(第67)がB3ゆえB3連続回避／B3一次トリガーMeta v20は9/24（翌日）で未点火／答え合わせ点火＝外部の新鮮な実測（GitHub実装PR）の登場でP0の主戦場妥当性を数字で裏付け直す回。
+
+- **現象（機構＝既確定S/A／今回の新実測＝A）**：
+  - 機構（既収録）：モバイルで `unload`/`beforeunload` はほぼ発火しない＝MDNは「`visibilitychange` で送り、未対応用に `pagehide` をフォールバック」を明記（S）。Speedkit（A・5,200万PV）で `visibilitychange`＋`pagehide` 併用が**91%到達**＝二段構えが定石。
+  - **新実測（A・GitHub PR #13「Hand off by gesture on Facebook, and measure arrival properly」）**：iOS+Facebookのアプリ内ブラウザ実測で**`visibilitychange` リスナーが「確認された背景化」の 39% を取りこぼしていた**（143イベント・2026-09-21時点・PostHog HogQLで突合）。作者の結論＝「`visibilitychange` も `pagehide` も**どちらか単独では全部は捕まえられない**＝両方を配線した」。
+  - なぜアプリ内で漏れるか：WKWebView の一生は**入れ物アプリ(LINE/FB=ホスト)が握る**＝チャット復帰/アプリ切替でホストがWebViewを一時停止/破棄・OSがホストごとサスペンド＝Web側JSが `visibilitychange` ハンドラを走らせる順番の前に実行機会を奪われうる（素のSafariより取りこぼしやすい／origins.md 67件目「埋め込みブラウザの従属」）。
+- **根拠URL（S/A）**：
+  - MDN `Navigator.sendBeacon`（visibilitychange主・pagehideフォールバック＝S） https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
+  - Speedkit「unload beacon reliability benchmarking」（併用91%＝A・5,200万PV） https://www.speedkit.com/blog/unload-beacon-reliability-benchmarking-strategies-for-minimal-data-loss
+  - GitHub PR #13（iOS+FB WebViewで visibilitychange が背景化の39%取りこぼし・143イベント・2026-09-21＝A・小N/単一環境/AI補助の正直メモ付き） https://github.com/314-Apps/314-apps.com/pull/13
+  - Apple Developer「WKWebView」（ホストアプリ埋め込み・ライフサイクルはホスト管理＝S） https://developer.apple.com/documentation/webkit/wkwebview
+- **現物照合（目付grep・index.html 461-476行）**：
+  - `document.addEventListener('visibilitychange', ()=>{if(document.visibilityState==='hidden')flush();})`（475行）＋ `window.addEventListener('pagehide', flush)`（476行）＝**両方を配線済**＝実測が言う"両方"を満たす＝**この実測の範囲では離脱データ欠測は免疫**。
+  - `flush()`（469行）＝`navigator.sendBeacon(FLUSH_ENDPOINT, ...)`（473行）。両合図で二重に飛んでも受け口 app.mjs の**単調増加マージ(P1)**が `active_sec`/`box_stats` を巻き戻さない＝**二重着信でも冪等**。
+  - 461行コメント「visibilitychange(hidden)が主・pagehideがフォールバック」＝**アプリ内ブラウザでは主従が逆転しうる（"フォールバック"のpagehideが離脱の主役）**＝呼び名の更新余地（実装は既に両取りゆえ挙動は無傷）。
+- **対策案（コードは触らない／採否・N値はDaiya・メイン領分）**：
+  1. **現物は両取り済＝免疫・実装変更は不要**。この追加観点の主眼は「なぜ免疫か」を外部実測で裏付け、片方頼みへの縮退を禁じる番犬化。
+  2. **461行コメントの表現更新（挙動無変更・記録のみ）**：「visibilitychange＝主・pagehide＝フォールバック」→「主戦場のアプリ内WKWebViewでは両者 co-primary（visibilitychangeが背景化の実測39%を取りこぼす環境がある）」。※コメント文言もコードゆえ目付は書き換えない＝メイン領分への提案に留める。
+  3. **両合図とも無力な離脱（アプリ強制終了/クラッシュ/電源断＝JSが1行も走らない）への任意の第3ベルト**＝**可視中の低頻度ハートビートflush**（例：N秒ごとに軽い要約を `sendBeacon`）で、terminal合図が1つも鳴らなくても損失を直近ハートビートからのN秒に上限化。トレードオフ＝ネットワーク/サーバ負荷増（Lokuの軽量・明示設計の逆張り）×クラッシュ耐性。＝**合図駆動（visibilitychange/pagehide）と時間駆動（ハートビート）は補完**。採否・N値・ペイロード軽量化はDaiya判断。
+- **検証方法**：主戦場実機E2Eで①`visibilitychange` を人工的に抑止した離脱でも `pagehide` 経由でP0 flushが届く負のテスト（片方頼みへの縮退回帰）②（ハートビート採用時）両terminal合図を抑止しても直近ハートビートで下限保証③両合図二重着信でも `active_sec`/`box_stats` が単調増加マージ(P1)で巻き戻らない冪等回帰（メイン/番人領分・P7〜P22境界テストと同群で）。
+- **放置すると（店主の数字のどこが狂うか）**：もしどこかの計測経路が `visibilitychange` 単独に頼ると、主戦場（LINE/IG内ブラウザ=iOS WKWebView）で**離脱の3〜4割で滞在・視線の最後の一区間が送られず、active_sec/スクロール到達/box視線が"途中まで"で欠ける**＝滞在が実際より短く、離脱因果（どこで離れたか）が手前にズレて見える。現物は両取りゆえ免疫だが、"片方頼み"は主戦場で静かに数字を痩せさせる。
+- **申し送り**：**番人(qa-auditor)へ**＝上の検証方法①③を境界テストに追加（visibilitychange抑止でもpagehide到達／二重着信冪等）。**物見(intel-scout)へ**＝Microsoft ClarityのAI無料化（Copilot要約・AIクローラ可視化）・PostHog Replay Vision（フラストレーション数値化）・Umami MIT化＝ヒートマップ/録画/OSS計測の動向。**見廻り(lp-mimawari)へ**＝今回法規制該当なし。
+- **出典**：上記根拠URL群。**起源＝なぜアプリ内ブラウザ(WKWebView)は素のSafariより離脱合図を取りこぼしやすいのか＝埋め込みブラウザの一生は入れ物アプリ(LINE/FB)の一生に従属し、ページのJSはその外側の生殺与奪を見られないから＝origins.md 67件目**。**新種P番号なし＝第44回P28以来24回連続（45-68）＝P0への追加観点。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
