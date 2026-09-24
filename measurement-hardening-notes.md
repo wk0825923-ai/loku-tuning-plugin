@@ -1934,3 +1934,33 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **放置すると（店主の数字のどこが狂うか）**：もしどこかの計測経路が `visibilitychange` 単独に頼ると、主戦場（LINE/IG内ブラウザ=iOS WKWebView）で**離脱の3〜4割で滞在・視線の最後の一区間が送られず、active_sec/スクロール到達/box視線が"途中まで"で欠ける**＝滞在が実際より短く、離脱因果（どこで離れたか）が手前にズレて見える。現物は両取りゆえ免疫だが、"片方頼み"は主戦場で静かに数字を痩せさせる。
 - **申し送り**：**番人(qa-auditor)へ**＝上の検証方法①③を境界テストに追加（visibilitychange抑止でもpagehide到達／二重着信冪等）。**物見(intel-scout)へ**＝Microsoft ClarityのAI無料化（Copilot要約・AIクローラ可視化）・PostHog Replay Vision（フラストレーション数値化）・Umami MIT化＝ヒートマップ/録画/OSS計測の動向。**見廻り(lp-mimawari)へ**＝今回法規制該当なし。
 - **出典**：上記根拠URL群。**起源＝なぜアプリ内ブラウザ(WKWebView)は素のSafariより離脱合図を取りこぼしやすいのか＝埋め込みブラウザの一生は入れ物アプリ(LINE/FB)の一生に従属し、ページのJSはその外側の生殺与奪を見られないから＝origins.md 67件目**。**新種P番号なし＝第44回P28以来24回連続（45-68）＝P0への追加観点。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
+
+
+## 【2026-09-24・第69回巡回＝ビート3「決断面の移動」＝P28への追加観点（新種P番号なし）】P28検知器を"反応的検知"から"決断面ごとの廃止/版動カレンダー常設監視"へ格上げ — 本日Meta Graph API v20退役（失敗せず黙ってv21ルーティング＝200＋ドリフト）＋Safari 27除去リスト黙って拡張が同日点火＝"fall-forward（利用可能な最古版へ黙って落とす）"は大規模APIの業界標準作法と確認（目付還流・コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**。第44回で起こした **P28（外部の決断面プラットフォームがAPI/リンク仕様/APIバージョンを変えると、collectは200のまま source/reach_path の構成比が黙ってズレる＝P22の死活監視では見えない"生きている装置の意味ズレ"を、構成比・unknown率の分布シフト＋外部changelogアンカーで検知する種）** への**追加観点**。実装照合表（P0-P3済）・P5・P6〜P28・P35・各追加観点とは重複させない。**追記前に本ファイル全読＝P0〜P29＋P35（P4/P24欠番）をgrep**し、P28の既存記述（1195行〜＝新種P28の起種・"外部契約の破断"）に対し本追加観点が「実物トリガーの日付つき点火＋fall-forwardの業界標準確認＋検知器の常設カレンダー化」という**運用格上げ**であって新機構ではないことを確認。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+- **現象（機構＝S確定／本日の実物点火＝S/A→traced）**：
+  - **実物①（本日9/24点火）＝Meta Graph API v20 退役**：期限後の呼び出しは4xx/5xxで即死せず、アプリが使える最古の版(=v21)へ**黙って自動ルーティング**＝**成功(200)を返しつつ返却内容が静かにズレる(API drift)**。＝P28が守る「外部プラットフォームのAPIバージョン変更で計測契約が黙って壊れる」型の**教科書どおりの実物が日付つきで到来**。第68回巡回の予告「9/24当日〜直後がP28答え合わせ最有力回」がそのまま点火。
+  - **業界標準の確認（機構＝S）**：この"fall-forward（退役版→利用可能な最古の安定版へ黙って落とす）"は**Meta固有でなく大規模APIの標準作法**。Shopify＝退役版を「最古の利用可能な安定版」へfall-forward、Klaviyo＝退役リビジョンを「次に古いリビジョンの挙動」で応答、と公式Docsに明記。＝**「動いているから大丈夫(200)」が計測にとって最も危ない失敗形**という急所を業界の実装が裏書き＝P28検知器の設計思想の正しさが実装で確認された。
+  - **実物②（同日点火）＝Safari 27 が除去パラメータリストを黙って拡張**：iOS27(9/14公開)で通常モードLTP既定化は未実施だが、**除去対象にThreads `xmt`/YouTube `si`/X `twclid,cn,cxt` を黙って追加**（従来gclid/fbclid/msclkid）。**公式リリースノートはこの変更に無言**＝WebKitオープンソース精読で判明。＋Safari 27はLinkedIn/BingをIP遮断。＝**ブラウザ側でも"仕様が黙って動き、流入元ラベルが静かにズレうる"P28/P5型が同日多発**。
+- **根拠URL（S/A）**：
+  - Meta Graph API changelog（v20.0 Available Until 2026-09-24＝S） https://developers.facebook.com/docs/graph-api/changelog/
+  - Shopify「About API versioning」（退役版はfall-forward＝S） https://shopify.dev/docs/api/usage/versioning
+  - Klaviyo「API versioning and deprecation policy」（退役リビジョンは次に古い版で応答＝S） https://developers.klaviyo.com/en/docs/api_versioning_and_deprecation_policy
+  - dev.to/flarecanary（v20→v21沈黙ルーティング＝200＋drift・A→traced） https://dev.to/flarecanary/metas-graph-api-v20-expires-september-24-your-calls-wont-fail-theyll-quietly-start-running-v21-2m2a
+  - TAGGRS「Safari 27 tracking protection」（除去リストにThreads/YouTube/X追加・公式ノート無言・WebKitソース精読＝A→traced） https://taggrs.io/safari-27-tracking-protection/
+  - Seresa（utm系はLTP除去対象外＝A） https://seresa.io/seed/data-loss-recovery/does-safari-strip-utm-parameters-2026
+- **現物照合（目付grep）**：
+  - `*.mjs`/`*.js`/`handoff-demo`/`index.html` に `graph.facebook`/`/v20`/`/v21`/`fbclid` 参照＝**0件**＝Loku現物はMeta Graph APIを一切叩いていない＝**Meta v20沈黙DGの直接被害はゼロ＝P28免疫継続**。
+  - `app.mjs` 245-247行＝`sess.utm?.source || sess.entry_source`（流入元はutm最優先）＝**utm系はSafari LTPの除去対象外**ゆえ、今回のSafari除去リスト拡張でも流入元ラベルは無傷＝**P5免疫継続**。
+  - ＝2つの実物点火はいずれも**現物には直接刺さらない**が、P28が守る「一般型の被害」（将来Lokuがプラットフォーム/ブラウザ由来のIDやAPIに依存を持った瞬間、装置は生きたまま意味のズレた構成比を出し続ける）の**実在性を日付つきで実証**した。
+- **対策案（コードは触らない／採否・実装はDaiya・メイン領分）**：
+  1. **現物はGraph API非依存・utm最優先＝両実物とも免疫・実装変更は不要**。この追加観点の主眼は**P28検知器の運用格上げ**。
+  2. **P28の"外部changelogアンカー"を、反応的検知から「決断面ごとの廃止/版動カレンダー常設監視」へ格上げ**＝Lokuが読む決断面（GBP/Instagram/LINE の reach_path/source）＋ブラウザ(Safari除去リスト)＋広告プラットフォーム(Meta)の**次版動日を台帳化し、退役日前後に構成比/unknown率の分布シフトを待ち構える**（"気づく"でなく"待ち構える"）。
+  3. **各面のサイクル目安を注記**：Meta ≈6か月版動（次版動でattribution window/Pixel→Dataset API移行の余波も監視）／Safari 除去リストは版ごと・**公式ノート無言ゆえソース精読が必要**（"公式が黙ってる=不変"ではない）／LINE LIFF v2.31.1=10/7（"?"処理修正＝source構成比の"良い段差"）。
+  4. **退役日を跨いだ構成比の段差は「計測バグ」でなく「外部版動由来」と注記**＝数字で潰さない（P28の芯＝生きている装置の意味ズレを"直して"消さない）。
+- **検証方法**：ユニット/E2E（メイン領分・P22/P28境界テストと同群）。①外部版動（API退役日・除去リスト拡張）を跨いだ時にsource/reach_path構成比・unknown率の"段差"が**警報として上がり、「計測バグ」と自動で潰されない**負のテスト②退役日を跨いだ構成比シフトを**"外部版動由来"と分類**できる回帰③維持された廃止カレンダー（Meta/Safari/LIFF等の版動日）に警報をアンカーする回帰。
+- **放置すると（店主の数字のどこが狂うか）**：現状は免疫（Graph API非依存・utm最優先）。だが将来Lokuがプラットフォーム/ブラウザ由来のID・APIに依存を持てば、退役日を境に**装置は生きたまま（collect 200・拒否ゼロ・値もクリーン）"意味のズレた流入元/成果の構成比"を出し続ける**＝店主に見せる「どの広告/面が効いたか」が"壊れた"と分からないまま静かに狂う（P22の死活監視では原理的に見えない＝P28の射程）。
+- **申し送り**：**番人(qa-auditor)へ**＝外部版動を跨いだ時の構成比/unknown率の段差警報＋"外部版動由来"分類の回帰（P28常設カレンダー版）。**物見(intel-scout)へ**＝"失敗させず沈黙で古い版に落とす(fall-forward)"が業界標準（Meta/Shopify/Klaviyo）＝"動いているから大丈夫"が最も危ないという計測横断の潮流／Microsoft Clarity Copilot(LLM)搭載・AI Bot Activity可視化／GA4 AIダッシュボード自動生成／Umami MIT化。**見廻り(lp-mimawari)へ**＝今回法規制該当なし。
+- **出典**：上記根拠URL群。**起源＝なぜAPIは"失敗させず黙って古い版に落とす(fall-forward)"設計が生まれたのか＝数百万の連携を一夜で壊す恐怖より「動き続けるが静かにズレる」を選び、ドリフト検知の責任がプラットフォームから連携者(計測する側)へ移った＝これがP28の存在理由＝origins.md 68件目**。**新種P番号なし＝第44回P28以来25回連続（45-69）＝P28への追加観点（検知器の常設カレンダー化）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
