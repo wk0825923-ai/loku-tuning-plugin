@@ -1964,3 +1964,33 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **放置すると（店主の数字のどこが狂うか）**：現状は免疫（Graph API非依存・utm最優先）。だが将来Lokuがプラットフォーム/ブラウザ由来のID・APIに依存を持てば、退役日を境に**装置は生きたまま（collect 200・拒否ゼロ・値もクリーン）"意味のズレた流入元/成果の構成比"を出し続ける**＝店主に見せる「どの広告/面が効いたか」が"壊れた"と分からないまま静かに狂う（P22の死活監視では原理的に見えない＝P28の射程）。
 - **申し送り**：**番人(qa-auditor)へ**＝外部版動を跨いだ時の構成比/unknown率の段差警報＋"外部版動由来"分類の回帰（P28常設カレンダー版）。**物見(intel-scout)へ**＝"失敗させず沈黙で古い版に落とす(fall-forward)"が業界標準（Meta/Shopify/Klaviyo）＝"動いているから大丈夫"が最も危ないという計測横断の潮流／Microsoft Clarity Copilot(LLM)搭載・AI Bot Activity可視化／GA4 AIダッシュボード自動生成／Umami MIT化。**見廻り(lp-mimawari)へ**＝今回法規制該当なし。
 - **出典**：上記根拠URL群。**起源＝なぜAPIは"失敗させず黙って古い版に落とす(fall-forward)"設計が生まれたのか＝数百万の連携を一夜で壊す恐怖より「動き続けるが静かにズレる」を選び、ドリフト検知の責任がプラットフォームから連携者(計測する側)へ移った＝これがP28の存在理由＝origins.md 68件目**。**新種P番号なし＝第44回P28以来25回連続（45-69）＝P28への追加観点（検知器の常設カレンダー化）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
+
+
+## 【2026-09-25・第70回巡回＝ビート2「計測・分析技術と競合の動き」＝P2への追加観点 第4弾（新種P番号なし）】クライアント計測はJSを実行しない相手を原理的に数えられない＝AIクローラ(GPTBot/ClaudeBot/PerplexityBot)は collect に来ない＝来訪/予約分母には構造的免疫だが bot-report は「JS実行suspectの割合」に限定表記する一線 — Microsoft Clarity が2026年サーバ/CDNログ層を新設＝ベンダーもクライアント計測の盲点を認めた（目付還流・コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**。既実装 **P2（bot除外・UA＋挙動＝実装照合表で✅済み）** への**追加観点 第4弾**。第18回「P2追加観点（クラウドIP・アクション上限を抽象で提示）」・第22回「第2弾（実数つき既定値＋エージェンティックブラウザ）」・第49回「第3弾（挙動層を止まりすぎ＋速すぎのImpossible Speed両端に）」とは**重複させない**＝今回は**「JS実行ゲートという計測面の境界そのもの＝非JSクローラは誤分類ではなく“不在”／bot-reportが返せるのはJS実行suspectのみ」という別facet**。追記前に本ファイル全読＝P0〜P29＋P35（P4/P24欠番）をgrep済。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。テーマ転換＝直近B2(65)/B1(66)/B3(67)/B1(68)/B3(69)からローテーションし、B3連続とB1直近を避けてビート2（計測・分析技術と競合の動き）へ明確に舵。
+
+- **現象（機構＝A→traced／ベンダー動き＝S一次→traced）＝クライアント計測の“見えない層”**：
+  - **AIクローラは生HTMLを1回読んで去る＝JSを実行しない**：GPTBot/ClaudeBot/PerplexityBot は「単一HTTPリクエストで返ったHTMLを読み、JSは実行せず、再試行もしない」。**GPTBotは全リクエストの約11.5%・ClaudeBotは約23.84%でJSファイルを取得するが実行しない**（＝ダウンロードはするが走らせない）。**5億超のGPTBot取得を調べてJS実行の痕跡ゼロ**（Vercel/Oncrawl独立研究）。JSレンダリングまでするのはGooglebotと（AIの中では）Geminiのみで、他の主要AIクローラは生HTMLしか見ない。
+  - **ベンダーの裏書き＝Microsoft Clarity がサーバログ層を新設**：Clarity（クライアント側JSのヒートマップ/セッション録画ツール）は2026年に **Bot Activity** を新設し、**自分のJSタグでなく“接続したCDNのサーバログ”**（Fastly/Amazon CloudFront/Cloudflare/Azure Front Door/Akamai）でAIボットのオペレータ・AIリクエスト比率・パス別・**robots.txt違反（2026-06-23告知・Ihab Rizk）**を可視化＝**「自分のJSタグでは非JSボットが測れない」ことをツール側が構造として認め、別レイヤー（サーバログ）を足した**。SEO/GEOでも「AIボットはサーバ/CDNログでしか見えない＝ログ解析がAI時代の最も正直な診断」に収束。
+- **現物確認（目付がgrep・当たりを認める）**：
+  - Loku の P2 は **UA入口除外（`BOT_UA_RE` app.mjs 19行）＋挙動フラグ `suspect_bot`（397行・タグ発火させず実名導線に乗せない隔離＝262/449-450行）＋`GET /api/attn/bot-report`（915-922行）で除外/隔離件数を可視化**（GA4は黙って消すが、うちは件数を店主に見せる＝信頼の担保）。
+  - **決定的な構造事実＝P2のUA照合も挙動フラグも“すべて collect の下流”**：collect（`/api/attn/collect`）は **loku-attn.js が動いて初めて叩かれる**＝**Lokuは構造上“JSを実行したトラフィック”しか見ない**。＝**GPTBot等の純フェッチ型AIクローラは loku-attn.js が発火しない＝collect を一度も叩かない＝Lokuのデータに誤って“人間”として混ざるのですらなく、そもそもレコードが存在しない（＝不在）**。
+  - 帰結①＝**来訪数・滞在・因果・予約の分母は汚れない＝JS実行ゲートが黙って弾く“自動免疫”**（エージェンティックブラウザ＝本物のJS実行＝第22/41/63回は挙動層が最後の砦で要るが、非JSクローラはそもそも入口に来ない＝別レイヤー）。素のピクセル計測(PVだけ)よりLokuの“関与を測る”設計が非JSクローラ流入に構造的に強いことの再確認。
+  - 帰結②＝**bot-report(915-922行)が返せるのは「JSを実行した“疑わしい訪問”の割合」だけ**（`excluded_count`＝UA除外・`suspect_count`＝挙動隔離）。**GPTBot等の非JSクローラのサーバ負荷・AI引用露出は原理的に映らない**。補足＝`BOT_UA_RE`(19行)はUAに"bot"等を含む相手を弾く設計だが、非JSクローラはそもそも collect に来ないため**この入口UAフィルタは非JSクローラに対しては実質的に空振り**（意味を持つのは"JSを実行しつつbot UAを名乗る"稀なケース）＝**非JSクローラを弾いているのはUAフィルタでなくJS実行ゲート（沈黙の上流）**。
+- **根拠URL（S/A一次・egress遮断は検索/独立記述でtraced）**：
+  - digitalapplied「Server Logs: Finding the AI Agents That GA4 Can't See」（AIクローラJS非実行・サーバログのみ＝A→traced） https://www.digitalapplied.com/blog/server-log-ai-agent-detection-beyond-ga4-2026
+  - Plausible「Client side vs server side analytics: the gap in data」（A） https://plausible.io/blog/server-log-analysis
+  - Similarweb「Log File Analysis: Track AI Bots & Fix Crawl Gaps」（A→traced） https://aisearch.similarweb.com/blog/log-file-analysis/
+  - wislr「48 Days of Server Logs（GPTBot 11.5%/ClaudeBot 23.84%・取得すれど非実行）」（A→traced） https://www.wislr.com/articles/ai-bot-behavior-log-analysis/
+  - Microsoft Clarity Blog「See AI Bot Activity with Clarity」「Clarity Now Surfaces Robots.txt Violations in Bot Analytics（2026-06-23）」（S一次・egress遮断→SEJ 580446 でtraced） https://clarity.microsoft.com/blog/ai-bot-activity-in-clarity/ ／ https://www.searchenginejournal.com/microsoft-clarity-now-flags-bots-that-ignore-robots-txt/580446/
+  - seobro「Do AI crawlers execute JavaScript?（実測値）」（A→traced） https://seobro.com/blog/do-ai-crawlers-execute-javascript/
+  - 現物: loku-tuning-plugin/handoff-demo/app.mjs 19/262/397/449-450/915-922行
+- **対策案（射程を絞る・新種P番号は起こさない・採否はDaiya/メイン判断）**：
+  - **(a) bot-reportのラベル正直化**：`bot-report` の見出し/店主表示を **「JSを実行した“疑わしい訪問”の割合」に限定表記**し、「全ボットトラフィック」と読ませない（数字は作らない・限定表記のみ）。
+  - **(b) “測れない層”への正直な注記**：店主が「AIにサイトを食われてないか／AI検索露出は」を問うたとき、**“クライアント計測の外＝サーバ/CDNログ領分”と正直に返す**注記を効果台帳/ダッシュボードに持つ（P9/第23回「辿れない天井は推測で埋めず正直にラベリング」と同型）。
+  - **(c) 将来サーバ/CDNログ突合を足すなら別レイヤーとして**（Clarity型＝クライアント計測と独立の“もう一つの目”。ただしIP/ログ保存の可否は見廻り領分＝下記申し送り）。
+- **検証方法**：実機/ユニットE2E（メイン領分・1スタジオ目本番化時・P7〜P22と同じ境界テスト群で）。①**負のテスト＝非JSクローラのHTML取得（JS非実行）で collect が1件も増えず来訪/予約分母が動かない**こと（＝JS実行ゲートによる自動免疫の確認）②bot-reportが“JS実行suspectのみ”と明示され店主が全体像と誤読しないラベルになっているか③（サーバログ突合を足す場合のみ）別レイヤーとしてクライアント集計を汚さないか。
+- **優先度**：**低〜中（データ破損防御でなく“正直な説明”のenrichment）**。分母は既に構造免疫ゆえ緊急度は低いが、店主への説明の正直さ（見えている数字＝全部ではない）を担保する土台。実装・QA・採否・優先度はメイン領分／Daiya。
+- **⚠️見廻り（lp-mimawari）へ申し送り**：サーバ/CDNログでのボットIP・UA記録／robots.txt違反の可視化は、**ログにどこまで記録・保存してよいか（IP等の扱い・保存期間）**の法規制論点があり得る＝可否・保存設計の線引きは法規制領分（第22回クラウドIP申し送りと同系統・継続）。
+- **位置づけ（テーマ転換・ビート2 単軸）**：直近B2(65)/B1(66)/B3(67)/B1(68)/B3(69)からローテーションし、B3連続とB1直近を避けてビート2へ。テーマ履歴＝autocapture(65)→LIFF最小化(66)→複数OA(67)→WKWebView 39%(68)→P28カレンダー(69)→AIクローラJS非実行/計測面境界(70)。起源掘りは「なぜAIクローラはJSを実行しない設計で生まれたか＝数十億ページを安く速く舐めるためGoogleの重いレンダリング基盤を捨て、その副作用でJS計測に映らない存在になった＝計測の前提(JS=可視)が割れた起源」（origins 69件目）とし、P2自動免疫の“なぜ”とbot-report限界の“なぜ”を同一の一点で根拠づけた。**新種は起こさず既存P2への追加観点に留める（seed-sprawl回避）。**
