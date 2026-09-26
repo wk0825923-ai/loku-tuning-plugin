@@ -1994,3 +1994,28 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - **優先度**：**低〜中（データ破損防御でなく“正直な説明”のenrichment）**。分母は既に構造免疫ゆえ緊急度は低いが、店主への説明の正直さ（見えている数字＝全部ではない）を担保する土台。実装・QA・採否・優先度はメイン領分／Daiya。
 - **⚠️見廻り（lp-mimawari）へ申し送り**：サーバ/CDNログでのボットIP・UA記録／robots.txt違反の可視化は、**ログにどこまで記録・保存してよいか（IP等の扱い・保存期間）**の法規制論点があり得る＝可否・保存設計の線引きは法規制領分（第22回クラウドIP申し送りと同系統・継続）。
 - **位置づけ（テーマ転換・ビート2 単軸）**：直近B2(65)/B1(66)/B3(67)/B1(68)/B3(69)からローテーションし、B3連続とB1直近を避けてビート2へ。テーマ履歴＝autocapture(65)→LIFF最小化(66)→複数OA(67)→WKWebView 39%(68)→P28カレンダー(69)→AIクローラJS非実行/計測面境界(70)。起源掘りは「なぜAIクローラはJSを実行しない設計で生まれたか＝数十億ページを安く速く舐めるためGoogleの重いレンダリング基盤を捨て、その副作用でJS計測に映らない存在になった＝計測の前提(JS=可視)が割れた起源」（origins 69件目）とし、P2自動免疫の“なぜ”とbot-report限界の“なぜ”を同一の一点で根拠づけた。**新種は起こさず既存P2への追加観点に留める（seed-sprawl回避）。**
+
+## 【2026-09-26・第71回巡回＝ビート3「決断面の移動の偵察」＝P11（reach_path/surface）への追加観点 第8弾（新種P番号なし）】スマホの“ウォレット（Apple Wallet/Google Wallet）のパス”が再来店の決断面として整い始めた＝UTMを持たない再訪導線＝ウォレット由来の再訪を黙って「不明/直接」に溶かさない前方ガード（目付還流・コード無変更）
+
+- **現象（ビート3・パス基盤=Apple/Google公式 S一次→traced／iOS 27・I/O 2026 具体=A→traced）**：再来店（リテンション）のきっかけ面が **LP・LINE の外＝OS標準のウォレット（お財布アプリ）のロック画面** へ移り始めた。
+  - **Apple Wallet「パスを作成（Create a Pass）」（iOS 27・9/14配信）**：QR/バーコードのカメラ読み取り or 手入力で**誰でもパスを自作**（Standard/Membership/Event の3テンプレ／パス下部に最大2つのタップ操作＝道案内・ポイント残高等）。ただし**“自作パス”は位置情報通知の基盤を持たない＝近接/位置連動通知（relevant-location・ロック画面浮上）は開発者(PassKit)発行の“公式パス”のみ**。加えて**「Tap to Share」**＝レジ端末にiPhoneをかざし会員情報/連絡先を渡す機能も新設。
+  - **Google Wallet「近接パス（Nearby Passes）」がGoogleマップ連携＝地点上限撤廃（I/O 2026・5/22）**：従来**1パス10地点まで**だった“近づいたら通知”のジオフェンスを、Googleマップの店舗識別で**枠を消費せず全店有効化**＝多店舗の会員証パスが全店の来店客のロック画面に浮く再訪導線が実務レベルに。
+  - **共通の構図**：公式ロイヤルティ/メンバーシップパスは**ロック画面浮上・パス上タップ操作・位置連動通知**で「また来て」を運ぶ＝**広告→LP→LINE という主戦場の“外側”に、実名客の再訪を促す面がもう1枚できる**。
+- **現物確認（目付がgrep）**：`handoff-demo/app.mjs` の `sourceLabel`（244-250行）は **`utm→entry_source→referrer(ホスト名)→その他`** の順で流入元を決める。**ウォレットのパスから開かれたLPはUTMが付かず・LINE参照元も無い**ことが多い（ウォレット起動リンクは参照元が空/アプリ由来になりがち）＝**「参照元(referral)」か「不明/直接」に落ちる**。reach surface（P11＝Where軸＝“どの面で決断/再訪が起きたか”）に **`wallet_pass` の枠は無い**（既存の面＝utm/LINE/referrer中心＝第64回 `line_agent`＝Agent i・第67回 LINEミニアプリタブに続く“決断面の外側化”の第3の面がOS標準ウォレット）。
+- **根拠URL（S/A一次・egress遮断は検索/独立記述でtraced）**：
+  - Apple Developer「Loyalty Passes」（S一次） https://developer.apple.com/wallet/loyalty-passes/
+  - Google Wallet「Release notes（Google for Developers・近接/位置通知規定）」（S一次） https://developers.google.com/wallet/docs/release-notes
+  - WalletWallet「Google Wallet at I/O 2026 and Apple Wallet in iOS 27（近接パスのGoogleマップ化＝10地点上限撤廃・iOS 27 Create a Pass/Tap to Share）」（A→traced） https://www.walletwallet.dev/blog/google-wallet-io-2026-and-ios-27-wallet/
+  - The Next Web「iOS 27 lets users create custom Wallet passes（自作パスは位置情報通知の基盤を持たない＝公式パスのみ）」（A→traced） https://thenextweb.com/news/apple-ios-27-wallet-custom-passes-create
+  - MacRumors「iOS 27 Wallet App Gets 7 New Features」（A→traced） https://www.macrumors.com/guide/ios-27-wallet/
+  - crm.com「Digital Passes: How Apple & Google Wallets Are Becoming the New Loyalty Cards」（A→traced・忘れられた会員証/ロック画面浮上の沿革＝起源掘り根拠） https://www.crm.com/digital-passes-how-apple-google-wallets-are-becoming-the-new-loyalty-cards/
+  - 現物: loku-tuning-plugin/handoff-demo/app.mjs 244-250行（sourceLabel＝utm→entry_source→referrer→その他）
+- **対策案（射程を絞る・新種P番号は起こさない・採否はDaiya/メイン判断）**：
+  - **(a) reach surface に `wallet_pass` を見込む**：将来ウォレットパスのリンクに `utm_source=wallet`（さらに必要なら `wallet_apple`/`wallet_google`）を付けて発行する運用を前提に、付いていないウォレット由来を **「不明」でなく“ウォレット由来（きっかけ詳細不明）”とラベリング**できる余地を `sourceLabel`/reach 集計側に持つ（UTM最優先の現行設計はそのまま＝utmが付けば正しく拾える）。
+  - **(b) 辿れないきっかけは推測で埋めず正直に表示**（第23/70回「辿れない天井/相手は推測で埋めず正直にラベリング」と同型・鉄則「数字を作らない」）。
+  - **(c) のべ来訪回(P15)/再訪率が動いた時、その増分の“きっかけ”が空欄化（unknown一括溶け）していないかを見張る**＝reach mix の unknown が静かに膨らむのを再来店施策の効果消失と読み違えない／逆に「不明増加＝計測バグ」と誤読して実在の再訪導線を潰さない。
+- **検証方法**：実機/ユニットE2E（メイン領分・1スタジオ目本番化時・P7〜P28と同じ境界テスト群で）。①**負のテスト＝UTMも参照元も無い再訪が「不明」に一括で溶けず、ウォレット系ラベルに振り分けられる**（＝reach mix の unknown が静かに膨らまない）②ウォレットパスのリンクに `utm_source=wallet` を付けた場合に `sourceLabel` が正しく最優先で拾う回帰③のべ来訪回/再訪率の増分に“きっかけ”ラベルが伴う（空欄の山を作らない）。
+- **優先度**：**低〜中（早期警報）**。**1スタジオ目（YUKIさん）はまだウォレットのパスを運用していない前提＝“導入されたら効く”前方ガード**。データ破損防御でなく「再来店のきっかけの可視化」enrichment＝ウォレット面の効き目を正直に切り分ける土台。実装・QA・採否・優先度はメイン領分／Daiya。
+- **重複回避**：第7弾(`line_agent`＝Agent i・第64回)・LINEミニアプリタブ(第67回・reach surface)とは重複させず＝今回は**「OS標準ウォレットのロック画面という LP/LINE の外側の再訪面」**という別facet。新種は起こさず既存P11への追加観点に留める（seed-sprawl回避・第44回P28以来27回連続 新種なし=45-71）。
+- **起源掘り（origins 70件目）**：「なぜウォレットのパスに近接/位置連動通知が生まれたか＝“引き出しで忘れられた会員証”を正しい場所・時刻に本人の目の前へ自分から現れさせるため＝再訪トリガーが“測れるクリック(UTM付きLINE/メール)”から“OSが握るロック画面イベント(UTMなし)”へ移った」＝上段の穴の“なぜ”そのもの＝第70回「AIクローラはJS非実行ゆえ最初から視界の外」と同構図（計測の前提が面の移動で片側だけ欠ける）。
+- **⚠️見廻り（lp-mimawari）へ申し送り**：ウォレットパスの**近接/位置連動通知は位置情報の取得・利用同意**の論点があり得る＝店がパスを発行し位置通知を使う場合の**同意取得・プライバシー表示・保存の可否**は法規制領分（第22回クラウドIP・第70回ログ保存申し送りと同系統・継続）。
