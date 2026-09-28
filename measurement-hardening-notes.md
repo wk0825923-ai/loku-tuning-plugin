@@ -2059,3 +2059,40 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 
 - **⚠️番人（qa-auditor）へ申し送り**：上記(あ)TICK下限33ms・(い)dt方式（固定値加算にしない）を回帰テストの明示項目に。＋省電力モード実機（iOS Low Power Mode ON）での滞在秒E2Eをライフサイクル境界群に追加。
 - **⚠️物見（intel-scout）へ申し送り**：Web Worker常駐でタイマー間引きを回避する"背景計測"の潮流（隠れタブでも数え続ける方式）＝業界一般ニュースとして。Lokuはこれをやらないのがむしろ正解、の文脈つきで。
+
+## 追加の種（2026-09-28・目付第73回巡回からの還流）
+
+**前提**：以下は**新規P番号を起こさない**。ビート2（計測・分析技術と競合の動き）を実探索し、**GA4がAI経由来訪を独立の既定チャネル「AI Assistant」に格上げした（medium=ai-assistant・分類ロジック2026-05-13投入/全展開06-07）**中で、現物の流入元判定 `sourceLabel`（app.mjs 244-250行）に **AI経由の受け皿が無い**穴を確認。既存の **P11（reach surface＝Where軸＝どの面で決断/来訪が起きたか）／P5（起源＝クリックID非依存の流入元保存）** への**追加観点 第9弾**（第7弾=line_agent＝第64回／第8弾=wallet_pass＝第71回に続く）。実装照合表（P0-P3済）・P5〜P28・reach_path各弾（第1〜8弾）・962行「GA4 AI Assistantローカル実数」の言及とは**重複させない**＝962行は"来ているのに測れない(dark ceiling)"の例示としてのGA4言及で、本件は**「AIが実際にクリックを送った時、その参照元分類が生ホスト名/不明に溶ける＝チャネル分類(taxonomy)の層」**という別facet。**追記前に本ファイル全読（P0〜P28+reach_path各弾 grep＋962行確認）**し非重複を確認＝新機構ではなくP11/P5への追加観点（第44回P28以来29回連続 新種なし＝45-73）。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P11/P5 追加観点・第73回巡回（2026-09-28）／reach surface に `ai_assistant` を見込む前方ガード＋GA4を反面教師にした維持規律（reach_path 第9弾）】新種P番号なし
+
+- **現象（機構＝GA4仕様 S一次／日付・5ソース・除外＝複数独立媒体 A→traced）**：GA4が既定チャネルグループに **AI Assistant** を新設。参照元が認定AIアシスタントに一致すると **`medium=ai-assistant` を自動付与**しReferralから分離（設定不要）。**分類ロジックは2026-05-13投入・全プロパティ展開は2026-06-07**。
+  - **認定される5ソース＝ChatGPT / Gemini / DeepSeek / Copilot / Grok**。**Claude・Perplexityは対象外（依然Referral行き）／Google自身のAI Overviews・AI Modeは「オーガニック検索」扱い（AI Assistantに入れない）**。
+  - **そしてAI流入の大半はそもそも参照元を持たない**（答えの中で完結＝クリック無し＝dark ceiling／クリックが起きても参照元欠落で直接・不明へ）＝チャネル分類で拾えるのは"参照元が残ってクリックが来た薄いスライス"のみ。
+
+- **現物確認（当たり＝過剰批判はしない・現物grepで"受け皿の有無"を切り分け）**：`handoff-demo/app.mjs` の `sourceLabel()`（244-250行）は **`utm?.source || entry_source` → 無ければ `new URL(referrer).hostname` → 失敗で `'referral'`**。
+  - ＝**参照元が `chatgpt.com` なら文字列「chatgpt.com」を生のまま返す**（AI経由という括りにならない）／UTMも参照元も無ければ上位判定で「不明・直接」へ。reach surface（P11＝Where軸）に **`ai_assistant` の枠は無い**（第64回 `line_agent`・第67回 ミニアプリタブ・第71回 `wallet_pass` に続く"決断/来訪面の外側化"で、まだ受け皿の無い面）。
+  - UTM最優先の現行設計は正しい（UTMが付けば正しく拾う）＝穴は"UTMも付かずAIドメインから来た click-through"のスライス。
+
+- **他種との非重複（実装照合の要）**：**第7弾 `line_agent`（第64回）**＝AIが操作＝collect発火するが視線0レコード（P2/causal二正面）／**第8弾 `wallet_pass`（第71回）**＝UTMなしの再訪がロック画面から（Where軸の穴）／**本第9弾 `ai_assistant`**＝**AIが実際にクリックを送った時、その参照元がAIドメインで"推薦元"が生ホスト名/不明に溶ける**（由来分類=taxonomyの層）。962行「GA4 AI Assistantローカル実数」＝"来ているのに測れない(dark ceiling)"例示、とは別facet（本件は"来てクリックした分の由来分類")。P5本体（クリックID非依存の流入元保存）とはレイヤーが別（P5=保存の堅牢化／本件=分類ラベルの拡充）。
+
+- **根拠URL（機構=S一次、日付/5ソース/除外=A→traced、現物=目付grep）**：
+  - Google「[GA4] 既定のチャネルグループ（Default Channel Group）」（S一次・ai-assistant medium/認定ソース定義）https://support.google.com/analytics/answer/9756891
+  - Search Engine Journal「Google Analytics Adds AI Assistant As Default Channel Group」（A→traced・5/13投入/6/7全展開/5ソース/設定不要）https://www.searchenginejournal.com/google-analytics-adds-ai-assistant-as-default-channel-group/574974/
+  - weekerp「GA4 AI Assistants Channel: What ai-assistant Tracks and Misses」（A→traced・Claude/Perplexity除外/AI Overviews/AI Mode→Organic）https://weekerp.com/en/blog/ga4-ai-assistant-channel-what-it-tracks-and-misses
+  - nicelookingdata「AI Traffic in GA4: How ChatGPT, Perplexity, Gemini & Google AI Mode Referrals Actually Show Up」（A→traced・大半は参照元なし）https://www.nicelookingdata.com/blog/ga4-ai-traffic-chatgpt-referrals
+  - 現物: handoff-demo/app.mjs 244-250行（`sourceLabel`＝utm→entry_source→referrer.hostname→'referral'）
+
+- **対策案（コード無変更・設計材料＝enrichment＋維持規律。採否・優先度はDaiya/メイン）**：
+  - **(a) reach surface に `ai_assistant` を見込む前方ガード**：参照元が既知AIドメイン（`chatgpt.com` / `gemini.google.com` / `copilot.microsoft.com` / `grok.com` / `deepseek.com`、**＋GA4が落とす `claude.ai` / `perplexity.ai` も忘れず**）にマッチしたら `ai_assistant`（可能なら `ai_assistant_<vendor>`）とラベリングできる余地を `sourceLabel`／reach集計側に持つ（UTM最優先の現行はそのまま）。＝第8弾 wallet_pass と同じ"1段足すだけ"のenrichment型。
+  - **(b) ドメイン表は固定でなく"維持前提"**：GA4の5ドメイン限定・Claude/Perplexity/AI Mode取りこぼしを**反面教師**に、AIの銘柄入替（ChatGPT Atlas撤退＝第69回既記録）・新AI登場・ドメイン変更を**廃止/版動カレンダー（P28）に載せて見張る**。固定表は静かに古びて"AI経由"を過少計上する。
+  - **(c) 辿れないAI流入は推測で埋めず正直に**：参照元なしのAI流入は「不明（AI経由の可能性含む）」に留め、"AI経由"と確定できるのは参照元が残った click-through slice のみ、と店主に切り分ける（鉄則「数字を作らない」・第23/70/71回と同型）。
+
+- **検証方法**：実機/ユニットE2E（メイン領分・1スタジオ目本番化時・P11/P5/reach_path境界テスト群で）。①**負のテスト＝参照元が既知AIドメインの来訪が生ホスト名でバラけず/不明に溶けず `ai_assistant` に振り分けられる**②UTM付きAI流入はUTMを最優先で拾う回帰③**ドメインallowlistが古びた（新AI/ドメイン変更）時に取りこぼしが増える負のテスト**④reach mix の unknown/referral が静かに膨らんでAI面の効き目が消えない／逆に「不明増加=計測バグ」と誤読して実在AI導線を潰さない。
+
+- **優先度**：**低〜中（早期警報＋enrichment）**。**1スタジオ目（YUKIさん）はまだAI経由流入が主でない前提＝"来たら効く"前方ガード**。データ破損防御でなく「AIに推薦されて来た実客の可視化」enrichment＝AI面の効き目を正直に切り分ける土台。GA4が業界標準として網を1枚足した節目＝Lokuも受け皿＋維持規律＋正直さの3点を一組で。実装・QA・採否・優先度はメイン領分／Daiya。
+
+- **位置づけ**：第64回 `line_agent`（AIが操作＝視線0）・第67回 ミニアプリタブ・第71回 `wallet_pass`（ロック画面再訪）に続く**"reach surfaceの未受け皿な面"の家系の第9弾**。今回の面＝**AIが実際にクリックを送った時の由来分類**（＝dark ceiling＝来訪0とも、AIクローラJS非実行＝bot とも別）。起源掘り（origins 72件目）＝「なぜ計測はsource/mediumで分類し、なぜAIに新チャネルを足したか＝"参照元ホスト名=推薦元"の20年物(Urchin 2005)の等号がAIで崩れたから」＝上段の穴の"なぜ"そのもの。GAですら不完全＝Lokuも「網を足す＋維持前提＋辿れない分は正直に不明」を一組で持つのが正解。
+
+- **⚠️番人（qa-auditor）へ申し送り**：上記(a)既知AIドメイン→ai_assistantラベリングの回帰テスト＋reach mix の unknown/referral が静かに膨らむ番犬（AI経由の溶け込み検知）＋(b)allowlistが古びた時の取りこぼし負のテスト。
+- **⚠️物見（intel-scout）へ申し送り**：GA4「AI Assistant」既定チャネル追加（5/13・6/7）＝AI経由来訪の計測が業界標準化した節目＝業界一般ニュースとして。＋Clarityの「AIボット可視化」・PostHogのセッション録画タッチ座標マスキングも計測ツール界の潮流として。
