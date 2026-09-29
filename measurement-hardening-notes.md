@@ -2096,3 +2096,27 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 
 - **⚠️番人（qa-auditor）へ申し送り**：上記(a)既知AIドメイン→ai_assistantラベリングの回帰テスト＋reach mix の unknown/referral が静かに膨らむ番犬（AI経由の溶け込み検知）＋(b)allowlistが古びた時の取りこぼし負のテスト。
 - **⚠️物見（intel-scout）へ申し送り**：GA4「AI Assistant」既定チャネル追加（5/13・6/7）＝AI経由来訪の計測が業界標準化した節目＝業界一般ニュースとして。＋Clarityの「AIボット可視化」・PostHogのセッション録画タッチ座標マスキングも計測ツール界の潮流として。
+
+## 追加観点（2026-09-29・目付第74回巡回からの還流）＝ビート1「計測精度の敵」＝iCloud Private Relay（Safariの本当のIPを隠す中継）＝Lokuは<code>IP</code>非使用ゆえborn免疫、ただし将来のP2「IP帯遮断/回数上限」の逆噴射ガード＝P2への追加観点 第5弾・新種P番号なし（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**。ビート1（計測精度の敵）の未踏サブ＝**IP層（クライアントIPの秘匿）**を初めて調べ、**既存 P2（bot除外・UA＋挙動）＋第18回で候補にした P2拡張(b)「クラウドプロバイダIP帯遮断」・(d)「1来訪あたりアクション上限」への“逆噴射ガード”**として記録する。**追記前に本ファイル全読＝P0〜P29（P4/P24欠番）＋P35をgrep**し、既存種の機構に無い&P2拡張(第18/22/49/63)と重複しないことを確認（第18は「クラウド/DCのIPを弾く”攻め”の穴」＝本件は「Apple中継の相席IPに乗った“実客”を弾いてしまう”守り”の穴」＝鏡像の非重複）。**コードは触っていない。** 採否・実装・QAはDaiya／メイン領分、法規制/IPの扱いは見廻り領分。**新種P番号なし＝第44回P28以来30回連続（45-74）。**
+
+### 【P2 への追加観点 第5弾（新種ではない）】将来 P2拡張(b)クラウドIP帯遮断・(d)1来訪あたりアクション上限を実装する“なら”、Appleの iCloud Private Relay 出口IP（公開feed）を白リスト化し、相席IPを踏まえて回数上限はIP単位で数えない
+- **前提**：P2（bot除外）は**実装照合表で✅済み**（UA入口除外 `BOT_UA_RE`＝app.mjs 19行＋`suspect_bot` 挙動フラグ＋`bot-report` 件数可視化）。現物のbot判定は **`BOT_UA_RE.test(req.headers['user-agent'])`（app.mjs 384-385行）＝UA文字列（自己申告の名札）のみ**を見ており、**送信元IPも位置も判定材料にしていない**（grep確認・collect受け口はサーバ側でIP参照なし）。これは**新種でなく、既実装P2＋第18回P2拡張候補への“逆噴射（false-positive）ガード”**。
+- **現象／根拠（S/A→traced）**：**iCloud Private Relay（IPR）** は iCloud+加入者の **Safari** の通信を Apple＋第三者パートナーの **2段（2026・iOS19で3段）の中継**を通し、**本当のIPアドレスを隠す**。
+  - (1) **複数の実客が同じ中継“出口IP”を相席で使う**＝IP評判スコア/IPで人を数えるのがほぼ無意味（Fingerprint A）。
+  - (2) IPからの位置推定は**市区町村レベル止まり**（広域設定なら国/時間帯のみ・geoplugin A）。
+  - (3) Appleは**中継の出口IP一覧（egress IP feed）を公開**＝サーバ側は「これはIPR経由」と識別可能（Apple Developer S）。
+  - (4) ⚠️**IPRは Safari限定**で、**アプリ内ブラウザ(WKWebView)・他社ブラウザは対象外**＝**Lokuの主戦場 LINE内ブラウザ(LIFF＝WKWebView)はIPRを通らず実回線IPそのまま**（Macworld/Apple Community B→traced）。＝この穴は「GBP/検索から素のSafariでLPに来る」導線側に限られる。
+  - Apple Support「iCloud Private Relay」: https://support.apple.com/guide/icloud/icloud-private-relay-mm8010d8daf3/icloud （S・egress遮断→traced）
+  - Apple Developer「Prepare your network for iCloud Private Relay（egress IP feed）」: https://developer.apple.com/icloud/prepare-your-network-for-icloud-private-relay/ （S・同）
+  - Fingerprint「Detect iCloud Private Relay Traffic」: https://fingerprint.com/blog/icloud-private-relay-detection/ （A・相席IP=評判無意味/検知法）／geoplugin「IPR & IP Geolocation 2026」: https://www.geoplugin.com/resources/icloud-private-relay-and-ip-geolocation-what-breaks-and-how-to-adapt/ （A・市区町村止まり）
+- **対策案（コード無変更・設計材料）**：
+  1. **今は何もしなくてよい（免疫の明文化）**：現物はIPを判定に使わない＝IPRがIP評判/IP位置を壊してもLokuの計測は不変（born免疫）。＝「IPを追跡/判定に使う設計だけがIPRに削られる」＝Lokuは土俵の外（第70 JS非実行／第72 タイマー間引きに続く「敵の土俵に乗らない」設計の4例目）。
+  2. **将来 P2拡張(b)「クラウド/DCのIP帯を弾く」を足す“なら”の一線**：Appleの**IPR出口IP（公開feed）を必ず白リスト化**する（＝IPRの出口はデータセンター的IPに見えるが、そこに乗っているのは**iCloud+を使う本物のSafari iOS実客**＝上位機種/優良客層に多い）。白リスト無しにクラウドIP帯遮断を掛けると、**実客を丸ごとbot隔離する逆噴射**。
+  3. **将来 P2拡張(d)「1来訪あたりアクション上限」を足す“なら”の一線**：**回数上限はIP単位で数えない**（IPRの相席IPは複数の別人が同居＝IPで束ねると別人の実客を1人に丸めて過剰に絞る）。**匿名ID/friend_id単位**で数える。
+  4. **IP-geo（店舗地域推定）にIPを使わない現状維持**：IPRは市区町村止まり＝IP-geoは不正確。Lokuは friend_id/明示信号で地域を持つ設計＝IP-geoに依存しない（現状維持でよい）。
+- **検証方法**：（P2拡張を実装する場合のみ）①**Apple中継IPからのSafari iOS実客が `suspect_bot` に隔離されない**負のテスト（IPR egress feedの1IPを模擬）②**相席IPで別人の実客が「回数上限」で1人に丸められない**回帰（回数の分母がIPでなく匿名ID/friend_id）③主戦場LINE内(WKWebView)はIPR非対象＝実回線IPで従来どおり動く後方互換。メイン/番人領分・1スタジオ目本番化時・P7〜P22の境界テストと同群で。
+- **放置すると（店主の数字のどこが狂うか）**：**現状は狂わない（免疫）**。ただし将来IP帯遮断/回数上限をIPR無配慮で入れると、(1)iCloud+のSafari iOS実客が一斉にbot隔離＝**「一部の優良客が急に消えた」を“客減”と誤読**(2)相席IPの回数上限で**別人の実客が1人扱いされ来訪/予約が過少**(3)結果、因果(causal.mjs)の分母が実態とズレる。高単価・比較検討型スタジオほどiOS上位機種客の取りこぼしは打ち手判断を誤らせる。
+- **見廻り(lp-mimawari)へ**：IPの出口を条件に使う（弾く/白リスト化する）設計＝**IPアドレスの扱い（個人情報/プライバシー）**の線引きは法規制領分＝可否・設計の一線を確認。**番人(qa-auditor)へ**：上記検証①〜③（特に①②の逆噴射・負のテスト）を境界テストに追加。**物見(intel-scout)へ**：IPR iOS19の3段化＝プライバシー中継の潮流／IPが“消せない最後のクッキー”として規制対象化した流れは業界動向として。
+- **出典**：上記根拠URL群。**起源＝なぜIPRが生まれたか＝IPアドレスは客が消せない“最後のクッキー”として、ITP/クッキー規制後も追跡の受け皿に残った→Appleが2中継(2026/iOS19で3段)で「誰か(IP)」と「何を見たか(DNS/宛先)」を機械的に分離＝IPを身元から切り離す＝origins.md 73件目**。**Lokuは実名+本人が押した予約+視線という“客が能動的に差し出した一次データ”だけで測る＝移動する敵(cookie→クリックID→FP→IP)の外側に最初から立つ。新種P番号なし＝第44回P28以来30回連続（45-74）＝P2への追加観点 第5弾。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
