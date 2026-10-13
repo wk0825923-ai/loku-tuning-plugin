@@ -2238,3 +2238,32 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
   3. **診断の明文化**：離脱送信が落ちた疑いがある時は**ブラウザのコンソールの CSP 違反メッセージ**（止めたディレクティブ名が出る）を一次証拠にする。「設置したのに数字が薄い／一部端末だけ妙に少ない」は CSP ブロックの典型徴候。
 - **検証方法**：実機/ユニットE2E（番人/メイン領分・1スタジオ目本番化時。P0離脱二段・P19返り値・P26来歴検証の境界テスト群で）。①店主LPに `connect-src 'self'` を含むCSPを置き、同一オリジン `/api/attn/collect` への離脱 sendBeacon が通る後方互換 ②`connect-src` から `'self'` を外した**負のテスト**で、離脱はがきが沈黙ドロップし（例外は飛ばない）・コンソールに CSP 違反が出ることを確認 ③P19 実装時、CSP ブロックの false 時に `fetch(keepalive)` フォールバックも**同じ理由で失敗**することを確認し、満杯 false（フォールバックが効く）と区別してログ ④受け口が同一オリジン相対のまま・リダイレクトを挟まないことの回帰（挟むと CSP が最終URLに再適用）。P0離脱二段・P1冪等マージと二重処理でも巻き戻らないこと。
 - **優先度**：**中**（現物は同一オリジン相対パス設計ゆえ多くの店主LPで免疫。実務上の要は「同一オリジン・無リダイレクトの維持」と「厳しめCSPを貼る店主LPのオンボーディング時チェック」＝設置時の設定問題として前方で潰す）。**新種P番号なし＝P0/P19/P24/P26 への追加観点（第44回P28以来 新種なし継続 45〜81）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
+
+## 追加観点（2026-10-13・目付第83回巡回からの還流）＝ビート2「計測・分析技術」＝ブラウザが「ソフトナビゲーション（SPAの擬似ページ遷移）」を検知する新API（Chrome 実験中）＝自動ページビュー計測の弱点をブラウザ側から正す動き＝Lokuは単一文書LP＋UTM明示でborn免疫・唯一の穴「店主LPのSPA化」への前ガード＝P7/P8/P15への追加観点・新種P番号なし（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**。ビート2の未踏サブ＝「ソフトナビゲーション（soft navigation＝同じHTML文書のまま URL と表示内容だけが切り替わる擬似ページ遷移＝SPAの肝）を**ブラウザ自身が検知する新API**（WICG仕様・Chrome origin trial）」を拾い、既存の **P7（bfcache/復帰の新ビュー計上・pageshow/persisted）／P8（先読み prerender 活性化までの初期化遅延）／P15（来訪エピソード＝visit_count を人単位で数える）** への**追加観点（将来ガード）**に留める。実装照合表（P0-P3済）・**第56回 pageswap/pagereveal（＝クロスドキュメント＝別HTML文書“をまたぐ”遷移の合図／P0/P7/P8）**・**第65回 autocapture（＝SPAでPV/UTM取りこぼし→Lokuは明示設計で免疫）**・第61回 bfキャッシュ適格性（P7/P0）とは**重複させない**。**追記前に本ファイル全読（P0〜P29＋P35 grep＋通読）**し、`soft nav`/`SPA`/`pushState`/`history`/`popstate`/`single-page`/`router` が既存種の主題に無いこと（第56は “クロスドキュメント＝別文書への遷移”＝ハード遷移側／第65は “収集アーキテクチャ autocapture vs 明示” の軸／第6回P7補遺で Plausible PR#5082 の SPA 重複防止ガードが bfcache を握り潰したバグに触れるのみ）を確認＝**今回は「同一文書内 same-document のソフトナビを“1遷移”として扱う新機構」という未接触の facet**。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P7／P8／P15 への追加観点・第83回巡回（2026-10-13）／ブラウザのソフトナビゲーション検知API＝自動PV計測の弱点をブラウザ側から正す＝Lokuは単一文書LP＋UTM明示でborn免疫・唯一の穴は店主LPのSPA化】新種P番号なし
+
+- **現象（機構＝WICG標準化一次 S→traced・複数独立二次が3条件で一致）**：ソフトナビゲーション(soft navigation)＝**ページを本当に再読み込みせず（文書は同じまま）URLと表示内容だけが切り替わる擬似的なページ移動**（SPA＝Single Page App の中核挙動）。従来、計測スクリプトもブラウザの Performance API も**フレームワーク（React/Vue等）が起こすこの遷移を「新しいページ」と認識できず**、速度指標(LCP/INP/CLS)やページビューが**最初のハード読み込みに累積**していた（例えると：デパートの入口カウンターだけが人数を数え、客が各階へ移動しても来店記録は全員「1階入口」のまま）。これを**ブラウザ側の共通信号で正す**のが Soft Navigations Detection API。
+  - **検知ヒューリスティック＝3条件そろって初めて1遷移**：(ⅰ)ユーザー操作(クリック等)→(ⅱ)DOM変更＋描画(paint)→(ⅲ)`history` によるURL更新。**操作なしのURL変更だけ（絞り込み・タブ・並べ替え・モーダル）は数えない**。設計は**精度優先（precision over recall）＝見逃し側に倒す**（誤検知より取りこぼしを許容）。検知エントリは**専用のナビゲーション識別子**を持ち、URLが変わった後でも計測値を正しいルートへ結び直せる。
+  - **PostHog（計測OSS）の2026対応（A・集約リリース情報）**：この Chrome 実験APIを土台に、**SPAの速度指標が“最初の読み込み”に積み上がって膨らむ問題への修正**（ルート切替ごとに計測窓をリセット・UTM等をフラグ付きイベントに保持）を提供（既定オフ）。版番号(1.411.0前後)・日付は集約値ゆえA止まり。
+- **鮮度の正直メモ（数字を作らない）**：Chrome のバージョン表記は**二次で食い違う**（「Chrome 139 初登場」説と「最終 origin trial は Chrome 147〜149」説の両方）＝**どちらも Chrome 公式リリースノートで未確認（当環境は developer.chrome.com が egress 遮断＝DNS不達・MDNも同様）**。本追記は**機構（3条件・ナビゲーション識別子・精度優先）**のみ採用し、**版番号は確定扱いにしない**。安定版化「2026年後半見込み」も未確認。
+- **根拠URL（S/A）**：
+  - WICG「Soft Navigations」仕様リポジトリ（S・標準化一次／3条件ヒューリスティック・精度優先）: https://github.com/WICG/soft-navigations
+  - developer.chrome.com「Soft Navigations origin trial」（S一次・当環境 egress 遮断＝DNS不達ゆえ直踏み不可・二次でtrace）
+  - SALT.agency「Why the Soft Navigations API Enables Better SPA Core Web Vitals Auditing」（A→traced・interaction+DOM+history の3条件・navigation id で LCP/INP/CLS を再帰属）: https://salt.agency/blog/why-the-soft-navigations-api-enables-better-spa-core-web-vitals-auditing/
+  - Coralogix「Soft navigations: The future of seamless browsing」（A→traced）: https://coralogix.com/blog/soft-navigations-the-future-of-seamless-browsing/
+  - uxify「New Soft Navigations origin trial」（B→traced・Chrome 147–149 説）: https://uxify.com/blog/post/new-soft-navigations-origin-trial
+  - PostHog posthog-js リリース（A・集約 newreleases.io/releases.sh＝「spa web vitals … soft navigation option / utm params preserved on flagged events」）
+- **Loku現物との突合（確認＝2026-10-13・過小評価も過剰評価もしない）**：
+  - 主戦場LPは**1枚の静的HTML文書**（index.html・クライアントルータ無し・`history.pushState`/`popstate` の使用0件＝grep確認）＝**そもそもソフトナビが発火しない土俵**。
+  - 滞在計測は**自動ページビューでなく「箱ごとの滞在・視線」を実クロック(dt)で積む**（index.html 342行 tick / 343行 dt）＝auto-pageview非依存。
+  - 流入元は `sourceLabel()`（app.mjs 244-246行）で **`sess.utm?.source || sess.entry_source` ＝UTM最優先の“明示ラベル”**（auto-pageviewからの推論でない）。entry_query/entry_pos/entry_health もセッション単位で明示捕捉（app.mjs 105/118-119行）。
+  - ＝**「ソフトナビで自動PVが膨らむ／UTMが読込タイミングに依存して direct/unknown に化ける」という今回の病気に Loku は構造的に免疫（第65回 autocapture の結論を2026新機構 Soft Navigations API で再確認＝“機構が正しいがゆえの免疫”の系列）**。
+- **唯一の穴＝対策案（前方ガード・コード無変更・将来SPA化時のレビュー観点／採否・実装・QAはDaiya／メイン領分）**：**店主LPが将来SPA（1ページ内でルーティングする作り）だった場合のみ**、loku-attn.js の「LPは1文書＝anon_id と流入を**初期化時に1回だけ読む**」前提(index.html 460行 `var anonId=getAnonId()`／流入の初回読み)が、ソフトナビで静かにズレうる。前ガードとして——
+  1. **来訪エピソード(P15)の跨ぎ無害化**：ソフトナビで loku-attn.js が再初期化されない前提下で、**1回の来訪中にルートを跨いでも「別の来訪(visit_count+1)」にしない**こと（P15の30分無操作ギャップ閾値＝第19回追加観点はそのまま。ソフトナビはギャップでないので新エピソードを立てない）。
+  2. **流入/anon_idの初回固定の整合**：初期化1回読み(index.html 460行)が**ソフトナビ後のURL変化で上書きされない**こと（＝初回UTMを保持＝app.mjsの先着帰属 399-411行＝第42回event-time追加観点と同じ“先着＝先起き”の器）。
+  3. **自前の仮想PV二重計上の禁止**：将来「ソフトナビを自前で監視して仮想PVを撃つ」設計に寄る“なら”、第6回P7補遺で記録した **Plausible PR#5082 型のバグ（SPA重複防止ガードが bfcache 復帰まで握り潰す）**を踏まないよう、SPA判定(ソフトナビ)とbfcache復帰(P7 pageshow/persisted)を**切り分ける**こと。ブラウザの検知エントリ(navigation id)が使えるなら自前推定でなくそれに合わせる。
+- **検証方法**：SPA化した負のシナリオで（番人/メイン領分・1スタジオ目本番化時・P7/P8/P15境界テスト群で）、①1来訪中のルート跨ぎが P15 来訪回を水増ししない ②流入ラベルがソフトナビ後も初回UTMを保持する（先着帰属を貼り替えない）③box計測がルート切替で巻き戻らない（P1 maxマージ）④自前仮想PVを足す場合は bfcache復帰(P7)を握り潰さない（Plausible PR#5082 型の負のテスト）。現状の単一文書LPでは①〜④いずれも発生せず（免疫）を後方互換として確認。
+- **優先度**：**低（将来ガード）**。現状の単一文書LPではソフトナビ不発火ゆえ実害なし＝今は設計メモ＋番人への「LPがSPAか単一文書かの確認」申し送り止まり。**新種P番号なし＝P7/P8/P15 への追加観点（第44回P28以来 新種なし継続 45〜83）。コードは触っていない。** 起源（origins.md #83 記録済）＝なぜソフトナビ検知APIが生まれたか＝#56 pageswap/pagereveal（クロスドキュメント＝別文書をまたぐ遷移）の“同一文書版”の対。**判断はDaiya。**
