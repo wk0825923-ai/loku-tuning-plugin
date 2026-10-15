@@ -2267,3 +2267,37 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
   3. **自前の仮想PV二重計上の禁止**：将来「ソフトナビを自前で監視して仮想PVを撃つ」設計に寄る“なら”、第6回P7補遺で記録した **Plausible PR#5082 型のバグ（SPA重複防止ガードが bfcache 復帰まで握り潰す）**を踏まないよう、SPA判定(ソフトナビ)とbfcache復帰(P7 pageshow/persisted)を**切り分ける**こと。ブラウザの検知エントリ(navigation id)が使えるなら自前推定でなくそれに合わせる。
 - **検証方法**：SPA化した負のシナリオで（番人/メイン領分・1スタジオ目本番化時・P7/P8/P15境界テスト群で）、①1来訪中のルート跨ぎが P15 来訪回を水増ししない ②流入ラベルがソフトナビ後も初回UTMを保持する（先着帰属を貼り替えない）③box計測がルート切替で巻き戻らない（P1 maxマージ）④自前仮想PVを足す場合は bfcache復帰(P7)を握り潰さない（Plausible PR#5082 型の負のテスト）。現状の単一文書LPでは①〜④いずれも発生せず（免疫）を後方互換として確認。
 - **優先度**：**低（将来ガード）**。現状の単一文書LPではソフトナビ不発火ゆえ実害なし＝今は設計メモ＋番人への「LPがSPAか単一文書かの確認」申し送り止まり。**新種P番号なし＝P7/P8/P15 への追加観点（第44回P28以来 新種なし継続 45〜83）。コードは触っていない。** 起源（origins.md #83 記録済）＝なぜソフトナビ検知APIが生まれたか＝#56 pageswap/pagereveal（クロスドキュメント＝別文書をまたぐ遷移）の“同一文書版”の対。**判断はDaiya。**
+
+
+---
+
+## 追加観点（2026-10-15・目付第85回巡回からの還流）＝Safari 26.2 CHIPS復活＝クロスサイト状態がCHIPS一本へ収束・Lokuはborn免疫（P3/P5/P24・第41 TCP・第54 Privacy Sandbox の追加観点・新種P番号なし・コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**。既存の P3（anon_id 7日揮発前提・ITP）・P5（クリックID非依存reach-path/同一オリジン）・P24（同一オリジン=広告ブロッカー免疫）、および第41回（Firefox状態分割TCP＝一人称localStorageは分割対象外）・第54回（Privacy Sandbox撤退＝存続はCHIPS/FedCMのみ）の**追加観点＝将来ガードの束ね直し**。実装照合表（P0-P3済）・P5・P6-P29・P35 とは重複させない。コードは触っていない（採否と実装はDaiya／メイン領分）。
+
+### 現象（S→traced＝Safariが分割Cookie(CHIPS)を26.2で復活・三大ブラウザが収束）
+- **CHIPS（分割Cookie）＝Cookieを「置いた業者オリジン × 今開いているトップページのオリジン」で二重施錠（double-keying）する仕組み**。同じ埋め込み業者のCookieでも、A店で置いた札はA店でしか読めずB店へ持ち越せない＝クロスサイト名寄せ（追跡）を機構ごと断つ。使うには `Partitioned` + `SameSite=None` + `Secure` の**3属性が全部必須**（未宣言のクロスサイトCookieは設定/読取とも拒否）。
+- **Safariの経緯＝18.4搭載→18.5で重大バグ（未分割Cookie拒否機構の不備）で全停止→26.2で opt-in 復活**（約1年の空白）。対応版＝Chrome/Edge 114・Firefox 141・**Safari 26.2**＝**三大ブラウザが「クロスサイト状態の受け皿＝CHIPS一本」へ収束**。第54回で掘った「Privacy Sandbox撤退後に存続するのはCHIPS/FedCMの2本だけ」を、Safari自力採用が裏打ち。
+- **⚠️B→traced（本文採用せず・一次未到達）**：CHIPS Cookie（`Partitioned;SameSite=None;Secure`）が**多段クロスサイトリダイレクト（元トップサイトへ戻る往復でも）で落ち、OAuth/OIDCログインを壊す**WebKitバグ（bug 306194・filed 2026-01-24・Safari 26.2 iOS/macOS再現・open）が2検索経路で一致。一次 bugs.webkit.org は当環境DNS遮断で未到達＝**機構のみ記録・版/状態は確定しない**。「リダイレクト往復でストレージが黙って落ちうる」はreach_path（広告→LP→LINEの多段）の監視点。
+
+### 現物との突き合わせ（Lokuはborn免疫）
+- **anon_id＝同一オリジンの一人称localStorage**：`index.html` 448-457行＝`loku_anon` を同一オリジンのlocalStorageに格納（`ANON_TTL_DAYS` で7日揮発前提＝P3）。＝**クロスサイトCookieでも分割Cookieでもない**＝CHIPSの3属性要件も double-keying も**そもそも非該当**（第41回TCPで確認済「一人称localStorageは分割対象外」の再確認）。
+- **流入起源＝URL内UTMを直載せ**：`handoff-demo/app.mjs` 244-246行（`sess.utm?.source || sess.entry_source`）・413-417行（lt_src/lt_ad→utm正規化）＝起源は**URLクエリで運ぶ**＝Cookie（分割も非分割も）に起源を預けていない（P5）。
+- **collect受け口＝同一オリジン相対**：`FLUSH_ENDPOINT='/api/attn/collect'`（464行）＝クロスサイト文脈に該当せず（P24）。
+- **恒久アンカー＝名乗り後のfriend_id**（merge=P9）＝LINE実名＝Cookie寿命と無関係。
+- **grep確認（2026-10-15）**：index.html / app.mjs に `document.cookie` 0件・クロスサイトCookie依存 0件＝**CHIPSが載ろうが落ちようが、3属性を揃えようが、Lokuの来訪・滞在・起源の測り方は不変**。
+
+### 対策案＝“維持すべき現行設計”のガード観点（コードは触らない・採否はDaiya／メイン領分・新種P番号は起こさない）
+- (a)【優先度 低・将来ガード】**reach_path（広告→LP→LINE）の起源を、将来もクロスサイト/分割Cookieへ載せ替えない**。CHIPSは①1年停止の前科（18.5→26.1）②3属性が1つ欠けると黙って無効③多段リダイレクトで落ちる疑い（bug 306194・B）＝**起源を運ぶ器として不安定**。現行のURL担送UTM＋一人称localStorage＋friend_idアンカーを規律として維持する（これがborn免疫の実体）。
+- (b)【優先度 低・監視】オンボーディングで店主LPに**埋め込み部材（チャット窓・地図・サポートウィジェット等）を足す場合**、その部材が分割Cookieのバグ（リダイレクト落ち）やCHIPS非対応ブラウザで挙動が揺れても、**Lokuの計測（anon_id/collect）は別レイヤーで独立**であることをオンボーディング前方チェックの分類アンカーに（＝「埋め込み部材の不調」と「Loku計測の不調」を取り違えない）。法規制・同意面（分割でも“業者がCookieを置く”事実は残る）は見廻り領分。
+- (c)【検証方法・番人/メイン領分】1スタジオ目実機（iOS Safari / LINE内WKWebView）で、**広告→LP→LINEの多段リダイレクト往復後に anon_id（loku_anon）と URL内UTM が維持されるか**の負のテスト。bug 306194 は分割Cookieの話でLokuは非依存だが、「リダイレクト往復でストレージが黙って落ちる」現象自体の実機確認は reach_path 精度の回帰として有用。
+
+### 根拠URL（S/A）
+- WebKit「WebKit Features for Safari 26.2」 https://webkit.org/blog/17640/webkit-features-for-safari-26-2/ （S・CHIPS opt-in復活・3属性・egress遮断→検索trace＋Apple Developer Forums #790578「18.5停止」＋commit note独立一致）
+- Google「Cookies Having Independent Partitioned State (CHIPS)」 https://privacysandbox.google.com/3pcd/chips （S・double-keying機構・対応版 Chrome/Edge114・Firefox141・Safari26.2・埋め込み用途例）
+- MDN「Partitioned cookies (CHIPS)」 https://developer.mozilla.org/docs/Web/Privacy/Privacy_sandbox/Partitioned_cookies （S・double-keying・設計意図）
+- IETF draft-cutler-httpbis-partitioned-cookies（2022-11・S仕様一次・起源）
+- （B→traced・本文採用せず）WebKit bug 306194 ＝多段リダイレクトでCHIPS落ち/OAuth破壊（一次 bugs.webkit.org DNS遮断で未到達・2経路一致で機構のみ記録）
+- （現物A）index.html 448-457行 `loku_anon` 同一オリジンlocalStorage・464行 同一オリジン相対collect／app.mjs 244-246・413-417行 URL内UTM最優先／grep `document.cookie`=0件（2026-10-15確認）
+
+**番人(qa-auditor)へ**：reach_path多段リダイレクト往復後の anon_id/UTM 維持の負のテスト（iOS Safari/LINE内WKWebView実機）。**見廻り(lp-mimawari)へ**：将来CHIPS/埋め込み部材採用時の同意・プライバシー通知の整理（分割でも業者Cookie設置の事実は残る）。
