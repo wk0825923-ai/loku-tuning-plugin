@@ -2301,3 +2301,35 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - （現物A）index.html 448-457行 `loku_anon` 同一オリジンlocalStorage・464行 同一オリジン相対collect／app.mjs 244-246・413-417行 URL内UTM最優先／grep `document.cookie`=0件（2026-10-15確認）
 
 **番人(qa-auditor)へ**：reach_path多段リダイレクト往復後の anon_id/UTM 維持の負のテスト（iOS Safari/LINE内WKWebView実機）。**見廻り(lp-mimawari)へ**：将来CHIPS/埋め込み部材採用時の同意・プライバシー通知の整理（分割でも業者Cookie設置の事実は残る）。
+
+## 追加観点（2026-10-16・目付第86回巡回からの還流）＝離脱送信の次世代が fetchLater 1本へ収束（PendingBeacon廃止）だがChrome GA未確定＋Safari未搭載＝sendBeacon二段(P0)据え置きが2026-10も正解（P0／P4／P19 追加観点・新種P番号なし・コード無変更）
+
+**前提**：新種は起こさない＝第44回P28以来 **42回連続で新種なし（45〜86）**。追記前に本ファイル全読＝P0〜P29（P4/P24欠番扱い）＋P35をgrepし、「fetchLater」4件・「PendingBeacon」1件・P4言及（第59回=iOS27/Safari27未搭載の答え合わせ）を確認。本項は P0（離脱時フラッシュ）／P4（fetchLaterへの置換検討＝WebKit実装待ちの休眠種）／P19（sendBeacon返り値未使用）の射程内の追加観点＝第59回エントリの**鮮度更新＋候補収束の明文化**。テーマ＝ビート1「計測精度の敵」探索主役（第85=B1 CHIPS収束に続きB1継続・ただし軸は離脱送信APIへ振替）。**コードは触っていない。** 採否・実装・QAはDaiya／メイン領分。
+
+### 現象（S→traced＝離脱送信の次世代が fetchLater へ一本化・ただし本番未到達）
+- **PendingBeacon（保留ビーコンAPI）が正式に「Deprecated（廃止）＝FetchLater APIへ置換」とChromium一次docに明記**。長く PendingBeacon と fetchLater の2案だった離脱送信の次世代が、**候補1本（fetchLater）へ収束**（第85回CHIPS収束=クロスサイト状態の受け皿が1本へ、と同型の“収束を問う”読み筋の離脱送信版）。
+- **fetchLater は Chrome では搭載済み**：自ノート sources.md が 2026-07-13 に chromestatus(S) 経由で **Chrome 135・2025-04 出荷** を確認済。※今回 googlesource の実験doc(HEAD)は「experimental・not enabled by default（既定OFF）」と**古い記述のまま**だったが、これは出荷前の **stale実験doc** であり「未搭載」の証拠ではない（鮮度を偽らない＝自ノートの既確認を優先・数字は作らない）。blink-dev「Intent to Ship」は出荷目標 **134→実際は135** ・Gecko positive・**WebKit supportive**。
+- **Safari は fetchLater を実装していない**（標準ポジション "supportive"＝賛意表明止まり＝搭載ではない）＝**主戦場の未搭載が核**。Background Sync も Safari 未対応継続（第52/59回既出）。
+- ＝**ブラウザ横断で本番投入できる離脱送信は依然 sendBeacon 一本**（Chromeは載っても主戦場Safariが未搭載ゆえ横断の最小公倍数はsendBeacon）。第59回「iOS27/Safari27でも未搭載」の“ないことの確認”を、**候補収束（PendingBeacon正式廃止でfetchLater一本化）**という新情報で更新＝Safari未搭載の通算9度目相当の据え置き確認。
+
+### 現物との突き合わせ（Lokuは現行P0が正解・乗り換え先が無い）
+- 離脱送信＝loku-attn.js は `navigator.sendBeacon(FLUSH_ENDPOINT,…)`（index.html 473行）＋発火=`visibilitychange`(hidden)主＋`pagehide`（475-476行）の**二段構え（P0）**。
+- fetchLater/Background Sync という“後でブラウザが送る官製キュー”は**使っていない**＝主戦場（LINE内WKWebView／iOS Safari）に来ていない以上、**乗り換え先が物理的に存在しない**＝P0の現行設計を変える理由が今回も生じない。
+- sendBeacon返り値は未使用（P19＝成否検知未装備）だが、離脱文脈で代替送信手段が無い以上、検知しても打ち手が無い＝P19は「返り値を見て何をするか」が本番化の前提（第81回CSP沈黙ドロップ＝P19フォールバックでも救えない第3の沈黙ドロップと同群）。
+
+### 対策案＝“維持すべき現行設計”のガード観点（コードは触らない・採否はDaiya／メイン領分・新種P番号なし）
+1. **fetchLater へ移行を検討するなら「Safari（主戦場）での実装を一次で確認してから」**＝“WebKit supportive（賛意表明）”を“搭載”と誤読しない。賛意≠搭載＝第59回の「standards-positions支持＋実装bug open」の線が今回も継続（優先 中・休眠種P4のまま）。
+2. **移行時も二段発火（visibilitychange＋pagehide）を回帰で残す**＝fetchLater は離脱イベントに依存せずブラウザが送る設計だが、(a)Safari非搭載端末のフォールバック (b)fetchLater が鳴る前の確実な1発、として sendBeacon 二段を落とさない（優先 高＝P0の片肺化防止）。
+3. **「fetchLater が出たらしい」の二次情報だけでP0を差し替えない運用規律**＝Chromeは載っても**主戦場Safariが未搭載である限り sendBeacon が横断の最小公倍数**＝Safari一次搭載を取るまで現行据え置き（優先 高・最軽量＝“変えない”判断の明文化）。なお実験docのstale記述を「未搭載」と早合点しない（自ノートの搭載済み確認を優先）。
+
+### 検証方法（番人/メイン領分）
+- 離脱E2E＝iOS Safari/LINE内WKWebWiewで「タブ閉じ/アプリ切替/バックグラウンド化」時に sendBeacon が最低1発届く回帰（P0二段の両肺確認）。
+- 将来回帰＝もし fetchLater を足す改修が来た場合、「fetchLater 失敗/非搭載時に sendBeacon へ必ずフォールバックする」負のテスト（二段を落とさない保証）。
+- reach_path多段（広告→LP→LINE）で anon_id/UTM が往復維持されるか（CHIPS 306194 の“多段で状態が黙って落ちる”のLoku非Cookie版の同型リスク確認・番人へ申し送り済）。
+
+### 根拠URL（S/A・当環境はchromestatus/googlesource.comがDNS遮断=ENOTFOUNDゆえ検索エンジン取得分を独立経路として扱う・一次自力到達は不可）
+- Chromium fetch-later.md 実験doc（S一次）: https://chromium.googlesource.com/chromium/src/+/HEAD/docs/experiments/fetch-later.md （「PendingBeacon=Deprecated, replaced by FetchLater」「experimental from Chrome 121・not enabled by default」）
+- blink-dev「Intent to Ship: fetchLater API」（S一次）: https://groups.google.com/a/chromium.org/g/blink-dev/c/Nd8Y3BVEoDs （Shipping on desktop 134／Android 134・Gecko positive・WebKit supportive）
+- Chrome for Developers「The fetchLater API Origin Trial」（S）: https://developer.chrome.com/blog/fetch-later-api-origin-trial （OT from Chrome 121）
+- 既出参照：第59回エントリ（2026-09-14・iOS27/Safari27 fetchLater未搭載）／第52回（Background Sync＝Nic Jansma 到達率≈82.9%実測・A）／MDN sendBeacon（S）
+- 確認日 2026-10-16（目付第86回巡回）
