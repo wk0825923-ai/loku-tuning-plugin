@@ -2333,3 +2333,34 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 - Chrome for Developers「The fetchLater API Origin Trial」（S）: https://developer.chrome.com/blog/fetch-later-api-origin-trial （OT from Chrome 121）
 - 既出参照：第59回エントリ（2026-09-14・iOS27/Safari27 fetchLater未搭載）／第52回（Background Sync＝Nic Jansma 到達率≈82.9%実測・A）／MDN sendBeacon（S）
 - 確認日 2026-10-16（目付第86回巡回）
+
+## 追加観点（2026-10-17・目付第87回巡回からの還流）＝OSS計測の「人の識別」が推測(IP＋UA)→宣言(distinct_id)へ収束＝Lokuの friend_id/anon_id 明示識別が業界の戻り先・born免疫（P9／P13／P3 の追加観点・新種P番号なし・コード無変更）
+
+**前提**：新種は起こさない＝第44回P28以来 **43回連続で新種なし（45〜87）**。追記前に本ファイル全読＝P0〜P29（P4/P24欠番扱い）＋P35をgrepし、既存の P9（識別mergeの孤児問題＝merge時点の単一anon_idしか結ばない）・P13（面またぎジャーニーの確定的vs推測的ID結合）・P3（anon_id 7日揮発＝恒久キーはfriend_id）に識別の論点が集約済みと確認。「data-distinct-id」「v3.4.0」「separate sessions」「明示宣言」は本ファイル0件＝重複なし。本項は**既存結論（Lokuは宣言的・確定的識別＝friend_id恒久キー）を2026新機構で再確認する“書く還流の最軽量型”**（第85/86と同型＝既存P群の束ね直し・新機構での免疫再確認）。テーマ＝ビート2「計測・分析技術」探索主役（第86回宿題①「B1 2連続ゆえB3/B2へ振る／B3空振り時はB2」を直行消化＝B3実探索空振り→B2へ）。**コードは触っていない。** 採否・実装・QAはDaiya／メイン領分。
+
+### 現象（2026のOSS計測2社の一次リリースノート＝A）
+- **Umami v3.4.0（2026-09-17・GitHub release＝A）**：(a)トラッカーの **`data-distinct-id` 属性で訪問者の身元を宣言**できる機構を追加（「Set a visitor identity through the tracker `data-distinct-id` attribute」）。(b)修正として **「Identified visitors sharing an IP address and user agent now receive separate sessions by distinct ID」**＝**同一IP＆同一UAでも distinct_id が違えば別セッションに分ける**と明記＝**推測束ね（IP＋UA）より宣言(distinct_id)を優先すると実装で態度表明**。
+- **Umami v3.3.0（2026-08-12・同）**：「Session identity stitching（識別された時点で過去の匿名セッションを束ねる）」＝Lokuの merge 後埋め（app.mjs 350行）と同型思想。
+- **PostHog posthog-js 1.426.0（2026-09-03・GitHub release＝A→traced）**：`identify()` 呼び出しで **distinct_id を必須パラメータ化**（従来は省略可＝“いつのまにか匿名のまま”を許容していた）＝「束ねるならサイトが明示的にIDを名乗れ」方向。
+- **読み筋＝収束（第85 CHIPS／第86 fetchLater の識別版）**：クロスサイトCookie規制・CGNAT・プライバシー機能でIP＋UA推測が崩れた結果、OSS計測の“人の識別”は**「宣言的（サイトが名札を渡す）」側へ収束**。広告界が逆に「確定的をあきらめ推測へ」堕ちた道（起源#113）の**裏返し**で、計測ツール側はいま“宣言”へ戻っている。
+
+### 根拠URL（A＝実装者一次レポ／S＝docs）
+- Umami Releases（A）: https://github.com/umami-software/umami/releases （v3.4.0 2026-09-17＝`data-distinct-id`＋「同一IP＆UAでも distinct_id 別なら別セッション」／v3.3.0 2026-08-12＝session identity stitching／v3.1.0 2026-04-16＝distinct_id をフィルタ/指標ディメンジョン化）
+- PostHog posthog-js 1.426.0（A→traced）: https://newreleases.io/project/github/PostHog/posthog-js/release/posthog-js@1.426.0 （identify で distinct_id 必須化・2026-09-03）
+- PostHog identity/alias docs（S）: https://posthog.com/docs/product-analytics/identify
+- 既出参照：P9（merge孤児問題）／P13（確定的vs推測的・PostHog Session Attribution＝推測モデルで面を繋ぐ／Lokuは確定的friend_idで1本）／P3（anon_id 7日揮発＝恒久キーはfriend_id）／起源#113（確定的vs推測的ID結合の起源）
+- 確認日 2026-10-17（目付第87回巡回）
+
+### 観点（P9／P13／P3 の追加観点＝維持すべき現行設計のガード・コードは触らない）
+- **(観点1・P9/P13)＝Lokuの識別は“宣言的かつ確定的”でOSS収束先と一致**：friend_id（LINE友だち追加＝本人の行為の確定的アンカー）＋anon_id（一人称localStorageの明示ID）＝サイトが名札を持つ宣言的識別。Umami/PostHog が2026に“推測を捨て宣言へ”寄せた動きは、Lokuの識別設計が**業界の戻り先と一致**していることの再確認（第85 CHIPS=クロスサイト状態の受け皿の収束／第86 fetchLater=離脱送信の収束 に続く“識別の受け皿”の収束）。→ **追加実装は不要**。P9の merge（app.mjs 324-357）・P13の journey（373-401）の確定的結合設計をそのまま維持するのが正解。
+- **(観点2・P9 設計規律ガード)＝将来も「IP＋UAで人を補完束ねする」推測識別を足さない**：共用WiFi/共用端末（同一IP・同一UA）で**別人の複数来訪が1人に潰れる**（来訪者数 過少・因果の分母ズレ）。逆に端末が割れると1人が複数人に膨らむ。**Umami v3.4.0 がわざわざ distinct_id を IP＋UA に優先させた理由そのもの**＝Lokuに「IP+UA補完を足したい」誘惑が将来来ても、それは潰れ/膨らみを招くゆえ禁じる。Lokuは明示 friend_id/anon_id ゆえ**born免疫**。
+- **(観点3・P3 恒久キー再確認)＝宣言的識別の恒久キーは friend_id に置き、anon_id 揮発(P3)に再訪判定を依存させない**：OSSが distinct_id を“宣言”で持つのと同様、Lokuの恒久アンカーは merge 後の friend_id（既存P3/P9の結論）。anon_id は7日揮発前提ゆえ再訪の主軸にしない＝P9 orphan回避・P3 の既存結論の新機構での再確認。
+- **(観点4・コンプラ連動＝見廻り申し送り)**：推測的な「人の束ね」は**同意ゲート無しだとGDPR等で否定されつつある**（P13業界物差し）＝宣言的識別(friend_id)＋同意記録(consent)の組は精度でも法規制でも“正しい側”。採否判断はしない＝背景情報として見廻りへ。
+
+### 検証方法（番人/メイン領分）
+- **共用IP＋共用端末で別人が潰れない負のテスト**：同一IP・同一UA・**異なる friend_id/anon_id** の複数来訪（YUKIさんスタジオの受付共用タブレット想定）を作り、①来訪者数が別人として分離されるか、②cause-outcomes/change-outcomes の因果の分母が潰れないか、③もし将来「IP+UA補完束ね」を足すなら別人が1人に潰れる負のテストで検出できるか、をE2E確認（P9/P13群・1スタジオ目本番化時）。
+- **宣言的識別の後方互換**：friend_id 未結合（anon_idのみ）の匿名来訪が、従来どおり孤児化せず merge 時に後埋めされるか（P9の既存回帰＝anon_ids配列対応の設計レビューと同群）。
+- 一次監視：Umami/PostHog の識別まわりの次版（distinct_id の扱いがさらに宣言寄りへ進むか）を定点。WebKit「Features for Safari 27/28」の版状態（Safari 27 リリース状態の二次食い違いの決着）。
+
+### 優先度
+**低（将来ガード＝維持すべき現行設計の再確認）**。現状の friend_id/anon_id 明示識別は既にOSS収束先と一致＝追加実装なし。価値は「IP+UA推測補完を足さない」設計規律の明文化＋業界収束との一致の裏書き。**判断はDaiya。**
