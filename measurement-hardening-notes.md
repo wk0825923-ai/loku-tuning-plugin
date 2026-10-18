@@ -2364,3 +2364,33 @@ QA: `node test.mjs 50` → **pass=33,800 / fail=0**・セクションF（群36�
 
 ### 優先度
 **低（将来ガード＝維持すべき現行設計の再確認）**。現状の friend_id/anon_id 明示識別は既にOSS収束先と一致＝追加実装なし。価値は「IP+UA推測補完を足さない」設計規律の明文化＋業界収束との一致の裏書き。**判断はDaiya。**
+
+## 追加観点（2026-10-18・目付第88回巡回からの還流）＝ビート1「計測精度の敵」＝Safari 27 がAIエージェント操縦口（MCPサーバ）を標準搭載＝“JS実行し人に見える”自動トラフィックという新種＝起源#70（非JSクローラ＝見えない）の裏返し＝P2 への追加観点 第7弾・新種P番号なし（コード無変更）
+
+### 現象（S/A→traced＝Safari 27 標準搭載のMCPサーバ）
+Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバが標準搭載**された（WebKit公式blog「Features for Safari 27.0」・9to5Mac 2026-09-17）。MCP=Model Context Protocol（2024〜2026のAI連携標準規格）。有効化は `Safari＞設定＞開発＞「リモートオートメーションと外部エージェントを許可」`で、AIエージェント（Claude等）が **実際のSafariウィンドウを操縦し、DOM・ネットワーク通信・スクリーンショット・コンソールを読める**。ローカル完結・外部通信なし・opt-in（既定オフ）。
+→ **起源#70「AIクローラ（ChatGPT/Perplexity等）はJSを実行しない＝計測ビーコンに映らない見えない敵」の裏返し**：MCPエージェントは**実Safariを動かす＝JSを実行する＝loku-attn.js の `tick()` が発火する**。しかも**UAは素のSafari**＝`selenium`/`headlesschrome` のような自動化の目印が付かない。
+→ 読み筋＝第85-87の「収束」の逆＝**AIトラフィックは“非JS=見えない(#70)”↔“JS実行=人に見える(#88)”へ分岐(divergence)＝UA一本の判定では足りない**という前方警報。
+
+### 現物との突き合わせ（二段構えの後段が効く＝設計は正しい）
+- 入口フィルタ `BOT_UA_RE`（handoff-demo/app.mjs **19行**・UA文字列のみ：`bot|crawler|spider|scrapy|headlesschrome|puppeteer|playwright|phantomjs|python-requests|selenium` + `curl/|wget/`）は、**“名乗る自動化”のUAを弾く**が、**Apple純正MCPの実Safari操縦はUAが素のSafari＝ここを通り抜ける**。
+- これは現物 **17行コメント**「※ヘッドレス偽装は捕まらない＝SDK側の挙動フラグ(suspect_bot)との二段構え」が**最初から想定していた実例**＝後段 `suspect_bot`（**262行**：suspect_botセッションは tick false／**397行**：d.suspect_bot===true で立てる／**449行**：suspect_botはタグ発火させない＝実名導線・配信対象に乗せない）こそがこの新種への唯一の守り。
+- `bot-report`（**915-922行**：UA入口除外数 `bot_excluded` ＋挙動suspect数を可視化＝黙って消さず件数を見せる）があるので、万一の混入も“見える化”される設計。
+- **第78 Plausible 4層モデル対応**：第1層UA（`BOT_UA_RE`）＝素UAゆえすり抜け／第2層スパム参照元・第3層DC-IP帯＝同一オリジン設計ゆえ省略（第78明文化）／**第4層挙動（`suspect_bot`）＝この新種を捕まえる層**。
+
+### 対策案＝“維持すべき現行設計”のガード観点（コードは触らない・採否はDaiya/メイン領分・新種P番号は起こさない）
+- 現状の二段構え（UA入口＋挙動後段）は**この新種に対して設計として正しい**＝変更不要。
+- 将来 agentic-browser（実ブラウザ+MCP操縦）が主戦場（広告→LP→LINE）で増えたら、`suspect_bot` の判定材料に“操縦痕跡”系signal（例：WebDriver/automation系のnavigatorフラグ、人間らしからぬ入力タイミング/無カーソル移動）を足すか**検討**＝ただし現状は**デスクトップSafari限定・主戦場のLINE内WebView(WKWebView)に非搭載・opt-in＝主戦場非到達**ゆえ**優先度=低（前方ガードの明文化どまり）**。
+- Lokuは確定的識別（friend_id＝LINE友だち追加という本人の行為）を持つゆえ、人に見えるエージェントが混ざっても**“本人の行為”を伴わない限り実名導線に乗らない**＝因果の芯は守られる（P9/P13の裏書き）。
+
+### 検証方法（番人/メイン領分）
+実Safari+MCP（`リモートオートメーションと外部エージェントを許可`オン）でLPを踏ませ、(a)`BOT_UA_RE`をすり抜けるか（素UA確認）(b)`suspect_bot`が立つか（挙動フラグ）(c)bot-report/attnにどう映るか（視線・滞在に混ざるか）の負のテスト。主戦場WebViewへMCP/操縦口が降りたら優先度を昇格。
+
+### 根拠URL（S/A・当環境はwebkit.org DNS遮断=ENOTFOUNDゆえ検索/報道取得を独立trace経路として扱う）
+- WebKit Blog「WebKit Features for Safari 27.0」 https://webkit.org/blog/18325/webkit-features-for-safari-27-0/ （S→traced）
+- 9to5Mac 2026-09-17「WebKit blog breaks down what's new with Safari 27 for developers, including MCP support」 https://9to5mac.com/2026/09/17/webkit-blog-breaks-down-whats-new-with-safari-27-for-developers-including-mcp-support/ （B→traced・設定経路/権限/ローカル完結）
+- 起源既出：#70（AIクローラはJS非実行＝見えない）・#113（確定的vs推測的ID）・#87（計測の宣言回帰）
+- 現物：handoff-demo/app.mjs `BOT_UA_RE` 19行・17行コメント・`suspect_bot` 262/397/449行・bot-report 915-922行
+
+### 優先度
+**低（前方ガードの明文化どまり・現状は主戦場非到達）**。第44回P28以来 **新種P番号なしを 45〜88 継続**（既存二段構えの新機構での再確認＝第85/86/87と同型の“書く還流・最軽量型＝追加観点1本”）。昇格トリガー＝agentic-browser操縦口がLINE内WebView/モバイルSafariへ降りること。
