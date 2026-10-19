@@ -2394,3 +2394,35 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 
 ### 優先度
 **低（前方ガードの明文化どまり・現状は主戦場非到達）**。第44回P28以来 **新種P番号なしを 45〜88 継続**（既存二段構えの新機構での再確認＝第85/86/87と同型の“書く還流・最軽量型＝追加観点1本”）。昇格トリガー＝agentic-browser操縦口がLINE内WebView/モバイルSafariへ降りること。
+
+## 追加観点（2026-10-19・目付第89回巡回からの還流）＝ビート2「計測・分析技術」＝計測ツール自身が「AIが問い合わせる窓口（MCPサーバ）」を生やす（PostHog公式MCP）＝効果台帳の“出口”が機械速度でクエリされうる時代＝P23（差分・合成攻撃耐性）の脅威アクター更新・新種P番号なし（コード無変更）
+
+**前提**：以下は**新種P番号を起こさない＝既存 P23（出力側の再識別 第2層＝差分・合成攻撃耐性・差分床/率丸め/時間解像度/ε予算）への“脅威アクター更新”の追加観点**。テーマは第88回宿題①の未踏サブ「計測のMCP/AI連携窓口」。**追記前に本ファイル全読＝P23が差分攻撃/leave-one-out/QuerySnout/Ads Data Hub difference checks/DP ε予算を既に保持と確認＝重複でなく“誰がその差分クエリを撃つか”の更新**（P0〜P29＋P35 grep・seed-sprawl回避）。**コードは触っていない。** 採否・時期・しきい値はDaiya／メイン領分、匿名性の法的判断は見廻り領分。
+
+### 【P23 脅威アクター更新・第89回巡回（2026-10-19）／分析ツールがMCPで“効果台帳をAIが関数で叩く窓口”を公式提供し始めた＝P23の差分クエリの実行者が「ゆっくりな人」→「機械速度のAIエージェント＋自動攻撃探索」へ＝人の遅さに頼ったガードは前提が崩れる】新種P番号なし
+
+- **現象（S→traced＝分析の“出口”がMCP化へ収束）**：
+  - **(1) PostHog が公式MCPサーバを提供（S→traced）**＝PostHog Docs「Build insights with MCP」「MCP FAQ」が明記＝**trends/funnels/retention/HogQL（自由なSQL）＋feature flags/error tracking/experiments/CDP/surveys を“関数で呼べる道具”として任意のMCPクライアント（Cursor/Windsurf/Claude Code/VS Code）に公開**。読みだけでなく**dashboard/insight/flag の作成・更新・削除**まで。無料（呼んでもPostHog課金は増えない）・OAuth認証・ホスト先 mcp.posthog.com/mcp（EUは mcp-eu.posthog.com/mcp）。当環境 posthog.com DNS遮断(ENOTFOUND)ゆえ検索スニペット経由trace（第86「検索/報道の本文取得は一次trace経路」の運用）。
+  - **(2) Plausible/Umami もコミュニティ製MCPで追随（B）**＝Plausible Analytics MCP Server（read-only・サイト一覧/統計クエリ/リアルタイム訪問者）／mikusnuz/umami-mcp（非公式66ツール・API v2）＝**「分析をAIに開く」は公式/非公式の濃淡はあれ各社同時進行＝収束の方向**。第88回（Safari MCP＝ブラウザ＝計測の入口をAIが操縦）の“出口（分析＝効果台帳をAIが問い合わせる）”側の裏返しの対＝**計測パイプライン両端のMCP化**。
+  - **(3) P23の脅威アクターがこれで一段鋭くなる**＝P23は元から「店主/台帳を引ける第三者が**時間差で何度も効果台帳を引く**→1人違いの2枚の引き算で個人の予約有無が漏れる（差分攻撃/leave-one-out）」を想定済み（P23現象(1)Ads Data Hub difference checks≈50・(2)DP ε予算・QuerySnout引用）。**PostHog型の分析MCPは、その“何度も引く”を「ゆっくりな人の手」でなく「AIエージェントの機械速度＋自動攻撃パターン探索」で武装化しうる前例**＝**P23が暗黙に頼っていた“人は遅い/クエリ回数は自然に少ない”という前提が崩れる**（QuerySnout＝クエリベース系への自動攻撃発見研究はP23が既に引用＝その自動化がMCPで誰でも手に入る時代）。
+- **根拠URL（PostHog公式S→traced・コミュニティ製B）**：
+  - PostHog Docs「Build insights with MCP」（S→traced・trends/funnels/retention/HogQL・任意MCPクライアント） https://posthog.com/docs/product-analytics/build-insights-mcp
+  - PostHog Docs「MCP FAQ and advanced setup」（S→traced・flags/analytics/error tracking/experiments/SQL/CDP/surveys を関数ツール公開・無料・OAuth・mcp.posthog.com/mcp／EU mcp-eu.posthog.com/mcp） https://posthog.com/docs/model-context-protocol/faq
+  - Plausible Analytics MCP Server（B・コミュニティ製read-only） https://glama.ai/mcp/servers/lb7xeaxnng
+  - mikusnuz/umami-mcp（B・非公式66ツール） https://enterprisedna.co/directories/mcp/mikusnuz-umami-mcp
+  - 現物: loku-tuning-plugin/handoff-demo/app.mjs（cause-outcomes 1014行=生 n/booked_rate 返却1028／change-outcomes 1035行=baseline/treatment 生 visitors/booked と delta_pp 返却1054-1058＝差分クエリそのもの・いずれも素のGET＝MCP非公開）＋dashboard-design（Loku本体MCP=mcp__Loku__=broadcasts/scenarios/friends=配信/CRM側のみ・効果台帳は非公開）
+- **現物との突き合わせ（Lokuの非対称＝born免疫＋“開く前に守りを決める”余地）**：
+  - **Lokuの効果台帳（cause-outcomes/change-outcomes）は素のGET＝MCP非公開**＝AIエージェントが機械速度で差分連打する窓口は**今は無い＝分析“読み”側はborn免疫**。
+  - **Loku本体の既存MCP（mcp__Loku__・Bearer lk_）は broadcasts/scenarios/friends＝配信/CRM側**＝“送る・束ねる・管理する”側であって“注視度の効果台帳”を公開していない＝**配信側MCP(有)×分析側MCP(無)の非対称**。
+  - ゆえに**Lokuには“開く前に守りを決める”珍しい余地が残る**（PostHogは開いてから守る順）＝効果台帳をMCP/AI窓口に開く設計判断が来た“その瞬間”にP23を前提条件に据えればよい。
+- **対策案（コードは触らない・採否/時期/しきい値はDaiya/メイン領分・匿名性の法的判断は見廻り領分）**：
+  - **(a) 効果台帳をMCP/AI窓口に開く日が来たら、P23の差分床・率丸め・時間解像度を“そのクエリ層で先に”敷く**＝「人はゆっくりクリックする」前提で守らない。具体＝P23対策(a)率＋粗いバケツ丸め／(b)差分クエリ(change-outcomes)に一般集計より高い母数床（両群床未満→delta非開示）／(c)同一クエリの時間解像度を粗く（日次スナップショット/キャッシュ）＝**機械速度の連打でも“1人増減の前後2枚”を観測させない**。
+  - **(b) MCP窓口は特にレート制限＋クエリ合成予算（ε／1アクター1日あたり回数上限）を“人間UIより厳しく”**＝機械は人の数千倍速く引けるため、P23対策(d)の「クエリ合成予算ε」は人間UIでは任意だったがMCP公開時は実質必須寄りへ（上級・本格DP・採否はDaiya/見廻り）。
+  - **(c) 開かない/人間UI限定ならborn免疫継続**＝“開く前に守りを決める”時間的優位を活かし、開く価値（AIにレポートを喋らせる利便）と差分耐性コストを天秤にかけるのはDaiya。
+  - **優先度＝前方ガードの明文化どまり（現状MCP非公開ゆえ実害ゼロ・born免疫）**。P23本体の優先度（中〜高）は不変。
+- **検証方法（番人/メイン領分）**：P23の既存境界テスト①〜⑤に「**効果台帳を機械速度で連打＋1人（friend）増減の前後差を自動探索（QuerySnout型）**」シナリオを足す＝①cause-outcomes を機械速度で「1人 friend 追加＋予約」の前後2回引き、n=4→5・booked=2→3 の差から個人の予約有無が読めないか（負のテスト・人の手でなく連打で）②change-outcomes の両群が床 k 未満で delta_pp が非開示になるか③同一クエリ連打で時間解像度が粗い（同じスナップショットを返す）か④（MCP公開を想定する場合のみ）1アクターのクエリ回数上限/ε予算が効くか＝差分床/率丸め/時間解像度が“人の遅さ”に頼らず成立するか。実機/ユニットE2E＝メイン領分・1スタジオ目本番化時（小母数で台帳が最も痩せる＝P7〜P23の境界テストと同じ群で）。
+- **非重複（新種P番号なし＝P23の脅威アクター更新）**：**P23＝出力側の再識別 第2層（クエリ間の合成・差分・再クエリ）**の主題は不変。今回足すのは**「その差分クエリを“誰が・どの速度で”撃つか」という脅威モデルの一変数（攻撃者＝人→機械速度のAIエージェント＋自動探索）の更新**＝新機構(分析MCP)はP23の守り対象(差分床/率丸め/時間解像度/ε予算)を**変えず、その必要性を機械速度で裏書きする**。P0〜P29＋P35 を grep し「分析MCP/機械速度の差分クエリ」が既存種の主題に無いこと＝P23の脅威モデル更新が正しい受け皿であることを確認（第44 P28以来 45〜89 新種なし継続＝第85/86/87/88と同型の“書く還流・最軽量型＝追加観点1本”）。
+- **⚠️見廻り(lp-mimawari)へ申し送り**：効果台帳をMCP/AIに開く設計判断が来た場合、「何回引かれても個人が復元されない＝匿名」と言える水準（差分床/ノイズ/予算）をどこに置けば GDPR/個情法の“匿名加工情報”線引きを満たすか＝P23既出申し送りの延長。**分析MCP公開が“繰り返し/差分クエリで実質再識別”の現実的トリガーになりうる**（従来は人の遅さで事実上ガードされていた）。
+- **⚠️番人(qa-auditor)へ申し送り**：上の検証方法①〜④を境界テストに追加＝特に「**効果台帳を機械速度で連打し1人増減の前後差を自動探索**」する負のテスト。配信側MCP(mcp__Loku__)と分析側GET(cause/change-outcomes)は分けて扱う（前者は既存・後者はMCP非公開＝born免疫の現状を回帰で固定）。
+- **⚠️物見(intel-scout)へ申し送り**：計測ツールが「AIが問い合わせる窓口（MCPサーバ）」を生やす収束（PostHog公式・Plausible/Umami非公式）＝第88回Safari MCP（入口）と対で「AIが計測土台を触る」潮流の出口側＝計測・分析技術の継続鉱脈。分析MCPに差分プライバシー/クエリ予算を組み込む動き（PostHog/Snowflake DP）はP23の業界側アンカーとして追う価値。
+- **位置づけ（第88回宿題①未踏サブ「計測のMCP/AI連携窓口」の消化）**：第88回(ビート1/Safari MCP=入口)からローテーションしビート2(計測のMCP化=出口)へ。**第88(入口)↔第89(出口)で「計測をMCPでAIに開放する」1軸の両端を2巡で対にして埋めた**（起源#88↔#89の裏返しの対）。P23(差分/合成)・AFP/fingerprint・計測死活(P22)には戻らず、既存P23の脅威アクター更新として新種を起こさず追記（seed-sprawl回避のP0〜P29+P35 grep済）。
