@@ -2459,3 +2459,38 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 - **⚠️番人(qa-auditor)へ申し送り**：上の検証方法①〜④を境界テストに追加＝特に「**データセンターIPから素UA＋JS実行で来る本物ブラウザ（Muse型）**」シナリオと「VPN本物客の誤隔離の負のテスト」。配信側MCP(mcp__Loku__)と分析側GET(cause/change-outcomes)の区別（第89）はそのまま。
 - **⚠️物見(intel-scout)へ申し送り**：HUMAN月次9月版（Comet退潮・Meta Muse首位）＋DataDome四半期版＝AIブラウザ勢力図の総入れ替え＝業界本流ニュース。AIエージェントの“動く場所”が端末(Comet)→クラウドVM(Muse)へ移る潮流＋AIブラウザ賭けの不発（Atlas 8/9終了）は計測・競合動向の継続鉱脈。HUMAN/DataDome 月次は「量」の定点として追う価値（機構×量の対）。
 - **位置づけ（第89回宿題①「次はB1かB3／B3空振りなら実探索先行」の消化）**：第89回(ビート2/計測のMCP化=出口)からローテーションしビート1(計測精度の敵)へ。B3実探索（GBP/IG/TikTok/LINE）は7度目空振り→B1へ。**第88(Safari MCP=機構)↔第90(HUMAN月次=量)で「JS実行し人に見えるAIトラフィック」の“機構”と“量”を対で埋めた**（起源#88/#89に続き、AIトラフィックの軸が「見える/見えない」×「端末/クラウド」の2×2へ立体化）。P23(差分/合成)・AFP/fingerprint・計測死活(P22)・reach_path系には戻らず、既存P2の名簿更新＋形追加として新種を起こさず追記（seed-sprawl回避のP0〜P29+P35 grep済）。
+
+---
+
+## 追加観点（2026-10-21・目付第91回巡回からの還流）＝ビート2「計測・分析技術」＝bot除外の“第2層（データセンターIP帯の遮断）”の実装定石＝第90回で名指しした Muse 型相手（クラウドVM/DC-IP発・素UA・JS実行）の“捕まえ方”＝P2への追加観点 第9弾（新種P番号なし・コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**＝第44回P28以来**新種なしを継続（45〜91）**。第6回で起こした **P2（bot/自動化アクセスを計測から隔離し、黙殺せず件数を可視化する＝bot-report）** への**追加観点 第9弾**。既存のP2追加観点＝第2弾（第22回・挙動層 `suspect_bot` が最後の砦）／第4弾（第63回 `navigator.webdriver`／第70回 JS非実行crawlerは collect に来ない）／第5弾（第74回・将来IP帯遮断を足す“なら”Apple iCloud Private Relay 出口IPを白リスト化）／第6弾（第78回・bot除外の業界4層モデル＝UA／スパム参照元／DC-IP帯／挙動。現物は第1層＋第4層で第2・第3層は同一オリジン設計ゆえ安全に省くと“根拠”を明文化＝**why**）／第7弾（第88回・Safari 27 MCP＝JS実行し人に見える自動トラフィック）／第8弾（第90回・勢力図総入れ替え＝Comet退潮・Meta Muse 首位＝クラウドVM/DC-IP発＝第18/22で提案したクラウドIP帯隔離の“**相手**”を名指し）とは**重複しない**＝本弾は「第8弾で名指しした相手（Muse型）を実際に捕まえる**第2層の“作り方（how＝実装定石）”**を、ベンダ実装docs/OSS/実装者一次で具体化する」facet。第6弾が「持たない根拠（why）」、第8弾が「相手の顔ぶれ（who）」、本第9弾が「入れる“なら”の設計図（how）」。**追記前に本ファイル全読＝P0〜P29＋P35（P4/P24/P25欠番）をgrep**し、第22/63/70/74/78/88/90のP2言及と非重複を確認。**コードは触っていない。** 採否・優先度・実装・QA・しきい値はDaiya／メイン領分。
+
+### 【P2 への追加観点 第9弾（新種ではない）】データセンターIP帯の遮断は「名簿（自動DL＋サーバ側キャッシュ＋取得失敗時フォールバック）＋VPN許可CIDR（全弾き回避）＋正規botはFCrDNS/公開レンジで許可」が実装定石。IP単独は“一次通過”に過ぎず（CGNAT/回線切替/住宅プロキシで腐る）、第4層の挙動が最後の砦という多段は不変
+
+- **現象（A・ベンダ実装docs／OSS／実装者一次。egress遮断→検索経由で独立複数一致の範囲のみ採用）**：
+  - **反bot業界は“クラウドの住所”を既定で高リスク扱いにする**＝クラウド事業者のネットワーク（ASN/IP帯=CIDR）は公開ゆえ、**データセンターIP帯の遮断リスト（名簿）**を持ち、そこ発の通信を既定で疑わしいと採点する。これが Muse（クラウドVM発）のような“本物ブラウザだが人でない来訪”を弾く**第2層**。
+  - **名簿の運用定石**（Clickport bot-management docs・A）＝名簿は**サーバ側に自動ダウンロード＆キャッシュし、取得失敗時は前回キャッシュへフォールバック**（配信元が落ちても守りが止まらない）。必須の対＝**VPN許可CIDR（allowlist）の併用**＝VPN越しの実客を“データセンター発”と誤認して全弾きしない**逆噴射ガード**。
+  - **自己ホストOSS**＝`ufw-bots`（DC-IP名簿＋ufw/iptablesスクリプト・2026-02更新・A）＝名簿＋スクリプト型の最小構成。
+  - **IP単独は“一次通過（粗いふるい）”に過ぎない**（sgcWebSockets 2026.6・A）＝CGNATの相席・スマホ↔WiFi切替・住宅プロキシ（residential proxy）でIPは腐り、巧妙なbotはそこへ隠れる＝**第2層で粗く落とし、最後は挙動で切る多段が定石**。多信号版は「既知bot IP帯＋データセンター/ホスティング検知＋FCrDNS＋DNSBL評判」を束ねる。
+  - **“弾く（bad）”の対＝正規botの“通す（good）”検証**（Google Search 公式docs・S）＝**FCrDNS（逆引きでホスト名が `googlebot.com`/`google.com`/`googleusercontent.com` 等で終わるか→順引きで元IPに戻るかの二段）**。**PTR（逆引き）単独は詐称可能**（誰でも自分のPTRを googlebot 風にできる）＝順引き一致でなりすましを落とす。大量時はDNS照合でなく公開IPレンジ名簿（`googlebot.json`／特殊クローラは `special-crawlers.json`）照合でよい。
+  - ※数字（Plausible 3.2万DC-IPレンジ＝第78弾引用／Meta-ExternalAgent 13.1%＝9月Cloudflare二次）は**出典の主張としてのみ引用し、Lokuの実測/効果には使わない**（鉄則＝主張を代作しない）。
+- **なぜP2の追加観点で新種でないか**：bot/自動化アクセスの隔離はP2の定義そのもの。新機構ではなく、**第8弾で名指しした相手（Muse型＝DC-IP発）を捕まえる第2層の“実装定石（how）”を具体化**するもの＝P2の射程の実装側更新（第6弾=why／第8弾=who／第9弾=how の三点セットが揃う）。
+- **現物との突き合わせ（現物読み・`app.mjs` grep・過剰批判はしない）**：
+  - **bot判定は第1層UA＋第4層挙動のみ・IP/ASN/CIDRは一切不使用**：`BOT_UA_RE`（19行＝`bot|crawler|spider|scrapy|headlesschrome|puppeteer|playwright|phantomjs|python-requests|selenium` ＋ `curl/`・`wget/`・385行で入口除外）＋ `suspect_bot`（262行 countable=false／397行 collect受領／449行 タグ非発火で配信・因果分母から隔離）。grep で `ipaddr|cidr|asn|datacenter|remoteAddress|x-forwarded` 等は**0件**＝IP非使用を再確認（第74回 watchlist「`BOT_UA_RE`はUA文字列のみ＝IP非使用ゆえborn免疫」と整合）。
+  - **第2層（DC-IP帯）を持たないのは設計**（第78弾で明文化済）＝`collect` は同一オリジンで“ページが実際に開いた時だけ鳴るクライアントビーコン”＝外から偽IP/偽参照元を注入する経路が無い。**ただし Muse 型（素UA＋JS実行）は第1層（素UAで素通り）・第4層（JS実行で滞在>0・スクロール>0なら人間らしく振る舞える）を“すり抜けうる唯一の穴”**＝第2層（住所）を足して初めて確実に隔離できる相手。
+  - **IP非依存ゆえ正規botの誤遮断もゼロ**＝正規クローラはJSを実行せず collect に来ない（起源#70）＝良い住所の確証（FCrDNS）すら不要な born 免疫。将来第2層を入れる“なら”、FCrDNS/公開レンジ許可を**省くと**クラウド発の正規サービス/将来の正規エージェントを誤遮断しかねない前ガード。
+- **根拠URL（S/A・当環境はegress遮断ゆえ検索経由・独立複数一致で採用）**：
+  - Clickport「Bot Management」（名簿の自動DL/キャッシュ/失敗時フォールバック・VPN許可CIDR）… https://clickport.io/docs/bot-management （A）
+  - sgcWebSockets 2026.6 Firewall Bot Detection（既知bot IP帯＋DC検知＋FCrDNS＋DNSBL／IP共有・ローテ・住宅プロキシの限界）… https://www.esegece.com/community/blog/sgcwebsockets-firewall-bot-detection/ （A）
+  - `ufw-bots`（DC-IP名簿＋ufw/iptables・2026-02）… https://awesome.ecosyste.ms/projects/github.com%2Fbrahma-dev%2Fufw-bots （A）
+  - Google Search Central「Verify Googlebot and other Google crawlers」（FCrDNS手順・PTR単独は詐称可・IPレンジ名簿）… https://developers.google.com/search/docs/crawling-indexing/verifying-googlebot （S）
+  - Google「Verify requests from Google crawlers and fetchers」（`googlebot.json`/`special-crawlers.json`）… https://developers.google.com/crawling/docs/crawlers-fetchers/verify-google-requests （S）
+  - Queue-it「Data center IP blocking」… https://www.queue-it.com/blog/data-center-ip-blocking （B→traced）
+  - 現物：`loku-tuning-plugin/handoff-demo/app.mjs`（19/262/385/397/449行・IP非使用をgrep確認）
+- **対策案＝“維持すべき現行設計”のガード観点＋将来第2層を入れる“なら”の設計図（コードは触らない・採否・実装・QA・しきい値はDaiya／メイン領分・新種P番号は起こさない）**：
+  1. **第4層（挙動）を“最後の砦”として弱体化させない回帰**（第6弾からの継続）：`suspect_bot` の countable/タグ隔離/因果除外（262/449行）を落とすと、UA名簿も住所名簿もすり抜けた Muse 型（素UA＋JS実行で挙動が人間らしい）が分母に混ざる＝この三点の隔離を赤にするユニット/E2E（優先度 高）。
+  2. **将来 第2層（DC-IP遮断）を入れる“なら”の設計図**（優先度 中・設計レビュー観点・足さない限りは born 免疫）：(a)名簿は**サーバ側で自動更新＋取得失敗時は前回キャッシュへフォールバック**（名簿が切れても守りが止まらない）(b)**VPN許可CIDR＋Apple iCloud Private Relay 出口IP（公開feed＝第5弾）を allowlist 併用**して実客の全弾きを回避(c)**DC遮断（bad）とFCrDNS/公開レンジ許可（good）は対で入れる**＝良い住所の確証を省かない(d)回数上限はIP単位で数えない（相席IP対策＝第5弾）。
+  3. **IP単独に依存しない多段の明文化**：IPは“一次通過”＝CGNAT/回線切替/住宅プロキシで腐る＝住所で粗く落として最後は挙動（第4層）で切る、を設計規律として残す（“住所で人を数えない”＝friend_id恒久キー設計=起源#87/#113 と同じ知恵の弾く側版）。
+- **検証方法（番人/メイン領分・1スタジオ目本番化時。P2境界テスト群で）**：①`suspect_bot=true` が countable=false・タグ非発火・因果分母非算入の三点を満たす負のテスト（第6弾継続）②既知bot UA が385行で除外され bot_excluded に可視化される後方互換 ③**DC-IP発の“素UA＋JS実行（滞在>0/スクロール>0）”の疑似来訪が第1層・第4層をすり抜ける**ことを再現し、**第2層（住所名簿）を入れた時のみ落ちる**ことの回帰 ④VPN許可CIDR/Private Relay 出口IPの実客が第2層で誤遮断されない負のテスト ⑤FCrDNS許可が正規botを通し、PTRだけ詐称した偽Googlebotを順引き不一致で落とす ⑥正規の同一オリジンPOSTが従来どおり200で通る。P0離脱二段・P20 allowlist・P28分布シフトと二重処理でも冪等。
+- **優先度**：**中**（現物は第1層＋第4層の二段構えで既に堅く、第2層の不在は同一オリジン設計ゆえ born 免疫。ただし Muse 型＝素UA＋JS実行は第1/4層をすり抜けうる唯一の穴＝第2層を入れる“なら”の設計図が本弾で揃った）。**新種P番号なし＝P2への追加観点 第9弾（第44回P28以来 新種なし継続 45〜91）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
