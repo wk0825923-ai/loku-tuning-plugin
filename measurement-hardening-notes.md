@@ -2514,3 +2514,33 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 - **見廻り（lp-mimawari）申し送り**：送信元IP/ASN を条件に使う守りは**個人情報・同意の論点**を伴う（住宅IP＝個人回線・proxyware の同意不透明さ・FBI注意喚起の文脈）。第2層採否は法規制面の確認が要る領分。
 
 - **根拠URL**：blog.cloudflare.com/residential-proxy-bot-detection-using-machine-learning/（A・IPで弾くな/per-request採点/毎時1,700万新規住宅IP）／dev.to wantsvibes（B→traced・CGNAT/ASN種別）／spur.us 住宅プロキシ検知（B→traced・ASN所有＋挙動）／fbi.gov 2026 alert（S・proxyware＝端末の出口ノード化）。
+
+## 【2026-10-23・第93回巡回＝ビート2「計測・分析技術」＝TLS握手の指紋（JA4）＝第91回「DC-IP帯遮断」も第92回「住宅プロキシの住所借り」もすり抜ける相手に残る“IPを超える手がかり”＝P2への追加観点 第11弾（新種P番号なし・45〜93継続）（目付還流・コード無変更）】
+
+**前提**：以下は**新規P番号を起こさない**。第91回（第9弾＝DC-IP遮断の“作り方”how）・第92回（第10弾＝住宅プロキシの“裏と境界”）への続きで、第11弾は「**DC-IPでも住宅IPでも落ちない相手に残る“IPを超える手がかり”＝TLS握手の指紋（JA4）**」という**別の層（ネットワーク/TLS指紋）**の追加観点。追記前に本ファイルを全読し、`grep -niE "ja3|ja4|tls指紋|tls fingerprint|handshake|clienthello"` が **bot除外文脈に0件**（既存の「指紋」は第350行＝probabilistic デバイス指紋（クロスチャネル帰属の文脈）／第1109行〜＝Brave farbling＝クライアント側JS指紋APIの免疫確認 の2つだけ＝いずれも層が別）を確認した。実装照合表（P0–P3済）・P5〜P23・第2〜10弾とは重複させない。**コードは触っていない。** 採否・優先度・実装・QA・しきい値はDaiya／メイン領分。
+
+### 【P2 への追加観点 第11弾（IPを超える手がかり＝TLS握手の指紋JA4・新種ではない）】“住所（IP）では落ちない相手（住宅プロキシ／素UA＋本物ブラウザ）”に残る物差しは「握手の癖（JA4）」＝ただし計算はTLS終端（CDN/エッジ）でのみ可能で現物Nodeは自力で持てず、入れる“なら”の芯は「信頼エッジのヘッダーのみ／欠落≠bot／単独で遮断しない・本命は第4層挙動」
+
+- **現象（業界の2026定石・S一次＋A/B→traced）**：
+  - **JA4とは**＝接続の最初のTLS握手（`ClientHello`）で、クライアントが「使える暗号の一覧・拡張・対応プロトコル」をどう並べて送るかを短い指紋文字列にしたもの。並びは**ブラウザ/TLSライブラリの作りで決まりユーザーが選べない＝UA文字列のように自由に書き換えられない＝住所（IP）を借りても変わらない**。JA3（Salesforce 2017）が元祖→**Chrome 110（2023初）が拡張順をランダム化**（ossification防止）で壊れ（同じブラウザが毎回別JA3）→**FoxIO が2023年9月に“並べ替えてからhash”するJA4**を出しランダム化に強くした（SHA-256・先頭に読めるプロトコル情報・QUICカバー）。
+  - **用途（Cloudflare公式）**＝JA4は**リクエストごとに計算**され custom ruleで **block/challenge/skip**。Signals Intelligence で1つのJA4につき**ブラウザ由来割合・既知bot由来割合・使用ネットワーク数・サイト数**が見え、Workers/originのMLに流せる。**Bot Managementがskipの要求では値が“欠落”しうる（＝欠落≠bot）**。
+  - **計算場所（AWS公式ほか）**＝JA4は**TLSを終端する層でのみ計算可能**＝CDN/WAF/LB（AWSはCloudFront・ALB・web ACLログから・**握手に十分な情報がある要求だけ**計算）／`nginx` の `ngx_http_ja4_module`／HAProxy／Envoy／Zeek・Suricata（ミラー）。**originアプリへは要求ヘッダーで渡す**（例：bunny は `CDN-JA4`）。JA4ファミリー＝JA4(TLS)/JA4H(HTTP)/JA4S(server)/JA4T(TCP)。
+  - **OSS計測の分担**＝PostHog（公式bot doc）はクライアントJSブロック＋クエリ時分類で**TLS/JA4やproxy/VPN判定はネイティブに無く第三者頼み**／Plausible高度botフィルタは有料クラウド側／Umamiは組み込みbotフィルタの記述なし（`CLIENT_IP_HEADER` のみ）。＝**「アプリ単体はUA＋挙動／ネットワーク層指紋はエッジ」という分担が業界標準**。
+- **現物との突き合わせ（grep再確認）**：`app.mjs` のbot判定は**第1層UA（`BOT_UA_RE` 19行）＋第4層の挙動フラグ（`suspect_bot` 262/397/449行）のみ**。`grep -niE "ja3|ja4|tls|fingerprint|clienthello"` は**0件**＝**TLS握手指紋は現物に不在**。かつ `app.mjs` 384行は要求の `user-agent` だけ読む Nodeサーバ＝**TLS握手は手前のエッジが終端済みゆえ、Node自身はJA4を原理的に見られない**。＝住宅プロキシ型（素UA＋本物ブラウザ＝第1層UA素通り・第92回で「住宅IPゆえ仮の第2層も素通り」と確定）に対し、JA4は「UAは書き換えられても握手の癖は書き換えにくい」**ネットワーク層の追加シグナル＝第4層挙動を補強する“第2.5層”**になりうる。ただし**前提＝JA4を吐くCDN/エッジを `collect` の前に置くこと**（今の構成に無ければ使えない＝設計の種どまり）。＝**OSS計測の標準構成と同じ分担＝born健全（“足りない”のではなく“層が違う”）**。
+- **対策案（コード無変更・設計材料）**：JA4を“もし”入れる場合の芯＝
+  - **① 信頼できるエッジのヘッダーからのみ読む・クライアント詐称コピーを端で剥がす**＝`collect` が外から直接叩ける経路だと、クライアントが `CDN-JA4` を自分で詐称して“本物ブラウザ”に化け隔離をすり抜ける。エッジで上書き/strip した上で、信頼エッジ由来の要求でのみ採用。
+  - **② JA4欠落＝botではない**＝握手情報不足でJA4が欠落しうる（AWS明記）。欠落を一律botに落とすと握手が特殊な本物客を数字から消す。
+  - **③ 単独で遮断しない・本命は第4層挙動**＝同じJA4を何百万の本物ブラウザが共有（Signals Intelligenceが per-JA4 の「ブラウザ割合/bot割合」を出すのは“指紋は共有される”前提だから）。JA4はあくまで `suspect_bot` の採点に効く**一票**＝hard-blockしない。
+  - **④ Nodeアプリ内で無理にTLS/IP判定を足さない**＝TLS終端の手前にいないのでJA4は取れず、`x-forwarded-for` 等の詐称可能ヘッダーをIP判定に使うと偽装される＝“偽の安心”で本命の挙動から目をそらす。JA4が要るなら**エッジ（CDN/nginx/ALB）で計算→信頼ヘッダーでoriginへ**の経路一択。
+- **検証方法**：実機E2E（メイン領分・1スタジオ目本番化時・第91/92回の第2層負のテスト群に追加）。①クライアントが `CDN-JA4` 詐称ヘッダーを送っても信頼エッジ由来でなければ無視される（端で剥がす）②JA4欠落の本物客がbot扱いされない③同じJA4を共有する正規ブラウザ群が単独ルールで一括遮断されない（第4層挙動と併せた採点か）④JA4を足しても第4層 `suspect_bot` の判定率が落ちない回帰。
+- **見廻り（lp-mimawari）申し送り**：TLS指紋/ネットワーク層識別は「指紋＝ある種の識別子」＝**個人データ・同意の論点**を伴いうる（第92回の住宅IP＝個人回線の論点の延長）。JA4採否は法規制面の確認が要る領分。
+- **根拠URL（S/A・当環境はegress遮断ゆえ検索経由・Cloudflare/AWSは公式doc記載を採用）**：
+  - Cloudflare Docs「JA3/JA4 fingerprint」（S一次・custom ruleでblock/challenge/skip・skip時欠落）… https://developers.cloudflare.com/bots/additional-configurations/ja3-ja4-fingerprint/
+  - Cloudflare Docs「Signals Intelligence」（S一次・per-JA4のブラウザ/bot割合・ネットワーク数/サイト数・Workers/origin ML）… https://developers.cloudflare.com/bots/concepts/signals-intelligence/
+  - Cloudflare blog「JA4 Signals」（S・JA3の限界/QUIC非対応/randomization）… https://blog.cloudflare.com/ja4-signals/
+  - AWS WAF「JA4Fingerprint」（S一次・CloudFront/ALB・web ACLログ・十分な握手情報がある時だけ計算）… https://docs.aws.amazon.com/waf/latest/APIReference/API_JA4Fingerprint.html
+  - bunny.net「JA4 Fingerprinting」（A・`CDN-JA4` ヘッダーでoriginへ・一信号として扱え）… https://bunny.net/docs/cdn/security/ja4-fingerprinting
+  - PostHog Docs「Bot and traffic detection」（S・クライアントJSブロック＋クエリ時分類・TLS/proxyネイティブ非対応／DNS遮断＝検索経由trace）… https://posthog.com/docs/web-analytics/bot-detection
+  - FoxIO JA4+（一次仕様・未到達＝版/日付は二次複数一致でtrace）… https://github.com/FoxIO-LLC/ja4
+  - 現物：`loku-tuning-plugin/handoff-demo/app.mjs`（19/262/384/397/449行・ja3/ja4/tls/fingerprint 0件をgrep確認）
+- **優先度**：**低〜中**（現物は第1層UA＋第4層挙動で既に堅く、JA4不在は「Node単体＝TLS終端の手前にいない」ゆえの“層違い”でborn健全＝OSS計測と同じ分担。JA4は**JA4を吐くエッジを前に置く設計判断が出た時だけ**の“第2.5層”候補で、入れても本命は第4層挙動の補助一票）。**新種P番号なし＝P2への追加観点 第11弾（第44回P28以来 新種なし継続 45〜93）。コードは触っていない。**
