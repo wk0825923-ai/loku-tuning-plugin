@@ -2544,3 +2544,29 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
   - FoxIO JA4+（一次仕様・未到達＝版/日付は二次複数一致でtrace）… https://github.com/FoxIO-LLC/ja4
   - 現物：`loku-tuning-plugin/handoff-demo/app.mjs`（19/262/384/397/449行・ja3/ja4/tls/fingerprint 0件をgrep確認）
 - **優先度**：**低〜中**（現物は第1層UA＋第4層挙動で既に堅く、JA4不在は「Node単体＝TLS終端の手前にいない」ゆえの“層違い”でborn健全＝OSS計測と同じ分担。JA4は**JA4を吐くエッジを前に置く設計判断が出た時だけ**の“第2.5層”候補で、入れても本命は第4層挙動の補助一票）。**新種P番号なし＝P2への追加観点 第11弾（第44回P28以来 新種なし継続 45〜93）。コードは触っていない。**
+
+## 【2026-10-24・第94回巡回＝ビート1「計測精度の敵」へ回し戻し＝離脱計測（P0）の“手前”の盲点＝`location.replace()` リダイレクトはiOS Safariで離脱イベントを一切鳴らさない＝P0への追加観点（新種P番号なし・コード無変更）（目付還流）】
+
+### 【P0 への追加観点（新種ではない・遷移の種類そのものが離脱イベントを消す）】`window.location.replace()` はiOS Safariで `pagehide`/`unload`/`visibilitychange` を1つも発火しない＝P0二段構えの“手前”に空く穴
+
+**前提**：以下は**新規P番号を起こさない**。既存の **P0（離脱時フラッシュ＝`visibilitychange(hidden)`主＋`pagehide`フォールバック・`index.html` 461-476行）** への**追加観点＝将来ガード**。P0既存・P7（bfcache復帰 pageshow/persisted）・P8（prerender活性化遅延）・第56回（pageswap/pagereveal＝クロスドキュメント遷移の合図）は**いずれも「どのライフサイクルイベントを聞くか」**の話。今回は**「特定の“遷移の種類”＝`location.replace` が、そのイベント自体を鳴らさない」**という**手前の層**の観点。**追記前に本ファイル全読**し、`grep -niE "location\.replace|location\.assign|replaceState|履歴置換"` が **0件**（現物SDKも不使用）を確認した。実装照合表（P0-P3済）・P5〜P23・P2追加観点第2〜11弾とは重複させない。**コードは触っていない。** 採否・LP設計指針化・優先度・QAはDaiya／メイン領分。
+
+- **現象（WebKit一次）**：WebKit Bugzilla #275702＝「iOS Safariでは `window.location.replace` による遷移が、ページのライフサイクルイベント（`pagehide`／`unload`／`visibilitychange`）を何ひとつ発火しないように見える」。**デスクトップSafariでは `pagehide`+`visibilitychange`+`unload` が鳴り、iPhone Safariでも `replace` 以外の遷移方法では鳴る**＝**`location.replace` だけがiOSで例外的に“無音”**。報告者の期待は「`replace` 後に `pagehide` が鳴るべき」。
+- **裏取り（実装者A）**：計測実装者の技術記事 ctrl.blog「Safari's Beacon API problems」も、Safari（mac/iOS）はページ離脱時に `visibilitychange` を鳴らさないことがあり離脱送信は `pagehide` を使え、と警告＝「離脱の合図はSafariで取りこぼしやすい」という独立裏打ち。
+- **現物との突き合わせ（grep確認）**：Lokuの離脱送信は `index.html` 461-476行＝`visibilitychange(hidden)`主＋`pagehide`フォールバック＋`sendBeacon`＋800ms間引き。**現物SDKは `location.replace` を一切使っていない**（`index.html`/`handoff-demo/app.mjs` grep＝離脱系の `location.replace` 0件・`app.mjs` 99行の `.replace` はCSVエスケープで無関係）＝**Loku自身のコードはこの穴を踏まないborn免疫**。
+- **ではどこが穴か**：穴は**計測スクリプト（loku-attn.js）が載る“店主のLP”／“LP→LINE誘導の中間ページ”側**にある。実店舗LPの「タップでLINEを開く」ボタンや、広告→LP→LINE誘導の中間ページが **JSの `location.replace()`** でLINEへ飛ばす作りだと、iOS Safari（主戦場）では離脱flushの二段が両方とも鳴らず＝**そのビューの `active_sec`・スクロール・エンゲージメントが最後の瞬間に送られないまま消える**。
+
+**対策案（コードは触らない・採否はDaiya/メイン領分・新種P番号は起こさない）**
+1. **LP→LINEの遷移は `<a href>` の通常遷移か、サーバ側302リダイレクトを優先**＝どちらも本物の遷移としてブラウザが `pagehide` を正常に鳴らす（＝P0が効く）。
+2. **どうしても `location.replace` を使うなら、呼ぶ直前に明示的に `flush()` を一発撃ってから遷移**（P0のflushを“イベント頼み”でなく“手動一発”で先回りさせる）。
+3. 店主LP作成ガイドラインに「離脱直前にLINE等へ飛ばす中間ページはJS `location.replace` を避ける／使うなら明示flush前置」を1行入れる（LP設計の指針＝メイン領分）。
+
+**検証方法（番人/メイン領分）**：P0実機E2Eの負のテストに「`location.replace` 経由の離脱」を1ケース追加＝①店主LPが中間ページで `location.replace` を使う想定で、iOS Safari/LINE内WKWebViewで離脱flushが落ちないか（落ちるなら明示flush前置の回帰）②`<a href>`／サーバ302遷移では `pagehide` 経由でflushが届くか。1スタジオ目本番化時にP0/P7/P8の境界群と同時に。
+
+**根拠URL（S/A・当環境は bugs.webkit.org／developer.mozilla.org とも DNS遮断=ENOTFOUNDゆえ検索/報道取得を独立trace経路として扱う）**
+- WebKit Bugzilla #275702「location.replace emits no page lifecycle events on iOS Safari」(S一次→traced・3検索で本文一致・fixed状態は一次未到達＝open前提) … https://bugs.webkit.org/show_bug.cgi?id=275702
+- ctrl.blog「Safari's Beacon API problems」(A実装者→traced・Safariは離脱時 visibilitychange を鳴らさないことがある→pagehide推奨) … https://www.ctrl.blog/entry/safari-beacon-issues.html
+- MDN「Location: replace()」(S一次・履歴に新エントリを作らず現在のを置換) … https://developer.mozilla.org/en-US/docs/Web/API/Location/replace
+- 現物：`loku-tuning-plugin/index.html` 461-476行（P0 flush）／`handoff-demo/app.mjs`（location.replace 0件をgrep確認）
+
+**優先度**：**中**（現物はborn免疫だが、穴が“店主LP/導線の作り方”側にあり、落ちるのが「LINEへ進んだ＝最も関心が高い群」＝逆相関バイアスで優良導線を誤判定しうる＝影響の“質”が悪い。実装は軽い＝LP設計指針＋明示flush前置）。**新種P番号なし＝P0への追加観点（第44回P28以来 新種なし継続 45〜94）。コードは触っていない。**
