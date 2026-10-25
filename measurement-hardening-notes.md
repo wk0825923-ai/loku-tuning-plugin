@@ -2570,3 +2570,28 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 - 現物：`loku-tuning-plugin/index.html` 461-476行（P0 flush）／`handoff-demo/app.mjs`（location.replace 0件をgrep確認）
 
 **優先度**：**中**（現物はborn免疫だが、穴が“店主LP/導線の作り方”側にあり、落ちるのが「LINEへ進んだ＝最も関心が高い群」＝逆相関バイアスで優良導線を誤判定しうる＝影響の“質”が悪い。実装は軽い＝LP設計指針＋明示flush前置）。**新種P番号なし＝P0への追加観点（第44回P28以来 新種なし継続 45〜94）。コードは触っていない。**
+
+## 【2026-10-25・第95回巡回＝ビート2「計測・分析技術」へ振り戻し＝なぜLokuは `IntersectionObserver`（画面に出たかを測るブラウザ標準API）を使わないのか＝P8／P12 への追加観点（設計判断の明文化・新種P番号なし・コード無変更）（目付還流）】
+
+**前提**：以下は**新規P番号を起こさない**＝第44回P28以来の新種なし継続（45〜95）。既存の **P8（可視・注視ゲート＝`document.visibilityState==='visible'&&hasFocus`＋箱の coverage/centerY 判定）／P12（可視復帰の時計取り直し＝放置タブ水増し防御）** への**追加観点＝設計判断の裏書き**。テーマは第94回宿題#1「第94はB1（location.replace/P0）主役ゆえ次はB2へ」に従いビート2（計測・分析技術）へ振り戻し、「“画面に出たか”を測るブラウザ標準API＝`IntersectionObserver` を、Lokuがなぜ使わず自前の重い `tick()` ループを採るのか」という設計根拠を一次（MDN/web.dev）で明文化する。**追記前に本ファイル全読＝P0〜P29＋P35（P4/P24/P25欠番）を grep し、`IntersectionObserver` が本ファイルに0件**（＝標準APIを名指しで「なぜ使わないか」を記したノートは未存在）を確認。4ゲートの機構自体（line13・P12・P8）とは別物＝「機構の説明」でなく「標準代替APIを採らない根拠」という未接触facet。第87回起源（MRCビューアビリティ＝“何を見られたと数えるか”の基準・現物 COVER_GATE=0.5 の祖先）とも別レイヤー（基準↔それを安く測る道具API）。**コードは触っていない。** 採否・リファクタ判断・優先度・QAはDaiya／メイン領分。
+
+### 【P8／P12 への追加観点・第95回巡回（2026-10-25）／`IntersectionObserver` は“幾何（画面に何%出たか）”しか返せず4ゲートを一つも表現できない＝Lokuが標準APIを捨てて `tick()`＋`getBoundingClientRect()` の重い自前方式を採るのは“読んだ”を守る意図的な設計＝「軽量化でIO単体へ素朴に置換」は計測の意味を壊す歯止め】新種P番号なし
+
+- **現象（S/A→traced＝標準APIの返すもの/返せないもの）**：
+  - `IntersectionObserver` は「ある要素がビューポートにどれだけ重なったか」を**非同期・メインスレッド非ブロッキング**で通知するブラウザ標準API。`IntersectionObserverEntry.time`（重なり変化時刻のDOMHighResTimeStamp）で**「入った時刻」と「出た時刻」の差＝“画面に出ていた秒数”は算出できる**。`threshold`（例：50%以上重なったら通知）で“どれだけ出たら数えるか”も指定できる（MRCの50%基準もここで表現可能）。
+  - **だがIOが知っているのは“幾何（画面に出ているか）”だけ**＝(a)そのタブが前面か・ウィンドウにフォーカスがあるか／(b)客が操作中か放置か／(c)ゆっくり読んでいるか猛スクロールで通過中か——**いずれも関知しない**。裏タブ放置・猛スクロール通過・上の空でも、幾何的に画面内なら「出ている」と数える。
+- **現物確認（目付がgrep＋読み・過剰批判はしない・“既に正しい部分”を切り分け）**：
+  - **`index.html` grep＝`IntersectionObserver` 0件**＝Lokuは標準のビューアビリティAPIを**意図的に使っていない**。代わりに `tick()`（index.html 342-367行＝`TICK=200`ms の自前ループ）で毎回 `getBoundingClientRect()` を読み、箱の `activeView` を**「`coverage>=COVER_GATE`（0.5＝幾何）」かつ「`activeGate`（`visibilityState==='visible'&&hasFocus`＝可視前面／`now-lastActivity<IDLE_MS`＝25秒無操作停止）」かつ「`slow`（`velSmooth<VEL_STOP`＝650・低速スクロール）」かつ「中央ゾーン（`ZONE_LO=0.12`〜`ZONE_HI=0.90`）」の4条件が全部そろった時だけ**加算（356-362行・289行に定数）。＝**IOの「幾何1条件」に対し、Lokuは「幾何＋前面＋操作＋低速＋中央」の多段ゲート**。
+  - ＝Lokuが標準APIをあえて使わないのは“知らなかった/手抜き”ではなく、**「見た」と「読んだ」を分けるための意図的設計**。IOは軽く正確だが幾何しか返せないため、乗り換えると engagement（読了率）＝温度感タグ発火の分子が「画面に出た＝読んだ」に退化する。現行 `tick()`＋`getBoundingClientRect()` は毎tickにレイアウト計算を強いる“重い道”だが、その重さと引き換えに4ゲートを表現できている。
+- **対策案＝“維持すべき現行設計”のガード観点（コードは触らない・採否はDaiya／メイン領分・新種P番号は起こさない）**：
+  - **(a) 歯止めの明文化**：**将来“軽量化/省電力”目的で `IntersectionObserver` 単体へ素朴に置き換えると、裏タブ放置・猛スクロール通過・25秒無操作・上の空の客まで「読んだ」に混ざり、engagement が一律水増し→素通り客が「検討度が高い」と誤タグ付け→店主の初回メッセージ空振り**（P12＝旧Universal Analyticsの放置タブ込み滞在水増しと同型）。
+  - **(b) 乗り換える“なら”の設計図**（優先度 低・足さない限り現行で健全）：IOは**幾何層だけ**に使い（off-main-thread/getBoundingClientRectの毎tick reflow を軽減できる利点は本物）、**4ゲートのうち行動側（前面/操作/低速/中央ゾーン）は従来どおりアプリ側で判定して AND を取る**＝「IOで幾何、ゲートは据え置き」のハイブリッドならengagementの意味を壊さない。**IO単体への全面置換は不可**。
+  - **(c) 恒久教訓**：**標準APIが肩代わりできるのは“幾何”まで＝計測の“行動ゲート（前面/操作/低速/中央）”はアプリ側の責務**。便利な標準APIがあるほど「とりあえずIOで」で済ませて行動ゲートを忘れる実装が増える＝Lokuの重い自前方式は“最適化で削る対象”でなく“守るべき資産”。
+- **検証方法（番人/メイン領分・1スタジオ目本番化時・P8/P12/P7の境界テスト群で）**：①裏タブ放置/猛スクロール通過/25秒無操作の疑似来訪で `activeView` が加算されない負のテスト（現行 `tick()` で守られていること）②もし将来IO導入時は「幾何＋前面＋操作＋低速＋中央」の全ゲート通過時のみ加算される後方互換③P12の可視復帰リセットと二重に働かないか。
+- **根拠URL（S/A・当環境は developer.mozilla.org／web.dev とも DNS遮断=ENOTFOUNDゆえ検索経由trace・複数検索で本文一致確認）**：
+  - MDN「Intersection Observer API」 https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API （S一次→traced・非同期/宣言的/threshold/メインスレッド非ブロッキング）
+  - MDN「IntersectionObserverEntry: time property」 https://developer.mozilla.org/en-US/docs/Web/API/IntersectionObserverEntry/time （S一次→traced・重なり変化時刻＝入退場差で可視秒算出）
+  - web.dev「IntersectionObserver is coming」 https://web.dev/articles/intersectionobserver （A→traced・毎スクロールtickで測り直す旧習をなくしメインスレッド負荷を下げる＝発明の動機）
+  - 現物: loku-tuning-plugin/index.html 289行（`COVER_GATE=0.5,ZONE_LO=0.12,ZONE_HI=0.90,VEL_STOP=650,IDLE_MS=25000,TICK=200`）・342-367行（`tick()` 4ゲート＝IO不使用の自前ループ）・`IntersectionObserver` grep 0件（2026-10-25確認）
+- **優先度**：**低**（現物は4ゲートで既に堅く、IO不使用は“読んだ”を守る意図的設計＝born健全。本弾は将来のIO置換事故を防ぐ“設計歯止めの明文化”）。**新種P番号なし＝P8／P12への追加観点（第44回P28以来 新種なし継続 45〜95）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
+- **非重複メモ**：`IntersectionObserver` 本ファイル0件（grep確認）＝名指しの「なぜ使わないか」ノートは未存在。4ゲート機構の説明（line13・P8・P12）とは別＝「標準代替APIを採らない根拠」。第87回起源（MRCビューアビリティ＝基準）とも別レイヤー（基準↔測る道具API）。※Web Bot Auth（Google agent.bot.goog・第95回答え合わせ宿題#3）は**還流を書かない判断**＝P2/P23名簿は第8〜11弾で厚く、署名検証はエッジの仕事・現状は設計の種どまり・本命は第4層挙動＝既存射程内（第94回「書かない還流も正解」の継続）。
