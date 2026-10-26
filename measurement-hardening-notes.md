@@ -2595,3 +2595,29 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
   - 現物: loku-tuning-plugin/index.html 289行（`COVER_GATE=0.5,ZONE_LO=0.12,ZONE_HI=0.90,VEL_STOP=650,IDLE_MS=25000,TICK=200`）・342-367行（`tick()` 4ゲート＝IO不使用の自前ループ）・`IntersectionObserver` grep 0件（2026-10-25確認）
 - **優先度**：**低**（現物は4ゲートで既に堅く、IO不使用は“読んだ”を守る意図的設計＝born健全。本弾は将来のIO置換事故を防ぐ“設計歯止めの明文化”）。**新種P番号なし＝P8／P12への追加観点（第44回P28以来 新種なし継続 45〜95）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
 - **非重複メモ**：`IntersectionObserver` 本ファイル0件（grep確認）＝名指しの「なぜ使わないか」ノートは未存在。4ゲート機構の説明（line13・P8・P12）とは別＝「標準代替APIを採らない根拠」。第87回起源（MRCビューアビリティ＝基準）とも別レイヤー（基準↔測る道具API）。※Web Bot Auth（Google agent.bot.goog・第95回答え合わせ宿題#3）は**還流を書かない判断**＝P2/P23名簿は第8〜11弾で厚く、署名検証はエッジの仕事・現状は設計の種どまり・本命は第4層挙動＝既存射程内（第94回「書かない還流も正解」の継続）。
+
+---
+
+## 追加観点（2026-10-26・目付第96回巡回からの還流）＝ビート1「計測精度の敵」＝SPAの“ソフトナビ”は離脱イベント（pagehide/visibilitychange）を鳴らさず離脱フラッシュ（P0）に“ビューの切れ目＝送信点”が存在しない＋その検知手段 Navigation API（navigateイベント）が主戦場 iOS Safari 26.2＋へ到達（2026-01 Baseline）＝P0 への追加観点・新種P番号なし（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**。ビート1「計測精度の敵」＝離脱計測(P0)の未接触facetを拾い、既存の **P0（離脱二段 visibilitychange(hidden)主/pagehideフォールバック）** への**追加観点（将来ガード）**に留める。**追記前に本ファイル全読**し、第83回ノート（2026-10-13・Soft Navigations Detection API＝P7/P8/P15）・第94回ノート（2026-10-24・`location.replace` 無音＝P0）・第95回ノート（IO不使用＝P8/P12）と**重複させない**ことを確認：**第83は「自動PV膨張/UTM化け＝数え方（P7/P8/P15）」の面**／**第94は「`location.replace` という遷移の“種類”が離脱イベントを消す（P0の手前）」**／**今回は「SPAソフトナビでは離脱イベントの発火前提そのものが無い＝P0の送信点が存在しない（別facet）」＋「検知手段 Navigation API の iOS主戦場到達という前提更新」**。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P0 への追加観点・第96回巡回（2026-10-26）／SPAソフトナビには離脱フラッシュの送信点が無い＝Lokuは単一文書LPでborn免疫・穴は店主LPのSPA化時のみ・検知手段は Navigation API が iOS 26.2＋到達で“実装可能な選択肢”へ格上げ】新種P番号なし
+
+- **現象（機構＝標準の仕組み／A実装者・ベンダ一次で明文）**：`pagehide`・`visibilitychange(hidden)` は**「文書が隠れる/破棄される」瞬間に鳴る退場センサー**。SPAのソフトナビ（`history.pushState`/`replaceState`/`popstate` による同一文書内のルート切替）は**文書を再読み込みしない（同じ文書のままURL/表示だけ差し替え）**＝**離脱イベントは1つも鳴らない**。＝**Lokuの離脱二段(P0)は「客が本当に文書を離れる/タブ背面化」には今まで通り効くが、「1文書内でビューA→Bへソフトナビした時」には一度も鳴らない**。第94回「`location.replace` が離脱イベントを消す」はP0の“手前”の穴だったが、今回は**同じP0の「ビューの切れ目＝送信点がそもそも存在しない」別の穴**。
+- **現物との突き合わせ（Lokuはborn免疫）**：主戦場LPは**1枚の静的HTML文書**（index.html・クライアントルータ無し）。**`pushState`/`replaceState`/`popstate`/`hashchange`/`Navigation` API 使用いずれも0件（grep確認・2026-10-26）**＝ソフトナビが発火しない土俵。かつ滞在計測は**離脱フラッシュ非依存の `tick()`（342-367行・200msごとの実クロック積み）**＝P1（受け口の単調増加マージ）とあわせ**文書が切れなくても箱の滞在値は失われず巻き戻らない**。＝**今回の病気に構造的に免疫**。穴は**店主LPがSPA（フレームワーク製の多ビュー構成）だった場合のみ**。
+- **前提更新（検知手段が主戦場に到達）**：**Navigation API（`navigate`イベント）が Safari/iOS 26.2（2025-12出荷）で対応・2026-01に Baseline Newly Available 入り**（caniuse S一次／InfoQ 2026-05 A）。`navigate` は**同一文書内のURL変更（pushState・戻る/進む）を1箇所のリスナーで受け取れ**、`navigateEvent.hashChange` で**ページ内アンカー移動を除外**できる。従来この検知はChrome専用＝iOS主戦場では自前の history監視の継ぎ接ぎしか無かったが、**いまLINEアプリ内ブラウザのエンジン（WKWebView＝OSのWebKit）の新しめiOS端末で素で使える**。＝第83ノートの「Chrome専用の将来ガード」が**iOS到達で“実装可能な選択肢”へ格上げ**。限界＝クロスオリジン/クロス文書は横取り(intercept)不可（イベントは鳴る）・**旧iOS(26.2未満)は非対応＝history監視＋popstateのフォールバックが要る**。
+- **根拠URL（S/A）**：
+  - One Dollar Stats「SPA tracking」（A→traced・クライアント側ナビは新HTML文書を読み込まずvisibilitychangeを起こさない＝自前でhistory.pushState/popstateを監視）: https://docs.onedollarstats.com/spa
+  - Fliplet Analytics「SPA」（A→traced・history.pushState/replaceStateを上書きしpopstate/hashchangeを聴く＝旧習の実物）: https://developers.fliplet.com/API/fliplet-analytics-spa
+  - Philip Walton（Google・web-vitals作者）「How We Track Pageviews Is All Wrong」（A→traced・visibilitychangeが信頼できる離脱信号・SPAは遷移ごとに手動でPVを数える要）: https://philipwalton.com/articles/how-we-track-pageviews-is-all-wrong/
+  - Chrome for Developers「Modern client-side routing: the Navigation API」（S一次→traced・navigateイベント/hashChangeフラグ/intercept/クロスオリジン不可）: https://developer.chrome.com/docs/web-platform/navigation-api
+  - caniuse「Navigation API」（S一次→traced・Safari/iOS 26.1以前非対応・26.2以降対応）: https://caniuse.com/mdn-api_navigation
+  - InfoQ（2026-05）「Navigation API … Baseline Newly Available」（A→traced・2026-01に主要ブラウザで利用可能）: https://www.infoq.com/news/2026/05/navigation-api-browser/
+  - 現物: loku-tuning-plugin/index.html 342-367行（`tick()` 離脱非依存の実クロック積み）・475-476行（P0離脱二段）・history系grep 0件（当環境は developer.chrome.com／developer.mozilla.org／bugs.webkit.org とも DNS遮断＝検索経由trace・複数独立ソースで機構/到達状況一致確認）
+- **対策案＝前方ガード（コード無変更・将来SPA店主LP対応時のレビュー観点／採否・実装・QAはDaiya/メイン領分）**：店主LPがSPAで**かつ「ビュー単位の読了スナップショットを残したい」設計へ寄る場合のみ**——
+  1. **離脱イベント待ちにしない**：ビュー境界の送信点を**Navigation API `navigate`（`hashChange` 除外）**に置く（対応iOS/Chrome）。P0の離脱二段は**本当の離脱/タブ背面化**用に温存（二重の役割を混ぜない）。
+  2. **非対応端末のフォールバック**：旧iOS(26.2未満)は `history.pushState`/`replaceState` の自前監視＋`popstate` の二段。第6回P7補遺の **Plausible PR#5082型バグ（SPA重複防止ガードが bfcache復帰を握り潰す）**を踏まないよう、ソフトナビ検知と bfcache復帰(P7 pageshow/persisted)を**切り分ける**。
+  3. **第83の P7/P8/P15 ガードと併走**：ビュー跨ぎを「別来訪(P15)」にしない・初回UTM/anon_idの先着固定を保持（第83ノート参照・重複記述しない）。
+- **検証方法**：将来SPA化の負のシナリオで（番人/メイン領分・1スタジオ目本番化時・P0/P7/P8/P15境界テスト群で）①疑似ソフトナビで `pagehide`/`visibilitychange` リスナーが発火しないこと（＝離脱頼み設計が静かに穴になる再現）②Navigation API 対応端末では `navigate`（hashChange除外）、非対応では history監視＋popstate のフォールバックで、ビュー単位スナップショットが過不足なく送られる後方互換③box滞在がビュー切替で巻き戻らない（P1 maxマージ）。現状の単一文書LPでは①〜③いずれも発生せず（免疫）を後方互換として確認。
+- **優先度**：**低（将来ガード）**。現状の単一文書LPではソフトナビ不発火＋離脱非依存の実クロック積みゆえ実害なし＝今は設計メモ＋番人への「LPがSPAか単一文書かの確認／対応iOSは navigate が使える前提の共有」申し送り止まり。**新種P番号なし＝P0 への追加観点（第44回P28以来 新種なし継続 45〜96）。コードは触っていない。** 起源（origins.md #95件目・通し96回 記録済）＝なぜ Navigation API は pushState/popstate があるのにわざわざ生まれたか。**判断はDaiya。**
