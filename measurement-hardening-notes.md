@@ -2666,3 +2666,33 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 - **検証方法（番人/メイン領分・1スタジオ目本番化時・P12/P6/P8 の境界テスト群で）**：①`active_sec` が INP/CWV のAPI（`PerformanceObserver`/`event-timing`）を一切参照せず自前 `tick()` だけで積まれる回帰（現行の設計が守られていること・CWV依存の混入防止）②「操作が速い（INP good）が滞在ゼロ＝素通り」の疑似来訪で `active_sec`≈0・4ゲートが加算しない負のテスト（応答性と関与が独立に出ること）③レポート/ダッシュボードで INP 等 CWV 値を出す段があれば「応答性＝入口の速さ」ラベルを付け engagement 指標と別セクションに分離（誤読防止）。
 - **優先度**：**低**（現物は web-vitals/INP 非依存で既にborn免疫＝応答性と関与が直交する設計・主戦場はCrUX非参加でINP不在。本弾は「CWVが良い＝良いLP」の混同と「INPで主戦場評価」の空集合という**2つの誤読を先回りで塞ぐ設計歯止めの明文化**）。**新種P番号なし＝P12／P6／P8への追加観点（第44回P28以来 新種なし継続 45〜97）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
 - **非重複メモ**：`INP`（メトリクス名の独立項目）は本ファイル0件（grep確認）＝名指しの「INPは関与を測らない/CrUX=Chrome専用でiOS不在」ノートは未存在。第95回（`IntersectionObserver`＝幾何しか返せず4ゲート表現不可＝標準APIを採らない根拠）・第97回（Soft Navigations CWV＝navigationId で“速度”を遷移別に割る・出荷×iOS未到達）とは別facet＝**第95＝標準APIが“読んだ”を測れない／第97＝CWVが“遷移別の速度”を測る・iOS未到達／今回＝CWVの1項目INPが“操作の反応の速さ”を測るのみで“関与”を測らない＋CrUX=Chrome専用で主戦場iOS構造的不在**。第97の `CrUX` 言及（Soft Nav 文脈）とも別＝今回は「CrUXの対象ブラウザの偏り（Chrome専用）が主戦場iOSを丸ごと落とす」という CrUX の“母集団の穴”facet。
+
+
+## 追加観点（2026-10-31・目付第101回巡回からの還流）＝ビート2「計測・分析技術」＝OSS計測3社（PostHog/Plausible/Umami）の既定「履歴(History API)の変化＝1ページビュー」は、SPA化した店主LPで(穴1)装飾的 pushState を幽霊PVに過剰計上し(穴2)OSS式の滞在時間＝“次の送信イベントまでの間隔”ゆえ離脱面を0計上する＝P7（ビュー境界）への追加観点・新種P番号なし（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**＝第44回P28以来の新種なし継続（45〜100）。既存の **P7（bfcache復帰＝“戻る操作での再読込”時の新ビュー計上／per-viewカウンタのリセット）** への**追加観点＝将来ガード（店主LPがSPA化した時の設計メモ）**に留める。テーマは第100回宿題#1「第100はB1（iOS離脱ceiling）主役ゆえ次はB2（計測・分析技術）へ／B2未踏サブ候補(b)＝OSS計測(PostHog/Plausible/Umami)の最新Changelogで“ソフトナビ/SPA per-view”実装定石が自前 tick() とどう違うか」に従いビート2へ。**追記前に本ファイル全読＋grep**（`history`／`pushState`／`history_change`／`soft nav`／`per-view`／`pageview`／`PostHog`／`Plausible`／`Umami`）し、**P6（max_scroll_pct）/P7（bfcache復帰）/P8（先読み幽霊PV）/P15（来訪エピソード）/第97回ノート（per-view は navigate＋tick() で割る・web-vitals ソフトナビCWVはiOS未到達）と重複させないことを確認**：**既存は「bfcache復帰のビュー計上（P7）」「CWVが画面別速度をiOSで割れない（第97）」が中心で、『OSS既定 history_change=1PV が(穴1)装飾的pushStateを幽霊PVに過剰計上し(穴2)離脱面を0計上する』という“数える既定そのものの2つの穴”は未収録**。第97回ノート（CWVの到達＝iOSで割れない）とは別facet＝**第97＝“測る側CWV”がiOSに来ない／今回＝“数える既定（history_change=1PV）”が装飾pushStateを過剰計上＋滞在が離脱面を0計上**。**コードは触っていない。** 採否・リファクタ判断・優先度・QAはDaiya／メイン領分。
+
+### 【P7 への追加観点・第101回巡回（2026-10-31）／OSS計測の既定「履歴変化＝1PV」は装飾的pushStateを幽霊PVに過剰計上し離脱面を0計上する＝SPA化店主LP対応時は「真のビュー変化だけ数えるゲート(P7)」＋「数える(P7)と質を測る(tick 4ゲート)の分離」が要る＝現物の単一LPはborn非該当（免疫）】新種P番号なし
+
+- **現象（何者か）＝OSS計測3社は「履歴(History API)の変化＝新しい1ページビュー」を既定で自動発火する“数える側”の定石**：
+  - **PostHog**＝公式SPAチュートリアルが**既定 `capture_pageview: 'history_change'`（defaults 2026-01-30）＝ブラウザ履歴API（`pushState`/`replaceState`/`popstate`）の変化を捉えて `$pageview` を自動発火**と明記。**旧既定は「最初のロードだけ・SPA遷移は手動設定が要る」**だった＝**“SPAは履歴変化＝1PVが既定”へ業界が舵を切った版動**（軽量版 posthog-js-lite も `captureHistoryEvents` で同挙動）。
+  - **Umami**＝公式ガイドが**トラッカーが History API を常時監視し SPA ページビューを自動送信**・ハッシュも既定で追跡し `data-exclude-hash="true"` で除外可。
+  - **Plausible**＝**`pushState` ルータは自動対応**、**ハッシュ(`#`)ルータだけは別スクリプト `script.hash.js` を載せ `hashchange` で発火**（公式docs「Hash-based routing」）。
+  - ＝3社とも「URL/履歴が変わる＝新ビュー」を数えるのが現代標準（例えると：新型レジは“お客さんが別の売り場へ移った回数”を自動で1件ずつ記帳する既定になった）。
+- **現物確認（目付がgrep・2026-10-31）＝現物の単一LPはborn非該当（免疫）**：現物の施術LP（`index.html`）は**単一ドキュメントのLP＝ページ内で履歴(`pushState`/`replaceState`/`popstate`)を一切動かさない**（`tick()` 342-367行＝箱ごとの `getBoundingClientRect` を `TICK=200`ms で読むだけ・`history`/`pushState`/`popstate` の発火も購読も grep 0件）。＝**OSS式「履歴変化＝1PV」の自動カウントは現物ではそもそも起きない＝幽霊PVを born で拾わない**（第96回「単一文書LPでborn免疫」の再確認）。本弾は**将来“店主LPがSPA化”した時のガード**。
+- **＝新規facet＝OSS既定「履歴変化＝1PV」の2つの穴（SPA化店主LP対応時）**：
+  - **(穴1) 装飾的 pushState の幽霊PV過剰計上**：`history_change` 既定は「見た目だけ変える `pushState`」（商品フィルタ・タブUI・モーダル開閉・無限スクロールのURL書換え）まで新ビューに数える＝**閲覧ページ数・直帰率を実態より歪める**（第8回P8の“先読み幽霊PV”とは別系統の過剰計上）。
+  - **(穴2) OSS式の滞在時間は「次の送信イベントまでの間隔」ゆえ離脱面を0計上**：Plausible は**次ページ遷移/タブ切替のたびにエンゲージメントイベントを送って区切る**（公式docs・スクロール深度は1-100%連続）＝滞在の正体は「このビューに来てから次イベントまでの間隔」＝**最後のビュー＝離脱面（主戦場では「LINEへ進む直前」）に“次”が無く構造的に0計上**（PostHog は滞在/スクロールを素では持たず自前カスタムイベントが要る）。←起源 origins.md #100件目（なぜ滞在時間は離脱面を測れないか＝間隔推計の構造的欠落）。
+- **根拠URL**：
+  - PostHog「Tracking pageviews in single-page apps (SPA)」（S/A・公式docs／既定 `capture_pageview:'history_change'`・defaults 2026-01-30・History APIでSPA遷移を自動捕捉・滞在/スクロールはカスタムイベント）https://posthog.com/docs/tutorials/spa
+  - posthog-js-lite README（A・`captureHistoryEvents` が pushState/replaceState/popstate を `$pageview` 化）https://www.npmjs.com/package/posthog-js-lite
+  - Umami「Track a single-page application」（S/A・公式docs／History API監視で自動・hash既定追跡・`data-exclude-hash`）https://docs.umami.is/docs/guides/track-single-page-apps
+  - Plausible「Hash-based routing」（S/A・公式docs／pushStateは自動・hashは `script.hash.js`+`hashchange`）https://plausible.io/docs/hash-based-routing ／「metrics-definitions（engagementイベント＝次ページ遷移/タブ切替ごと）」https://plausible.io/docs/metrics-definitions ／「Scroll depth」https://plausible.io/docs/scroll-depth
+  - 現物：loku-tuning-plugin/index.html（`tick()` 342-367行＝`getBoundingClientRect` 4ゲート `activeView`・`flush()` 469-476行＝離脱二段 sendBeacon・472行「冪等前提」コメント=P1マージ・history/pushState/popstate grep 0件）
+- **対策案（将来ガード＝採否はDaiya/メイン領分）**：
+  - **(a) 数える境界は「真のビュー変化だけ」をゲートする**：店主LPがSPA化する時、OSS既定 `history_change` を素で載せず、**P7 の `pageshow`/`event.persisted` のビュー境界判定を“本当に別画面へ移った時だけ新ビューを数えるゲート”として設計**し、**装飾的 `pushState`（フィルタ/タブ/モーダル）を新ビューから除外**（例＝遷移前後の主要コンテンツ識別子/ルートパスが変わった時だけ計上）。bfcache復帰（P7既存）と装飾pushStateを切り分ける。
+  - **(b) 「数える(P7)」と「質を測る(tick 4ゲート)」を別レイヤーとして分離**：OSSは「何画面見たか（数える）」が得意、Lokuは「1画面の中身の質（前面×操作×低速×中央の4ゲートで読了）」が強み＝SPA化対応時も**ビュー境界はOSS定石を借り、各ビューの滞在/読了は自前 `tick()` を境界で仕切り直す方式を維持**（第97回ノート「per-view は navigate＋tick() で割る」と併走・重複記述しない）。
+  - **(c) 離脱面0計上の回避を維持**：OSS式の「次イベント間隔」滞在へ素朴に置き換えない＝**離脱面（LINEへ進む直前）は `tick()` 端末内連続積算＋離脱ビーコン(P0)で0計上を構造的に回避している設計資産を、SPA化後も P7 ビュー境界と噛み合わせて守る**（起源#100＝P0が要る根拠）。
+- **検証方法（番人/メイン領分・1スタジオ目本番化時・P7/P8/P15 境界テスト群で）**：①装飾的 `pushState`（フィルタ/タブ切替）で幽霊PVが増えない負のテスト（真のビュー変化だけ計上されること）②離脱面（最後のビュー）の `active_sec` が0でなく `tick()` 積算値で `flush()` 経由で届く正のテスト③P7ビュー境界の切替が P1単調増加マージと衝突して過去ビュー値を巻き戻さない冪等回帰④現状の単一文書LPでは①②③いずれも発生せず（history非使用でborn非該当＝免疫）を後方互換として確認。
+- **優先度**：**低（将来ガード・版動更新）**。現状の単一文書LPは history を動かさずborn非該当＝実害なし＝今は設計メモ＋番人への「LPがSPAか単一文書かの確認／SPA化時は P7 で“真のビュー変化だけ数える”＋数える(P7)と質を測る(tick)の分離／OSS既定 history_change の装飾pushState過剰計上に注意」申し送り止まり。**新種P番号なし＝P7 への追加観点（第44回P28以来 新種なし継続 45〜100）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 起源（origins.md #100件目・通し101回 記録）＝なぜ滞在時間は離脱面を測れず間隔推計が0計上するか＝従来は「次PV時刻−このPV時刻」で推計し離脱ページに“次”が無いから＝P0（離脱フラッシュ）が存在する根拠。**判断はDaiya。**
+- **非重複メモ**：`history_change`／`OSS既定 1PV` は本ファイル未収録（grep確認）。P6（max_scroll_pct＝Plausible v3.0 sd）・P7（bfcache復帰のビュー計上）・P8（先読み幽霊PV）・P15（来訪エピソード＝Plausible visits）・第97回ノート（per-view は navigate＋tick()・CWVはiOS未到達）とは別facet＝**今回＝“数える既定（history_change=1PV）そのもの”が(穴1)装飾pushStateを過剰計上＋(穴2)離脱面を0計上する＝P7ビュー境界を“真のビュー変化ゲート”として設計し『数える(P7)と質を測る(tick)』を分離せよ**。
