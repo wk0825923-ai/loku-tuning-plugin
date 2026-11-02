@@ -2725,3 +2725,35 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 - **検証方法（番人/メイン領分・1スタジオ目本番化時）**：①低電力モードON実機でLP閲覧→箱ごとengagement/ヒートが通常端末と許容差内か（負のテスト＝電池状態でヒートが変わらないこと）②スクロールを止めてからの「熟読(slow)移行」までの実時間がLPM/通常で揃うか③総active_secがLPMでも実クロックで正しく積まれる後方互換（免疫の回帰）。
 - **優先度**：**低〜中（既存種精緻化・将来ガード）**。総active_secは免疫＝実害は「箱ごと視線の質」のLPM客でのブレに限局。今は設計メモ＋番人申し送り止まり。**新種P番号なし＝P12への精緻化（第44回P28以来 新種なし継続）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 起源（origins.md #101件目・通し102回 記録）＝なぜsetTimeoutは「約」なのか＝タイマー合体(timer coalescing)。
 - **非重複メモ**：Bug 272156 は本ファイル未収録（grep確認＝0件）。第46回P12追加観点（LPM免疫確認4本）とは**第46回の結論(3)「前面setTimeout射程外」を一次で訂正する差分**＝重複でなく前提訂正＋射程拡大＋速度較正ズレの新facet。P0(離脱flush)・P7(bfcache)・P8(先読み)・P19(ペイロード)とは別facet。
+
+
+## 追加観点（2026-11-02・目付第103回巡回からの還流）＝ビート2「計測・分析技術と競合の動き」＝ヒートマップ/セッションリプレイ競合（Clarity Copilot／Hotjar→Contentsquare Sense AI／Ptengine AIヒートマップ）が2026に揃って「AIが録画/ヒートマップを要約」へ舵＝だが要約の“材料”＝セッションリプレイ（画面録画）は主戦場のLINE内WebView(WKWebView)で既定マスク/除外・クロスオリジン埋め込みで既定非記録＝Lokuの同一オリジン一次tick()は録画捕捉に非依存＝P24（同一オリジン=広告ブロッカー免疫）への追加観点・新種P番号なし（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**＝第44回P28以来の新種なし継続（45〜103）。既存の **P24（同一オリジン配信＝広告ブロッカー免疫＝外部トラッカードメインを呼ばずEasyListのドメイン照合に非該当・index.html 464/469-473行／参考節 線76-90）** への**追加観点＝“維持すべき現行の良い設計”のガード**に留める。テーマは第102回宿題#1「第102はB1（低電力モード）主役ゆえ次はB2／B2未踏サブ候補(a)Clarity/Ptengine/HotjarのAI要約・セッションリプレイ新機能2026の“測る側の定石”」を直撃。**追記前に本ファイル全読＝P0〜P29＋P35 grep**し、`セッションリプレイ/session replay/rrweb/Clarity/Hotjar/Contentsquare/ヒートマップ/WKWebView/recordCrossOriginIframes` の既存言及と**重複させない**ことを確認：**第47回（線794＝Clarity CopilotがセッションリプレイをAI自動要約＝AI機能そのものを“計測の死活監視/異常検知P22”として記録）／第65回（線1834＝autocapture vs 明示計測・rage/dead clickは第47で既記録）／第70回（線1969＝Clarityがサーバ/CDNログ層を新設＝クライアントJSで非JSボットは測れない）／第24回（線76-90＝広告ブロッカーのコンテンツブロッカーはWKWebViewで無効＋ファーストパーティ同一オリジン配信）とは別facet**＝今回の新facetは**「録画の“捕捉そのもの”が主戦場（LINE内WebView／クロスオリジン埋め込み）で既定欠落し、AI要約の母集団が主戦場を外す」＝測る側AIが賢くなるほど材料欠落の非対称が目立つ**という点（第47=AI要約機能の存在／今回=その要約が食う材料の主戦場欠落）。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P24 への追加観点・第103回巡回（2026-11-02）／ヒートマップ・セッションリプレイ競合のAI要約は“画面録画”を材料にするが主戦場のWKWebView/クロスオリジンで既定欠落＝Lokuの同一オリジン一次tick()は録画捕捉に非依存で主戦場でも測れる＝P24（広告ブロッカー免疫）の“セッションリプレイ版”＝測る対象（録画=どこを触ったか／Loku=実名×視線×箱ごと読了）も届く範囲（録画=主戦場で欠落／Loku=主戦場で素通り）も二重に違う born 免疫】新種P番号なし
+
+- **現象（何者か・測る側の2026の動き）**：ヒートマップ/セッションリプレイ勢が揃って「AIが録画/ヒートマップを要約」へ舵を切った。
+  - Microsoft Clarity＝CopilotがセッションリプレイとヒートマップをAI自動要約（“全録画を見なくていい”が売り・learn.microsoft.com S一次）。
+  - Hotjar＝Contentsquareへ統合、RecordingsがSession Replays＋AI要約（Sense AI）＋エラー/速度モニタ＋MCP接続へ（hotjar.com S一次）。
+  - Ptengine（Ptmind・日本）＝「AIヒートマップ」事前登録開始＝ヒートマップとページ構成をAIが読み改善を自動言語化。
+  - **だが要約の“材料”＝セッションリプレイ（画面の録画＝お客がどこで立ち止まり迷ったかを後から見返す防犯カメラ的仕組み）は、主戦場で構造的に録れない**：
+    - **(1) LINE内WebView（WKWebView）で既定マスク/除外**：モバイル録画SDKは `WKWebView` の中身を既定で画像マスク or 除外（Sprig＝既定でWKWebView中身を未捕捉／Splunk Observability＝WKWebViewは既定sensitiveクラス／Datadog＝`<canvas>` はWebView内で非記録・OffscreenCanvas/transferControlToOffscreenも非記録）。
+    - **(2) 外部埋め込み（クロスオリジンiframe）は既定“非記録”**：録画OSS定番 rrweb は `recordCrossOriginIframes` 既定 `false`＝別ドメイン枠の中は同サイズの“空プレースホルダ”で代替（rrweb guide S/A）。Cloudflare Browser Run・Screeb docsも「クロスオリジンiframeの中身は記録されない」と同結論。
+  - ＝測る側AIは「録れた画面」だけを材料にする。主戦場（広告→LP→LINEの大半＝iOSのLINE内WebView）はその材料が既定で欠けるため、**AIがいくら賢くなっても要約の母集団が主戦場を外す**（＝第97 Soft Nav CWV／第98 INP・CrUX／第99 CrUX の「測る側がiOSに来ない」非対称の“録画版”）。
+- **現物との突き合わせ（目付がgrep・2026-11-02）＝Lokuは録画SDK/外部トラッカー非依存の同一オリジン一次計測**：`index.html` の計測は**現物LPの中で動く同一オリジンの `tick()`（342行・`TICK=200`ms）＋同一オリジンの受け口 `FLUSH_ENDPOINT='/api/attn/collect'`（464行・相対パス）＋離脱は `sendBeacon`（469-473行）**。録画SDK（rrweb系）も外部トラッカードメインも一切使わない（grep＝`rrweb`/`session replay`/`recordCrossOriginIframes` は現物0件）。＝**「画面を外から録れるか（WebViewをキャプチャできるか）」に一切左右されず、箱ごとの読了（関与）を主戦場のiOS LINE内WebViewでも素で測れる**。防犯カメラを外から置くのでなく“店の中の人が来店ノートを付ける”形＝カメラが店内（WebView）を映せるかに非依存。
+- **根拠URL（S/A・当環境はegress広く遮断＝検索/報道取得を独立trace経路として扱う・本文一致を複数検索で確認してから採用）**：
+  - Sprig「Mobile Replay — WKWebViewは既定で未捕捉（画像化で回避・録画recorderのメインスレッド使用量監視で閾値超過なら録画終了）」A→traced: https://docs.sprig.com/docs/support-privacy-and-technical/technical-considerations/mobile-replay-privacy-performance
+  - Splunk Observability「Record iOS sessions — UITextView/UITextField/WKWebViewは既定sensitive・WKWebView録画するなら表示サイト内の機微要素をすべてsensitive指定せよ」A→traced: https://help.splunk.com/splunk-observability-cloud/monitor-end-user-experience/real-user-monitoring/replay-user-sessions/record-ios-sessions
+  - Datadog「Mobile Session Replay troubleshooting — `<canvas>` はcanvas recording有効時のみ・ただしモバイルSDK経由のWebView内ではcanvas recording非対応・OffscreenCanvas/transferControlToOffscreenは非記録／browser docs=クロスオリジンはcanvasをtaintしピクセル読めず」A→traced: https://docs.datadoghq.com/session_replay/mobile/troubleshooting/
+  - rrweb guide「`recordCrossOriginIframes` 既定false・ブロックされた内容は同サイズのプレースホルダで再生／クラス制御 `.rr-mask`（テキスト）`.rr-ignore`（入力）」S/A→traced: https://github.com/rrweb-io/rrweb/blob/master/guide.md
+  - Cloudflare Browser Run「session-recording — クロスオリジンiframe要素内のコンテンツは記録されない・同一オリジンiframeは通常どおり記録」S→traced: https://developers.cloudflare.com/browser-run/features/session-recording/
+  - Screeb「cross-origin-limitations — クロスオリジンiframe内コンテンツはブラウザがフレーム間アクセスを遮断ゆえ録画されない・対策はコンテンツのあるページ側にタグを置く」A→traced: https://developers.screeb.app/sdk-browser/cross-origin-limitations
+  - Microsoft Clarity Copilot overview（Session Insights/Grouped Session Insights/ヒートマップ要約・“生成AIは誤りうるので録画と照合せよ”の注記つき）S→traced: https://learn.microsoft.com/en-us/clarity/copilot/overview
+  - Hotjar→Contentsquare「Recordings are now Session Replays in Contentsquare（AI要約・エラー検知・最大20倍のセッション容量）」S→traced: https://www.hotjar.com/product/recordings
+  - 現物：loku-tuning-plugin/index.html（`tick()` 342行・`TICK=200` 289行・`FLUSH_ENDPOINT='/api/attn/collect'` 464行・`sendBeacon` 469-473行・rrweb/session replay grep 0件）
+- **対策案＝“維持すべき現行設計”のガード（コード無変更・採否はDaiya/メイン領分・新種P番号は起こさない）**：
+  - **(a) 「録画AI要約でLoku関与を代替しない」用語ガード**：店主/レポート/比較資料で「Clarity/HotjarのAIが“全部見て要約”＝網羅的」と誤認しないための1行注記＝**録画は主戦場iOS LINE内WebViewを既定で欠く（マスク/プレースホルダ）＝非代表サンプル**であり、Lokuの関与（`active_sec`/箱ごと読了）とは測る対象（録画=どこを触ったか／Loku=実名×視線×読了）も届く範囲も直交。これは第95回「IO単体へ素朴置換＝計測の意味を壊す」・第97/98回「CWV/INPで主戦場を評価＝空集合」と同群の“測る側ツールに関与計測を肩代わりさせない”歯止めの録画版。
+  - **(b) 比較時は“主戦場欠落”を先に共有**：仮に録画ツールのAI要約とLoku数字を併置する段が出ても、**主戦場（iOS LINE内WebView／クロスオリジン埋め込み）の録画は構造的に空**という前提を先に釘刺し＝「録画AI要約はPC/Android中心の非・主戦場サンプルの要約」と明示。
+- **検証方法（番人/メイン領分・1スタジオ目本番化時・P24境界テスト群で）**：①`tick()`/`flush()` が録画SDK（rrweb系）や外部トラッカードメインを一切参照せず同一オリジン受け口だけで積まれる回帰（現行設計の後方互換）②主戦場相当（iOS Safari/LINE内WKWebView）で `active_sec`/箱ごと読了が素で積まれる（＝録画キャプチャの可否に非依存）ことの再現③録画ツール併用時に「WebView内がマスク/プレースホルダで空」になる負のシナリオをLoku計測が受けないことの確認。
+- **優先度**：**低**（現物は録画SDK非依存の同一オリジン一次計測で既にborn免疫＝P24の“セッションリプレイ版”。本弾は「録画AI要約でLoku関与を代替しない／比較時は録画が主戦場iOSを欠く前提を共有」の2つの誤読を先回りで塞ぐ設計歯止めの明文化）。**新種P番号なし＝P24への追加観点（第44回P28以来 新種なし継続 45〜103）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 起源（origins.md #102件目・通し103回 記録）＝なぜセッションリプレイに「AI要約」が付いたか＝録画本数が“見きれる量”を超えた不便をLLMで畳むため＝Lokuのtick()は最初から「人が録画を見る」前提を採らず数値の積算に畳む設計ゆえ“見きれない録画”問題が born 非発生。**判断はDaiya。**
