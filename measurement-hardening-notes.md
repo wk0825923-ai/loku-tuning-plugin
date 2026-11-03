@@ -2757,3 +2757,27 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
   - **(b) 比較時は“主戦場欠落”を先に共有**：仮に録画ツールのAI要約とLoku数字を併置する段が出ても、**主戦場（iOS LINE内WebView／クロスオリジン埋め込み）の録画は構造的に空**という前提を先に釘刺し＝「録画AI要約はPC/Android中心の非・主戦場サンプルの要約」と明示。
 - **検証方法（番人/メイン領分・1スタジオ目本番化時・P24境界テスト群で）**：①`tick()`/`flush()` が録画SDK（rrweb系）や外部トラッカードメインを一切参照せず同一オリジン受け口だけで積まれる回帰（現行設計の後方互換）②主戦場相当（iOS Safari/LINE内WKWebView）で `active_sec`/箱ごと読了が素で積まれる（＝録画キャプチャの可否に非依存）ことの再現③録画ツール併用時に「WebView内がマスク/プレースホルダで空」になる負のシナリオをLoku計測が受けないことの確認。
 - **優先度**：**低**（現物は録画SDK非依存の同一オリジン一次計測で既にborn免疫＝P24の“セッションリプレイ版”。本弾は「録画AI要約でLoku関与を代替しない／比較時は録画が主戦場iOSを欠く前提を共有」の2つの誤読を先回りで塞ぐ設計歯止めの明文化）。**新種P番号なし＝P24への追加観点（第44回P28以来 新種なし継続 45〜103）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 起源（origins.md #102件目・通し103回 記録）＝なぜセッションリプレイに「AI要約」が付いたか＝録画本数が“見きれる量”を超えた不便をLLMで畳むため＝Lokuのtick()は最初から「人が録画を見る」前提を採らず数値の積算に畳む設計ゆえ“見きれない録画”問題が born 非発生。**判断はDaiya。**
+
+---
+
+## 【P0 補強・新種P番号なし】`freeze`/`resume` は Chromium系専用でWebKit未実装＝iOSで取り得る離脱hookの上限は `visibilitychange`(hidden)＋`pagehide` の二段（目付第104回巡回・2026-11-03・コード無変更）
+
+**前提**：以下は実装照合表（P0-P3済）・P7（bfcache `pageshow`/`event.persisted`）・P12（可視復帰の時計 dt）とは**重複しない**、**P0（離脱時フラッシュ）の“到達(reach)軸”の明文化＝新種P番号は起こさない（第44回P28以来 新種なし継続 45〜104）**。テーマはビート1「計測精度の敵」＝ページのライフサイクル hook のiOS到達。**コードは触っていない。**
+
+- **現象（＝取りこぼしの“無い穴”を一次で確定）**：ページのライフサイクルには「背景化で眠らせる(freeze)→戻して起こす(resume)」という省電力の遷移があり、Chrome系はその直前に鳴る `freeze` イベントを「離脱直前にもう一回送る最後のチャンス」として使える。**だがこの `freeze`/`resume` は Chromium系ブラウザ専用で、WebKit（＝iOSの全ブラウザ・主戦場のLINE内WKWebViewの土台）は本体を実装していない**（WebKitソースには `onfreeze`/`onresume`/`wasDiscarded` の定義=IDLが `LayoutTests/imported/w3c/web-platform-tests` 配下に**テスト用として自動生成で取り込まれているだけ**で、出荷された実装ではない）。例えると：閉店間際の「最後のアナウンス設備」はChromeという店にしか無く、iPhoneの店には設計図が図面棚にあるだけで設備は一台も建っていない。
+  - ＝**iOSで離脱直前に“確実に鳴る”合図は `visibilitychange`(hidden) と `pagehide` の2つが上限**。`freeze` という“もう一段早い”合図は主戦場に**構造的に存在しない**。
+  - ＝**現物 loku-attn.js（index.html内SDK雛形 475-476行）の flush() は、`visibilitychange`(hidden) 主＋`pagehide` フォールバックの二段構え（sendBeacon）で、`freeze`/`resume` には一切依存していない**＝WebKitが実際に鳴らす合図“だけ”で組まれている（grep＝`freeze`/`onfreeze`/`document.wasDiscarded` は現物0件・依存なし）。
+- **他種との非重複（実装照合の要）**：
+  - **P0** は「離脱時に**どのイベントで**送るか（visibilitychange+pagehide の二段を使う）」の実装種。本補強はその**上に**「**それ以上に早い hook（freeze）は iOS に無い**＝二段は“好ましい選択”ではなく**取り得る上限（天井）**であって“不足”ではない」という**到達(reach)軸の確定**を足す＝P0の脅威範囲の格上げであって別実装ではない。
+  - **P7**（bfcache `pageshow`/`event.persisted`＝戻る入口）・**P12**（同一ページのままの可視トグルの時計）も、いずれも**WebKitが実際に鳴らす合図**（`pageshow`/`visibilitychange`）の上に組まれており、**鳴らない `freeze`/`resume` には依存していない**＝今回の確定は既存3種（P0/P7/P12）の設計選択が“到達する合図だけで構成されている”ことの裏書きでもある。
+- **根拠URL（S/A・当環境はegress広く遮断＝検索/報道取得を独立trace経路として扱う・本文一致を複数検索で確認してから採用）**：
+  - web.dev「Back/forward cache」（S・Google公式／`freeze`・`resume` は Chromium-based browsers のみ・bfcacheの合図は `pagehide`/`pageshow`＝Safariもbfcacheを持つと明記・403のため検索traceで本文一致確認）https://web.dev/articles/bfcache
+  - WebKitソース `page-lifecycle.idl`（S・`onfreeze`/`onresume`/`wasDiscarded` が `LayoutTests/imported/w3c/web-platform-tests/interfaces` 配下＝W3C Page Lifecycle specからの自動生成テスト用IDLであり実装ではない）https://webkit.googlesource.com/WebKit/+/00fcff39e9f7a9d1839a0c19073d27c20ad3fcda/LayoutTests/imported/w3c/web-platform-tests/interfaces/page-lifecycle.idl
+  - MDN `Navigator.sendBeacon` / `visibilitychange`（S・「最も確実なのは visibilitychange、未対応用に pagehide をフォールバック、unload/beforeunload はモバイルで壊滅的」＝本補強の“二段が上限”と整合）https://developer.mozilla.org/docs/Web/API/Navigator/sendBeacon
+  - Chrome公式「Page Lifecycle API」（S・`freeze`=背景タブのメモリ/CPU/電池/通信の過積載対策として“退場前の最終コール”／ただし「多くの状況で発火せず完全に信頼できない・状態保存は visibilitychange でやれ」＝生まれた瞬間から保険の保険）https://developer.chrome.com/blog/page-lifecycle-api/
+  - 現物：loku-tuning-plugin/index.html（flush() 469-473行・`visibilitychange`(hidden)→flush 475行・`pagehide`→flush 476行・`freeze`/`onfreeze`/`wasDiscarded` grep 0件）
+- **対策案＝“維持すべき現行設計”のガード（コード無変更・採否はDaiya/メイン領分・新種P番号は起こさない）**：
+  - **(a) 「iOSでは `freeze` が無い」を離脱送信の恒久前提に据える**：将来 loku-attn.js の離脱送信を拡張する際、「iOSでも `freeze` で最後にもう一回送れるはず」という期待で `document.addEventListener('freeze', flush)` を足しても、**主戦場では永遠に発火しない**（＝足しても害は無いが益も無い“死にコード”）。**離脱直前の送信は `visibilitychange`(hidden)＋`pagehide` の二段が iOS の上限**という前提を崩さない。
+  - **(b) 到達(reach)軸での born 免疫の明文化**：第103回で「測る側ツールの射程は“対象の直交（何を測るか）”＋“捕捉の到達（主戦場で録れるか）”の2軸で切る」と獲得した枠の**離脱送信版**＝`freeze` は「対象（離脱直前の送信合図）は正しいが、**到達(reach)軸でiOSに来ない**」hook。Lokuのflush()は到達する合図だけで組まれているため、この非到達の影響を受けない。
+- **検証方法（番人/メイン領分・1スタジオ目本番化時・P0/P7/P12のライフサイクル境界テスト群で）**：①LINE内WKWebViewで「LP閲覧中にホーム/アプリ切替→復帰」を往復させ、離脱flushが `visibilitychange`(hidden) で鳴り `active_sec`/箱ごと読了が途中値で保存されること（＝`freeze` 非依存でも取りこぼさない）②仮に `freeze` リスナが将来混入しても iOS では無反応で、P0の二段送信が従来どおり機能すること（死にコードの無害性）③P7（bfcache復帰）・P12（可視復帰リセット）が同一往復で `freeze` 非発火を前提に正しく走ること。
+- **優先度**：**低**（現物は `freeze` 非依存の二段flushで既にborn免疫＝P0の“到達軸”補強）。**新種P番号なし＝P0への追加観点（第44回P28以来 新種なし継続 45〜104）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 起源（origins.md #103件目・通し104回 記録）＝なぜ `freeze` イベントが生まれたか＝Chromeの「1ブラウザに多タブ過積載（メモリ/CPU/電池/通信）」を畳むための“退場前の最終コール”として設計されたが、Chrome自身が「信頼するな・状態保存は visibilitychange で」と言う保険の保険。iOSはタブでなくアプリ（プロセス）ごと一時停止する方式ゆえ同じ過積載を抱えず、WebKitはテスト用IDLだけ取り込んで本体を作らなかった＝**Lokuのflush()は「iOSはページを黙って一時停止する」不便に対し、WebKitが実際に鳴らす合図だけで組み、鳴らない freeze には最初から頼らない**設計（他者のwhy→自分のwhy 第86/100/101/103に続く5例目）。**判断はDaiya。**
