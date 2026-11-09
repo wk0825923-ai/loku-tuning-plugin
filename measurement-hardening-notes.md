@@ -2891,3 +2891,43 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 - **優先度**：**維持ガード＋鮮度観測**（新規実装なし・現行設計の良さの言語化と業界鮮度の記録）。**新種P番号なし＝P24への追加観点（第44回P28以来 新種なし継続 45〜106）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 起源（origins.md #106件目・通し107回 記録）＝なぜ計測業界は推定値を観測値と合算して見せ分けないのか（受け手が入札AI＝不確実性を扱えない機械だから）＝Lokuの受け手は人間ゆえ分けられる＝鉄則「数字を作らない」の構造的裏付け。**判断はDaiya。**
 
 ---
+
+## 追加観点（2026-11-09・目付第108回巡回からの還流）＝ビート1「計測精度の敵」＝bfcache（戻る/進むキャッシュ）に“冷凍”されている間、ブラウザは JavaScript のタイマーを止める（`setTimeout`/`setInterval` は凍結中に走らない）という一次を押さえた＝これにより P7（bfcache復帰ハンドル）が挙げた「復帰で古い active_sec が二重計上」懸念のうち<u>滞在秒(active_sec)の水増し</u>は、長い往復では現物の無操作ゲート(25秒)＋凍結中タイマー停止の二重でborn免疫＝残る実リスクは「短い往復(<25秒)での凍結秒の漏れ込み」に絞り込まれ、その塞ぎ(`lastTick`リセット)は P7 の `pageshow`(persisted) ハンドラ側に置くべき＝P7とP12の“継ぎ目”を一次で確定・新種P番号なし（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**＝第44回P28以来の新種なし継続（45〜107）。既存の **P7（bfcache復帰時に新ビュー計上＋per-viewカウンタのリセット・線200〜213）** と **P12（タブ/アプリの可視トグルで“隠れていた秒”が active_sec に混入するのを塞ぐ＝可視復帰時に `lastTick` リセット・線324〜337）** への**追加観点＝両種の“継ぎ目”の確定**に留める。テーマは第107回宿題#1「今回B2主役ゆえ次はB1／B1未踏サブ候補(d)bfcache復帰(pageshow persisted)時のtick/flush二重計上の現物境界（P7の精緻化）」の消化。**追記前に本ファイル全読＝P0〜P29＋P35 grep**し、`pageshow/bfcache/persisted/復帰/P7/P12/frozen/冷凍/タイマー` の既存言及と**重複させない**ことを確認：**P7（線200〜213）は「復帰で何もしないと(1)再訪まるごと未計測・(2)古いカウンタ(active_sec・エンゲージメント・max_scroll_pct)がそのまま復帰して二重計上」と<u>active_sec を二重計上リスクに含めて</u>記していたが、(i)<u>冷凍中はタイマーが止まる</u>＝凍結中は tick() 自体が走らず active_sec は積まれない、(ii)解凍直後の大 dt は現物の無操作ゲート(IDLE_MS=25秒)が長い往復では弾く＝active_sec の水増しは<u>既にborn免疫</u>、(iii)残る穴は“短い往復(<25秒)”に限られ、その塞ぎは P12 の可視復帰リセットではなく P7 の `pageshow` ハンドラが担うべき、の3点は未記録**＝今回の新facet。P12（線324〜337）は「同一ページのままの可視トグルの時計」に限定し線327で「P7の pageshow/persisted はタブ/アプリ切替では発火しない」とだけ切り分けていたが、**その“逆向き”＝<u>bfcache復帰では visibilitychange(visible) が正規の合図ではない</u>ゆえ P12 の塞ぎ(475行の hidden時flush に visible時reset を足す案)が bfcache往復を取りこぼす、という継ぎ目は未記録**＝今回確定。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P7＋P12 への追加観点・第108回巡回（2026-11-09）／bfcache“冷凍”中はタイマーが止まる＝active_sec の凍結秒水増しは長い往復でborn免疫・残る穴は短い往復(<25秒)のみ＝`lastTick`リセットは P7 の `pageshow`(persisted) ハンドラ側に置く】新種P番号なし
+
+- **現象（ページライフサイクルの一次・測る側の前提）**：
+  - **bfcache に“冷凍”されている間、ブラウザは実行中の JavaScript を凍結する＝保留中のタイマー（`setTimeout`/`setInterval`）や未解決の Promise・fetch コールバックは<u>走らない</u>**（例えると：控室で一時停止にされた客の“体内時計”も一緒に止まる＝止まっている間は秒を刻まない）。Chrome の Page Lifecycle（frozen 状態）と web.dev「Back/forward cache」が規定＝「frozen 状態では JS タイマーと fetch コールバックは実行されない」「ブラウザは bfcache 中のページの保留タイマー・未解決 Promise を一時停止する」。
+  - 復帰は `pageshow` の `event.persisted===true` が合図（load/DOMContentLoaded は再発火しない＝P7既出）。**復帰した瞬間に、凍結中に止まっていたタイマーが再開し、“凍結していた時間ぶん”が一気に経過したように見える**（最初の1刻みの経過時間 dt が「往復に費やした実時間」を丸ごと含む）。
+
+- **現物照合（A・born免疫と残穴の切り分けの根拠）**：loku-tuning-plugin/index.html `tick()`（342-349行）＝
+  - `var now=Date.now(), dt=(now-lastTick)/1000; lastTick=now;`（343行）＝毎刻み「前回からの経過」を dt として出す。**冷凍中は 367行の `setTimeout(tick,TICK)` が止まる＝tick() が走らない＝凍結中は active_sec は1秒も積まれない**（＝凍結＝加算停止がborn）。
+  - 解凍直後の1刻みは `dt ≈ 往復に費やした実時間`（例：15秒戻って見比べて進むと dt≈15）。ここで加算ゲート＝`pageVisible=(visibilityState==='visible'&&hasFocus)`（346行）＆`notIdle=(now-lastActivity)<IDLE_MS`（347行／IDLE_MS=25秒）＝`activeGate` 真の時だけ `totalActive+=dt`（348-349行）。
+    - **長い往復（凍結＋凍結直前の無操作 ≥ 25秒）**：`now-lastActivity ≥ 25秒` → `notIdle=false` → `activeGate=false` → **凍結ぶんの大 dt は加算されない＝born免疫**。これは P12 が可視トグルで塞ごうとしている水増しと<u>同じ無操作ゲート</u>が、bfcache 往復でも自動で効いている、ということ。
+    - **短い往復（凍結＋凍結直前の無操作 < 25秒。例：スクロール中にサッと戻る→10秒見比べ→進んで復帰）**：`now-lastActivity ≈ 10秒 < 25秒` → `notIdle=true` ＆ 復帰ページは可視・前面 → `activeGate=true` → **凍結ぶんの dt(≈10秒) が `totalActive` に混入**＝“戻って他ページを見ていた/席を外していた秒”が「このLPを読んでいた秒」に加算されうる（1往復あたり最大 ~25秒弱）。
+  - ＝P7 が「復帰で active_sec が二重計上」と一括りにした懸念は、**実際には“長い往復＝免疫／短い往復＝漏れ”に割れる**。漏れる側は P12 が可視トグルで言った穴と<u>同種（隠れていた秒の混入）</u>だが、**合図が visibilitychange でなく pageshow(persisted)** である点が違う。
+  - **flush の二重送信は別途 P1 で免疫**：bfcache に“入る”時は現物の `pagehide`→flush（476行）が鳴り、受け口 app.mjs の単調増加マージ（P1）が後続スナップショットの巻き戻しを防ぐ＝往復で複数回 flush しても active_sec/読了は巻き戻らない（P7既出・ここは不変）。今回の新点は**“送信の重複”でなく“同一セッション内の滞在秒の中身（凍結秒の混入）”**。
+
+- **他種との非重複（実装照合の要）**：
+  - **P7（bfcache復帰の新ビュー計上＋per-viewカウンタリセット・209行提案）**：P7の提案は「session/view_id 切替＋per-viewカウンタを0リセット」だが、**`lastTick` の取り直し（時計リセット）には触れていない**＝今回の追加点は「P7の `pageshow` ハンドラは、ビュー境界の数え直しに加えて<u>時計(`lastTick`)の取り直しも担うべき</u>（短い往復の凍結秒漏れを塞ぐため）」。かつ P7 が active_sec を「二重計上」側に入れていた記述を**“長い往復は免疫・短い往復のみ漏れ”に精緻化**。
+  - **P12（可視トグルの時計・335行(a)案＝visibilitychange の visible 側で `lastTick=Date.now()`）**：P12の塞ぎは **visibilitychange(visible)** を合図にする＝**同一ページのまま見え方だけ変わる往復**が対象。**bfcache 復帰はナビゲーション履歴の往復で、正規の合図は `pageshow`(persisted) ＝visibilitychange(visible) の発火は保証されない**（＝P12の可視復帰リセットだけでは bfcache 短往復を取りこぼす）。ゆえに**時計リセットを2経路（可視トグル＝P12／bfcache復帰＝P7）に分けて置く必要がある**＝これが P7とP12の“継ぎ目”。実装時は「同一往復で P7 のリセットと P12 のリセットが二重に走らないこと」だけ確認（P12の327行メモの裏返し）。
+  - **P8（prerender活性化ゲート）／P0（離脱flush）**：いずれも別レイヤー（入口の先読み／出口の送信）＝今回は「戻る入口での<u>時計の扱い</u>」＝非重複。
+
+- **根拠URL（S/A・当環境はvendor docが広くDNS遮断＝web.dev/MDN/webkit.org/html.spec.whatwg.org いずれも ENOTFOUND確認＝一次“文言”は複数検索の相互一致で確認してから採用・直フェッチ可の窓は github.com 系のみ）**：
+  - Chrome Page Lifecycle API（S・Google公式／frozen 状態で JS タイマー・fetch コールバックは走らない）https://developer.chrome.com/blog/page-lifecycle-api ※当環境DNS遮断＝検索経由で一次文言確認
+  - web.dev「Back/forward cache」（S・Google公式／bfcache 中はページの保留タイマー・未解決 Promise を一時停止／pagehide は unload が鳴る全ケース＋bfcache入場でも鳴る／persisted はキャッシュ“意図”の合図／iOS は全ブラウザが WebKit＝Safari 同挙動）https://web.dev/articles/bfcache ※当環境DNS遮断＝検索経由で一次文言確認
+  - WebKit Bugzilla #314237（A/S・2026-05-06報告・2026-05 main コミット／SuspendedPageProxy を同一プロセスの bfcache 各エントリ間で共有する変更）＝WebKit が2026年も bfcache を能動保守している鮮度アンカー https://bugs.webkit.org/show_bug.cgi?id=314237 ※当環境DNS遮断＝検索経由
+  - 現物（A）：loku-tuning-plugin/index.html（`tick()` 342-349行＝`dt=(now-lastTick)/1000; lastTick=now` と加算ゲート／346-348行 可視・無操作ゲート／367行 `setTimeout(tick,TICK)`＝凍結で停止／475-476行 visibilitychange(hidden)+pagehide flush＝可視復帰/pageshowハンドラは無し）・handoff-demo/app.mjs（P1 単調増加マージ）
+
+- **対策案＝“継ぎ目”の設計線（コード無変更・採否はDaiya/メイン領分・新種P番号なし）**：
+  - **(a) P7 の `pageshow`(persisted) ハンドラに「時計の取り直し」を含める**：P7が将来入れる `window.addEventListener('pageshow', e=>{ if(e.persisted){ /*新ビュー*/ } })` の中で、per-viewカウンタ0リセット（P7既存提案）に加えて **`lastTick=Date.now();`（必要なら `vel`/`velSmooth`=0）** も実行＝**短い往復の凍結秒が復帰直後の dt として active_sec に混入するのを塞ぐ**。P12が可視トグルで足す1行(335行(a))の bfcache 版＝「隠れていた間を dt に入れない」を2経路で揃える。
+  - **(b) 現状の守りの正しい言語化（過剰不安の抑制）**：**長い往復（≥25秒）での凍結秒水増しは、現物の無操作ゲート(347-348行)が既に弾く＝born免疫**＝ここは新規実装不要。P7の「復帰でactive_sec二重計上」は<u>短い往復に限った話</u>と読み替える＝メインターミナルが塞ぐべき面を「短往復の時計リセット」1点に絞れる（実装コスト最小化）。
+  - **(c) per-boxカウンタ側は別＝P7本来の宿題のまま**：active_sec と違い、箱ごとエンゲージメント/revisits/max_scroll_pct は無操作ゲートで弾かれない“累積値”＝**復帰で新ビューにするなら 0 リセットが要る**（P7の209行提案どおり）＝ここは今回の免疫の対象外＝P7のビュー境界判断（session刷新かview連番か）は引き続きDaiya判断。
+
+- **検証方法（番人/メイン領分・1スタジオ目本番化時・P0/P1/P7/P12のライフサイクル境界テスト群で）**：①主戦場 LINE内WKWebView/iOS Safari で「LPをスクロール中に<u>サッと戻る→別ページを10秒見る→進んで復帰</u>（短い往復）」を作り、復帰後の `active_sec` に**その10秒が混入していないか**を実機確認（＝短往復の穴の存在確認）。②同じ往復を「<u>30秒以上</u>別ページ滞在→復帰」（長い往復）に変え、無操作ゲート(25秒)で**凍結秒が弾かれる（active_sec が増えない）**ことを確認（＝現状の守りの効き確認）。③P7の `pageshow` ハンドラ（時計＋カウンタのリセット）を仮に足した場合、①の穴が消え、かつ P12 の可視復帰リセットと**同一往復で二重に走らない**こと＋P1で過去ビューが巻き戻らないことを確認。④bfcache 復帰時に visibilitychange(visible) が鳴るか否かを実機で観測し、**pageshow(persisted) を時計リセットの正規合図として扱う**判断の裏取り（鳴っても鳴らなくても pageshow 側に置けば安全）。
+
+- **優先度**：**P7（bfcache復帰ハンドル）の精緻化＋P12（可視時計）との継ぎ目確定**（新規実装なし・既存2種の適用範囲の切り分けと“時計リセットの置き場所”の設計線）。**新種P番号なし＝P7＋P12への追加観点（第44回P28以来 新種なし継続 45〜107）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 起源（origins.md #107件目・通し108回 記録）＝なぜ「タブ切替で戻った(visibility)」と「戻るボタンで戻った(bfcache navigation)」は同じ“戻ってきた”なのに別の合図なのか＝一方は「文書は生きたまま見え方だけ変わる(可視性)」、他方は「文書が退避/復帰する(ナビゲーション履歴)」という別次元の状態変化で、Webは両者を混同させないため別API(visibilitychange/pageshow+persisted)に分けた＝その分離こそが計測実装者に「復帰処理を2箇所に書く」継ぎ目(P7とP12の谷間)を生んだ根っこ。**判断はDaiya。**
+
+---
