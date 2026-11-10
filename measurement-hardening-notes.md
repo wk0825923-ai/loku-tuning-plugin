@@ -2931,3 +2931,25 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 - **優先度**：**P7（bfcache復帰ハンドル）の精緻化＋P12（可視時計）との継ぎ目確定**（新規実装なし・既存2種の適用範囲の切り分けと“時計リセットの置き場所”の設計線）。**新種P番号なし＝P7＋P12への追加観点（第44回P28以来 新種なし継続 45〜107）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 起源（origins.md #107件目・通し108回 記録）＝なぜ「タブ切替で戻った(visibility)」と「戻るボタンで戻った(bfcache navigation)」は同じ“戻ってきた”なのに別の合図なのか＝一方は「文書は生きたまま見え方だけ変わる(可視性)」、他方は「文書が退避/復帰する(ナビゲーション履歴)」という別次元の状態変化で、Webは両者を混同させないため別API(visibilitychange/pageshow+persisted)に分けた＝その分離こそが計測実装者に「復帰処理を2箇所に書く」継ぎ目(P7とP12の谷間)を生んだ根っこ。**判断はDaiya。**
 
 ---
+
+## 追加観点（2026-11-10・目付第109回巡回からの還流）＝ビート2「計測・分析技術と競合の動き」＝iOS 26 の新描画“Liquid Glass”がセッションリプレイのマスキング(目隠し)を壊し、Sentry/PostHog/Mixpanel の3ベンダが揃ってiOSの録画を自動オフ/安全封鎖（PII漏れ防止）＝Lokuは画面も入力値も録らない(never-capture)ゆえ伏せ字にすべき中身を持たず壊れようがない＝P24（同一オリジン=録画勢への免疫）への追加観点 第3facet・新種P番号なし（コード無変更）
+
+**前提**：以下は**新規P番号を起こさない**＝第44回P28以来の新種なし継続（45〜108）。既存の **P24（同一オリジン配信＝広告ブロッカー免疫／録画勢への免疫＝外部トラッカー/録画SDK非依存・index.html 464/469-473行）** への**追加観点＝“維持すべき現行の良い設計(never-capture)”のガード**に留める。テーマは第108回宿題#1「第108はB1主役ゆえ次はB2／B2未踏候補(a)PostHog/Plausible/Umami等OSS計測の2026 Q4新機能から盗める堅牢化テク（github.com経由=到達可）」を直撃＝探索主役がPostHog/Sentry/Mixpanelの iOS セッションリプレイ変更履歴に着地。**追記前に本ファイル全読＝P0〜P29＋P35 grep**し、`Liquid Glass/liquid glass/fail closed/8.57.0/Sentry/マスキング崩壊` の既存言及0件を確認、かつ**第103回（線2734＝録画の“捕捉範囲”が主戦場WKWebView/クロスオリジンで既定欠落＝過小捕捉免疫）／第107回（線2862＝rrweb `maskAllInputs:false`＝録画勢が入力“内容”を過剰捕捉・Lokuは入力value非参照＝過剰捕捉免疫）とは別facet**であることを確認：**今回の新facet＝「マスキング(目隠し)そのものがOSの描画層に依存するため、iOS 26 Liquid Glass の描画更新で“目隠しが黙って壊れる(信頼性の崩壊)”＝第103=過小/第107=過剰に続く“目隠しの信頼性”という第3軸」**。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P24 への追加観点 第3facet・第109回巡回（2026-11-10）／iOS 26 Liquid Glass がセッションリプレイのマスキングを壊し3ベンダがiOS録画を自動オフ/安全封鎖＝“録ってから隠す(record-then-redact)”方式の描画層依存の脆さが主戦場で露呈＝Lokuの“録らない(never-capture)”は伏せ字にすべき中身が無く壊れようがない＝P24免疫の第3軸(信頼性)】新種P番号なし
+
+- **現象（何者か・測る側の2026秋の事件・一次）**：セッションリプレイ（画面録画ツール）各社のマスキング（機微を伏せ字にする目隠し）が、**iOS 26 の新描画“Liquid Glass”で一斉に壊れた**。
+  - **Sentry Cocoa（A・実装者一次／GitHub CHANGELOG直取り成功）**＝`8.57.0`「`Session replay is now automatically disabled in environments with unreliable masking to prevent PII leaks (#6389)`」＝目隠しが不確実な環境では**PII漏れ防止のため録画を自動無効化**。原因＝`potential masking issues introduced by Apple's Liquid Glass rendering changes in iOS 26.0`（Xcode 26 ビルド×iOS 26 実行で view が正しくマスクされない）。override=`options.experimental.enableSessionReplayInUnreliableEnvironment`。**`9.12.0` で redaction 対応やり直し＝再有効化（override撤去）**。URL: https://github.com/getsentry/sentry-cocoa/blob/main/CHANGELOG.md
+  - **PostHog（A・一次changelog・検索経由＝posthog.com本体DNS遮断）**＝「Safer iOS replay masking」2026-10-29（Client Libraries Team）＝iOS 録画で**より多くの描画経路を既定で隠す側に倒した**（マスク対象がすり抜ける確率を下げる）。URL: https://posthog.com/changelog
+  - **Mixpanel（A・GitHub）**＝同不具合で Xcode 26/iOS 26 ビルドの録画を一旦停止→`v1.2.1` で対応・フラグで再有効化。URL: https://github.com/mixpanel/mixpanel-ios-session-replay-package
+  - ＝**主戦場(iOS 26)のど真ん中で、録画が約1世代ぶん「止まった/漏れ得た」**。目隠しが壊れた根っこ＝マスキングは「描画される一つ一つの部品を見て機微を描画の瞬間に塗りつぶす」＝**OS側の描画内部構造に強く依存**ゆえ、Appleが画面描画を作り替えると同じコードでも“塗り残し”が黙って発生する（第105回起源「OSの設計契約」と同型＝Web/計測の1段下のOS層が前提を一方的に変える）。
+- **現物との突き合わせ（目付がgrep・2026-11-10）＝Lokuは録画SDK非依存・画面も入力値も録らない(never-capture)**：`index.html` の計測は**同一オリジンの `tick()`（342行・`TICK=200`ms）＝「どの箱を何秒読んだか」という数字だけ**を出す。`keydown` 等は“操作があった合図”(`markActivity`・326行)に使うのみで**入力欄の `value` は一切読まない**。grep＝`rrweb`/`session replay`/マスキング系は現物0件。受け口 `FLUSH_ENDPOINT='/api/attn/collect'`（464行・同一オリジン相対）＝外部録画SaaSへ送らない。＝**伏せ字にすべき中身を最初から1件も捕捉しない＝隠す工程が無い＝隠し損ないも無い＝OSの描画が変わっても漏れない・止める必要もない**。
+- **非重複（第103/第107との別facet）**：
+  - **第103回（過小捕捉）**＝録画の“捕捉<u>範囲</u>”が主戦場WKWebView/クロスオリジンで既定欠落＝AI要約の母集団が主戦場を外す。
+  - **第107回（過剰捕捉）**＝rrweb `maskAllInputs:false`＝録画勢が入力“<u>内容</u>”を既定で録りすぎる＝Lokuは入力value非参照＝データ最小化免疫。
+  - **今回（信頼性）**＝目隠し<u>そのもの</u>がOS描画層に依存し、OS更新(Liquid Glass)で黙って壊れ、ベンダが録画を撤退させる＝**“過小/過剰”に続く第3軸＝「目隠しの信頼性＝OS描画依存の脆さ」**。Lokuのnever-captureは3軸すべてにborn免疫。
+- **対策案（コードは触らない・新規実装なし）**：
+  - **(維持ガード)** 現行の**同一オリジン・録画非依存・画面/入力値 非捕捉**設計を維持すべき根拠が1つ増えた＝「主戦場で計測を止めずに続けられる堅牢性の配当」。データ最小化は建前でなく堅牢性の設計判断。
+  - **(将来の併用時ガード)** もし将来 Loku が録画ツール（Clarity/Hotjar/PostHog等）を併用・連携するなら、録画データは**主戦場iOSで「録れていない期間」「マスキング崩壊で提供停止した期間」が虫食い**＝それを Loku の読了秒と並べて店主に見せると**iOSの客ほど“録画で裏が取れない”非対称**が生じる。役割分離＝「録画は補助・主戦場の正は Loku の読了秒／録画の欠測・崩壊期間を数字の信頼区間に添える」。
+- **検証方法**：番人(qa-auditor)領分＝実機E2E（iOS 26 LINE内WKWebView）で「collectペイロードに画面内容・入力欄 `value` が一切乗らないこと（録画SDK非依存・`keydown` は合図のみ）」をレグレッションガード＝**OS描画が変わっても Loku は機微を捕捉しない**を境界テスト化。
+- **優先度**：**低〜中**（現物はnever-capture設計ゆえborn免疫＝新規実装なし。実務上の要は「録画ツール併用を安易に増やさない／併用するなら主戦場iOSの録画欠測・崩壊を数字に添える」という設計・オンボーディング方針）。**新種P番号なし＝第44回P28以来 新種なし継続（45〜108）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 法規制（録画のPII/同意）は見廻り領分。
