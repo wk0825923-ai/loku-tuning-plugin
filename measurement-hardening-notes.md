@@ -2953,3 +2953,28 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
   - **(将来の併用時ガード)** もし将来 Loku が録画ツール（Clarity/Hotjar/PostHog等）を併用・連携するなら、録画データは**主戦場iOSで「録れていない期間」「マスキング崩壊で提供停止した期間」が虫食い**＝それを Loku の読了秒と並べて店主に見せると**iOSの客ほど“録画で裏が取れない”非対称**が生じる。役割分離＝「録画は補助・主戦場の正は Loku の読了秒／録画の欠測・崩壊期間を数字の信頼区間に添える」。
 - **検証方法**：番人(qa-auditor)領分＝実機E2E（iOS 26 LINE内WKWebView）で「collectペイロードに画面内容・入力欄 `value` が一切乗らないこと（録画SDK非依存・`keydown` は合図のみ）」をレグレッションガード＝**OS描画が変わっても Loku は機微を捕捉しない**を境界テスト化。
 - **優先度**：**低〜中**（現物はnever-capture設計ゆえborn免疫＝新規実装なし。実務上の要は「録画ツール併用を安易に増やさない／併用するなら主戦場iOSの録画欠測・崩壊を数字に添える」という設計・オンボーディング方針）。**新種P番号なし＝第44回P28以来 新種なし継続（45〜108）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。** 法規制（録画のPII/同意）は見廻り領分。
+
+
+## 追加観点（2026-11-11・目付第110回巡回からの還流）＝ビート1「計測精度の敵」＝離脱 `sendBeacon` の `application/json` ペイロードは「CORS安全リスト外」＝クロスオリジン送信時に事前確認(preflight)が要り、ページ消滅時にレンダラが片付けられて事前確認が未完→本送信が静かに落ちる／Lokuは本番 `FLUSH_ENDPOINT` が相対パス `/api/attn/collect`＝同一オリジンゆえ事前確認が規格上発生せずborn免疫＝P19（新規種／離脱時送信）への追加観点・新種P番号なし（コード無変更）
+
+- **既存P19との関係（非重複の別facet）**：既存P19（第18回巡回・本ファイル485行〜）は `sendBeacon` が **(1)保持中ビーコンの合計バイト超過／(2)1本が64KiB超** の時に例外でなく返り値 `false` を返す＝それを見て `fetch(keepalive:true)` へフォールバックすべき、という**「キュー溢れ/サイズ超過」facet**。今回は**別facet＝「Content-Type と CORS（送り先オリジン）」facet**。追記前に `preflight`/`safelist`/`CORS`/`Content-Type`/`application/json`/`text/plain`/`同一オリジン` で全read＋grepし、既存はバイト上限・返り値のみでContent-Type/CORS/preflightには未言及を確認（第107回恒久メモ(iv)=seed-sprawl回避＝前回が触れなかった別facetに限定）。
+
+- **現象（一次の事実）**：CORSで「事前確認(preflight)なしに送ってよい」単純リクエストのContent-Typeは **`application/x-www-form-urlencoded` / `multipart/form-data` / `text/plain` の3種だけ**（MDN「CORS-safelisted request header」＝Fetch仕様・S／`raw.githubusercontent.com/mdn/content/main/files/en-us/glossary/cors-safelisted_request_header/index.md` から直取りで原典3語を確認）。**`application/json` はこの3種に入らない**＝クロスオリジンに送る時は本送信の前に `OPTIONS`（preflight）を1往復投げる決まり。この事前確認は**描画プロセス（レンダラ）の中で走る**ため、**ページが消える離脱時はレンダラが先に片付けられ、事前確認が終わる前にプロセスが無くなる＝本送信が永遠に出ない**（Chromium開発者説明・A／Chromiumは「Intent to Temporarily Remove: sendBeacon() with a Blob whose type is not CORS-safelisted」＝安全リスト外Blob型beaconの一時撤去意向まで出した・blink-dev・A／WebKitも `LayoutTests/.../beacon/cors/cors-preflight-blob-failure.html`・`crossorigin-arraybufferview-no-preflight.html` でこの挙動を持つ・S）。なおMDNの `sendBeacon` 本体ページは「HTTP POSTで送る」「64KiB上限・`false`返り」までしか書かず**Content-Type/CORS/preflightには一切触れない**＝実装者の盲点になりやすい（本体ページも直取りして“書いていない”ことを確認）。
+
+- **根拠URL**：
+  - MDN「CORS-safelisted request header」（Content-Type安全リスト3種・application/json非該当＝preflight要）＝S：https://raw.githubusercontent.com/mdn/content/main/files/en-us/glossary/cors-safelisted_request_header/index.md （原典・直取り成功）／ 公開面 https://developer.mozilla.org/en-US/docs/Glossary/CORS-safelisted_request_header
+  - MDN「Navigator: sendBeacon()」（64KiB・false・POST・Content-Type/CORS記載なし）＝S：https://raw.githubusercontent.com/mdn/content/main/files/en-us/web/api/navigator/sendbeacon/index.md
+  - Chromium blink-dev「Intent to Temporarily Remove: sendBeacon() with a Blob whose type is not CORS-safelisted」＝A（preflightはレンダラで走りunloadで殺され得る／groups.google.com はセッションDNS遮断＝検索相互一致で確認）：https://groups.google.com/a/chromium.org/g/blink-dev/c/dAfYF2gauw4
+  - WebKit LayoutTests（beacon CORS preflight 挙動）＝S（webkit.googlesource.com はセッションDNS遮断＝検索index上でpath確認）：LayoutTests/imported/w3c/web-platform-tests/beacon/beacon-cors.sub.window.js ／ LayoutTests/http/wpt/beacon/cors/cors-preflight-blob-failure.html
+  - 現物（A）：loku-tuning-plugin/index.html `flush()`（473行＝`navigator.sendBeacon(FLUSH_ENDPOINT, new Blob([flushPayload()],{type:'application/json'}))`）・`FLUSH_ENDPOINT` 既定（464行コメント＝本番は相対パス `/api/attn/collect`・デモは `null`＝非送信）／ handoff-demo/app.mjs collect（364行・同一オリジンJSON受け）。
+
+- **現物との突き合わせ＝Lokuのborn免疫**：Lokuの `flush()` は確かに `application/json` のBlobを使うが、**本番 `FLUSH_ENDPOINT` の既定は相対パス `/api/attn/collect`＝必ず同一オリジン**＝**クロスオリジンでないため preflight は規格上起こりようがない**＝`application/json` でも離脱ビーコンは前さばき無しに1発で届く。**`application/json` を使っていても安全なのは「送り先が自分と同じドメインだから」の一点に効いている**。しかも**「集約先を同一オリジン(1st-party・相対パス)に保つ」という1つの条件が同時に3つを守る**＝(i)この離脱ビーコンのpreflight回避（本件）／(ii)匿名ID `anon_id` がITPの“3rd-partyストレージ7日削除”を受けない（**P3**）／(iii)`referrer`・起源パラメータの入力が保たれる（**P5**）＝**単一条件の多重防御**（本ファイル157行「P3補遺＝デバイス個性を識別に使わない＝P3+P5同時防御」と同型の“1条件×複数防御”）。
+
+- **対策案（コードは触っていない・採否と優先度はDaiya/メイン領分）**：
+  - **(a) 同一オリジン集約の維持＝既定の正着**：`FLUSH_ENDPOINT` を相対パス（同一オリジン）に保つ限り、`application/json` のままで preflight は発生しない＝現状維持が最善。新規実装は不要（＝“同一オリジンを崩さない”設計ガード）。これはP3（ITP 7日削除回避）・P5（起源入力保持）と同時に効く単一条件。
+  - **(b) クロスオリジン集約が将来不可避な場合のみ**（例：スタジオ横断の共通集約ドメイン `collect.loku.jp` へ絶対URLで送る構成）：離脱ビーコンの本文を **`text/plain` のBlobでJSON文字列として送る**（`new Blob([flushPayload()],{type:'text/plain'})`＝安全リスト＝preflight無し）＋サーバ側で `JSON.parse`。あるいは受け口側で `OPTIONS` に正しいCORSヘッダ（`Access-Control-Allow-Origin`/`-Methods`/`-Headers`）を返す設計を前提化するが、**離脱時はpreflight自体が落ち得るため `text/plain` 回避の方が主戦場で堅い**。
+  - **(c) 既存P19のフォールバック（`fetch(keepalive:true)`）もクロスオリジンなら正しいCORS必須**＝P19(a)の `fetch` 経路にも同じ preflight 論点が付く（Content-Type を `text/plain` にするか、サーバのCORS前提化）。
+
+- **検証方法（メインターミナル領分・1スタジオ目本番化時）**：iOS 26 の LINE内WKWebView／モバイルSafari で、`FLUSH_ENDPOINT` が **(a)同一オリジン相対パス時** と **(b)仮に絶対URL（別ドメイン）時** の離脱ビーコン到達率を、受け口のネットワークログ（collect の着弾数 vs 離脱イベント数）で実測比較＝(b)で到達率が落ちるなら preflight ドロップの実証＝`text/plain` 化で回復するかを併せて確認。**数字は実測で出す＝ここで作らない**。
+
+- **優先度**：**現行の同一オリジン集約が維持される限り実装不要（＝P19への“Content-Type/オリジンを崩さない”ガード）**。スタジオ横断の共通集約ドメイン等でクロスオリジン送信を検討する局面が来た時のみ「中」（`text/plain` 化 or CORS前提化）。判断はDaiya。
