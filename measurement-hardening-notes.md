@@ -3000,3 +3000,19 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
   - **(c) SRIは外部取得リソースのみ対象＝直書きは対象外＝“そもそも外部ファイルにしない／しても1st-party＋指紋”が最も堅い**。
 - **検証方法**：本番 `loku-attn.js` の配信元が(i)同一オリジン固定パスか(ii)指紋留めがあるかを**オンボーディング時チェック**に入れ、**CDN/ホスト変更の構成レビューで“指紋の貼り替え漏れ＝スクリプトが読めなくなる／留めが外れる”を番犬化**（実装・QAはメイン領分）。
 - **優先度**：**低〜中**＝デモ直書きなら**実装不要（“配信物の完全性”ガード）**。本番の外部配信/CDN化を検討する時のみ中。**新種P番号なし＝P24への追加観点 第4軸（第44回P28以来 新種なし継続 45〜110）。コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。**
+
+## 追加観点（2026-11-14・目付第112回巡回からの還流）＝ビート1「計測精度の敵（プライバシーによるID持続の制限）」＝Safari/WebKit 27 が“メール名寄せインフラ(identity resolution)”への通信を<ドメイン層で>遮断＝P5/P3/P9への追加観点・新種P番号なし（コード無変更）
+
+**前提**：WebKit公式ブログ「Blocking Identity Resolution Infrastructure」（2026-10-19・John Wilander/Charlie Wolfe/Matthew Finkel）の答え合わせ。以下は実装照合表（P0-P3済）・P5（LTP＝URLクリックID剥がし）・P9（merge／identity stitching）・既存P番号（P6-P29/P35）とは**重複しない、P5/P3/P9への追加観点＝“第三者 identity-resolution インフラ非依存”を急所条件として明文化＋店主後付け時の監視点**。**新規P番号は起こさない＝第44回P28以来の新種なしを継続（45〜111）。追記前に本ファイル全読（P0〜P29＋P35 grep＋identity resolution/名寄せ/Safari 27 既出箇所を確認）し、第62/69（LTP＝URL印削り）・第9回P9（merge層）・第67（複数OA friend_id）のいずれとも機構が別層であることを確認。** コードは触っていない。採否・優先度・実装・QAはDaiya／メイン領分。
+
+### 【P5／P3／P9・追加観点】ブラウザが“メール→持続ID”の第三者名寄せ業者への通信をドメイン層で遮断＝Lokuの一人称ID完結はborn免疫＝「第三者CDP/メール名寄せを後付けしない」を急所条件（番犬）として明文化
+- **現象**：Safari/WebKit 27（iOS/iPadOS/macOS/visionOS 27）が、**ログイン/メルマガ登録で集めたメールアドレスを“サイトをまたいで持続する追跡ID”に変換する第三者 identity-resolution インフラ業者への通信を、ドメイン単位で遮断**する（例えると：別々の店で書いた会員カードを裏で1枚の共通名簿に突き合わせる“名寄せ業者”への配線そのものを、店の壁の中で切る）。WebKit は背景を「クロスサイトCookieは6年前に全面遮断・名寄せはそのCookie後の抜け道」と位置づけ＝**ITP→P3（anon_id揮発）、LTP→P5（URLクリックID剥がし）に続く“サイト越えに人を束ねる手段をブラウザが一枚ずつ剥がす”一本の潮流の最新手**。
+  - **重要＝別層の確認**：第62/69回で扱った **Link Tracking Protection（P5）は「URL末尾のクリックID（gclid/fbclid/twclid/si/xmt/cn/cxt）を剥がす」=URLの印削り**。今回は**「業者サーバーへの通信をドメインで断つ」=ネットワーク層の遮断**＝別機構。第9回P9（Lokuの merge層の orphan 匿名ID＝自前の名寄せの抜け）とも別＝今回は**第三者(外部)名寄せインフラへの非依存**の話。
+  - **現物確認（当たり）**：Lokuの識別は**(1)端末内 `localStorage` の自前 `anon_id`（index.html SDK雛形 `getAnonId()`・P3＝TTL7日揮発前提）(2)LINE友だち追加後の `friend_id`（app.mjs identity Map・P9＝恒久キー）**のみ。**来訪者のメールアドレスを第三者名寄せ業者（LiveRamp RampID 等）へ送る導線は現物に存在しない**（index.html に email/identity-vendor 送信 grep 0件・唯一の input は consentChk 140行）＝**この遮断で壊れる計測行が1行も無い＝born免疫**。かつ「決定的マッチ＋リアルタイム＋ファーストパーティ優先」の2026名寄せ本流（第67回で確認）と `friend_id` 思想が同家系＝**ブラウザが第三者名寄せを潰すほどLokuの一人称完結の相対優位が上がる**。
+- **根拠URL**：WebKit Blog「Blocking Identity Resolution Infrastructure」2026-10-19（S・webkit.orgはDNS遮断ゆえ直取り未達／mjtsai.com・helpnetsecurity.com(10/21)・ppc.land・Relevant Audience・CyberInsider の5独立源で日付/著者/中核主張が相互一致＝**A→traced**） https://mjtsai.com/blog/?p=53607 ／ https://www.helpnetsecurity.com/2026/10/21/apple-safari-tracking-protection/ ／ WebKit Bugzilla bug 307853/324771（対象ドメイン adsrvr.org/rlcdn.com/pippio.com 等は二次・一次直取り未達） https://bugs.webkit.org/show_bug.cgi?id=324771
+- **対策案（コードは触らない・提案のみ）**：
+  - (a)**現状維持が正着**＝Lokuは一人称ID完結ゆえ追加実装不要（この遮断に対しborn免疫）。
+  - (b)**急所条件の明文化（番犬）**＝「**Lokuの計測/帰属に第三者 identity-resolution/メール名寄せ(enhanced conversions の email-match・CDP の identity graph)を“失った帰属の回収”目的で後付けしない**」を構成変更レビューの一発判定条件に追加（既存の急所3条件＝(1)同一オリジン集約(2)端末個性を識別に使わない(3)never-capture に続く**第4条件＝(4)サイト越え名寄せ(第三者)に依存しない＝一人称ID固定**）。
+  - (c)**監視点（店主が後付けした場合）**＝店主が別途CDP/メール名寄せを導入している場合、主戦場iOS(Safari/WebKit 27)で**その業者への通信が黙って切られ突合率が静かにゼロへ寄る**＝店主は「広告成果が急落した」と**実需の変化と誤読**しうる。Lokuの一人称計測を**“動かない基準線”**として提示し、その誤読を剥がす。
+- **検証方法**：(1)本番オンボーディング/構成変更レビューで「第三者 identity-resolution/メール名寄せベンダーへの送信導線が無いか」を番犬チェック（負のテスト＝あってはならない）。(2)決断面(surface)別・流入元別の到達/突合率を定点し、**特定経路だけの急減が“導線断/遮断”か“実需変化”か**を切り分ける検知器を用意。(3)W-112a（WebKitブロックリストの動的化・対象ドメイン確定）の一次(bugzilla/webkit.org許可時)追跡。
+- **優先度**：**実装は不要（born免疫）／(b)の急所条件明文化は中（構成変更レビューの番犬項目として常設価値）**。P5/P3/P9への追加観点・新種P番号なし（45〜111継続）・目付第112回巡回からの還流・コード無変更。
