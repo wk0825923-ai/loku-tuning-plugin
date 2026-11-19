@@ -3016,3 +3016,33 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
   - (c)**監視点（店主が後付けした場合）**＝店主が別途CDP/メール名寄せを導入している場合、主戦場iOS(Safari/WebKit 27)で**その業者への通信が黙って切られ突合率が静かにゼロへ寄る**＝店主は「広告成果が急落した」と**実需の変化と誤読**しうる。Lokuの一人称計測を**“動かない基準線”**として提示し、その誤読を剥がす。
 - **検証方法**：(1)本番オンボーディング/構成変更レビューで「第三者 identity-resolution/メール名寄せベンダーへの送信導線が無いか」を番犬チェック（負のテスト＝あってはならない）。(2)決断面(surface)別・流入元別の到達/突合率を定点し、**特定経路だけの急減が“導線断/遮断”か“実需変化”か**を切り分ける検知器を用意。(3)W-112a（WebKitブロックリストの動的化・対象ドメイン確定）の一次(bugzilla/webkit.org許可時)追跡。
 - **優先度**：**実装は不要（born免疫）／(b)の急所条件明文化は中（構成変更レビューの番犬項目として常設価値）**。P5/P3/P9への追加観点・新種P番号なし（45〜111継続）・目付第112回巡回からの還流・コード無変更。
+
+## 追加観点（2026-11-19・目付第114回巡回からの還流）＝ビート1「計測精度の敵（時計源の信頼性）」＝滞在秒 `active_sec` を刻む `tick()` の経過秒 `dt` は `Date.now()`（壁時計）で測る＝NTP自動補正/手動変更/夏時間で可視中でも時刻がジャンプすると `dt` が負or膨張しうる／業界定石は単調時計 `performance.now()`で測れ＝P12（可視復帰の時計）＋第46回(2)（LPM=実クロックdtで積む）への追加観点＝**自己訂正**（新種P番号なし・コード無変更）
+
+### 【P12＋第46回(2)への追加観点＝訂正／`dt` の計測は `Date.now()`=壁時計であって単調時計 `performance.now()` ではない＝第46回「Lokuは単調時計の定石を実装済」は厳密には不正確＝残る穴=壁時計ジャンプ(NTP/手動/夏時間)で可視中でもdtが負/膨張】新種P番号なし
+
+**前提**：以下は**新規P番号を起こさない**＝第44回P28以来の新種なし継続（45〜113）。本件は既存ノートの**自己訂正（誤報訂正）**＝第113回で確立した「成熟ノートの主産物は新種P番号より“答え合わせの質と誤報訂正”」の実践。**追記前に本ファイル全読＝`performance.now`/`monotonic`/`Date.now`/`時計`/`dt` を grep し、以下の既存種と非重複を確認**：
+- **P12（第11回・可視復帰の時計＝line 325付近）**＝タブ/アプリを離れて戻る境目で `lastTick` を取り直す＝**可視トグル(visibilitychange)に紐づく**凍結秒の混入。
+- **第26回 P12追加観点（line 665-673付近）**＝巨大 `dt` のクランプ(`dt=Math.min(…)`)/異常dtゲートを「保険」から「芯」へ格上げ＝ただし**(a)設計材料で未実装 (b)`Math.min` は“負のdt”を止めない (c)背景凍結/間引き前提の発想**。
+- **第46回(2)（line 1267/1273付近）**＝iOS低電力モード/背景タイマー間引きへの免疫確認。ここで「業界のタイマードリフト補正の定石『固定増分でなく `performance.now()`/実クロック差分で積め』を**Lokuは既に実装**」と記した＝**本件が訂正する当の記述**。
+- **P1追加観点(event-time・line 1130付近)**＝「どの時刻を payload に保存するか(event-time vs processing-time)」＝本件の「経過の“測り方”(壁時計vs単調時計)」とは別facet。
+
+いずれも**「可視のまま・凍結もしていないのに、時計そのものが時刻合わせで前後にジャンプして `dt` が狂う」経路は拾っていない**＝本件は**既存種の“訂正＋残る1点の明示”**。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+- **現象（S一次＋現物grep A）**：
+  - **(1) 現物は経過秒を壁時計 `Date.now()` の差で積む（現物grep A）**＝`tick()`（index.html 342-349行）は `var now=Date.now(), dt=(now-lastTick)/1000; lastTick=now;`＝「固定増分でなく実際に経過した時刻差で積む」半分は正しい（当たり＝第46回の指摘どおり）。**だが使っている時計は `Date.now()`＝壁時計**（例えると：壁掛けのカレンダー時計。誰かが針を合わせ直せば進みも戻りもする）。`lastTick=Date.now()`（323行）・`markActivity`/`anon_id`/`flush` も全て `Date.now()`（grep確認）。
+  - **(2) `Date.now()` は時刻調整の影響を受ける（S一次 MDN/W3C）**＝MDN「`Date.now()` may have been impacted by system and user clock adjustments, clock skew, etc.」／W3C High Resolution Time「2回の `Date.now()` の差で出した経過時間は、途中で時計が調整されると**マイナスになりうる**（unsafe current time can decrease）」。対して `performance.now()` は**単調時計**（例えると：押した瞬間から絶対に巻き戻らないストップウォッチ）＝MDN「its current time never decreases and isn't subject to adjustments」＝固定起点(time origin)から数え・減らず・調整免疫。
+  - **(3) 主戦場スマホは時刻ジャンプが日常（機構S）**＝NTP自動補正・手動時刻変更・夏時間(DST)切替・「日付と時刻を自動設定」トグルのON/OFF＝いずれも壁時計を前後に飛ばす。**前に飛べば `dt` が膨張（滞在水増し）／後ろに戻れば `dt` が負（`totalActive+=dt` で滞在が目減り）**。`tick()` 343行に `dt` の下限/上限ガードは無い（grep 0件）＝第26回で提案したクランプも未実装。しかも**可視トグルも凍結も伴わない**ため P12（復帰リセット）も第46回（throttle）も発火せず素通りする。
+- **なぜ重要か（計測土台の芯）**：`active_sec`・箱の `activeView+=dt*coverage`（362行）＝**全スタジオの滞在/視線の土台の物差し**。時計ジャンプを跨いだ来訪だけ秒数が静かに狂い、**どの来訪で起きたか区別できない**＝店主に見せる「平均滞在/この箱を◯秒見た」が個別に汚れ、下流の因果(causal.mjs)の入力(熱心さ)が歪む。頻度は低いが「起きても気づけない」のが怖い（目付の存在理由「入力が狂えば因果もレポートも砂上」の時計版）。
+- **根拠URL（S/A）**：
+  - MDN「Performance: now() method」（S・developer.mozilla.org はDNS遮断ゆえ raw.githubusercontent.com/mdn ミラーで一次確認）＝「its current time never decreases and isn't subject to adjustments」「`Date.now()` may have been impacted by system and user clock adjustments, clock skew」 https://raw.githubusercontent.com/mdn/content/main/files/en-us/web/api/performance/now/index.md
+  - W3C「High Resolution Time」（S・www.w3.org はDNS遮断＝検索相互一致で確認）＝単調時計は減らない/調整免疫・`Date.now()` 差は負になりうる https://www.w3.org/TR/hr-time-3/
+  - Chrome for Developers「When milliseconds are not enough: performance.now()」（A）＝性能計測は単調時計で https://developer.chrome.com/blog/when-milliseconds-are-not-enough-performance-now
+  - 現物（A・grep 2026-11-19）：index.html 322-323行（`lastTick=Date.now()`）・342-349行（`dt=(now-lastTick)/1000`・ガードなし）・362行（`activeView+=dt*coverage`）・367行（`setTimeout(tick,TICK)`）。
+- **対策案（コードは触らない・提案のみ・採否と優先度はDaiya/メイン領分）**：
+  - **(a) `dt` を単調時計で積む（源流の修正）**＝`tick()` の `now` を `performance.now()` に変える（`lastTick`/`markActivity` の“経過を測る用途”も単調側へ）。**カレンダー時刻として保存したい値（`anon_id` の `at`・`started_at`・`last_seen_at`）は `Date.now()` のまま**＝「長さは単調時計・人に見せる時刻は壁時計」とW3C定石どおり二枚に割る。
+  - **(b) 当面の軽いガード（単調化しない場合の保険）**＝`var dt=(now-lastTick)/1000; if(dt<0||dt>CLAMP) dt=0;`（負や巨大な `dt` はその刻みを無加算にし `lastTick` だけ取り直す）＝第26回「異常dtゲート」を**負値側にも拡張**（`Math.min` だけでは負を止められない点の補完）。
+  - **(c) どちらも P12（可視復帰リセット）・P7（bfcache復帰）と同一往復で二重に走らないことだけ確認**（第46回・P12本体の非重複メモを踏襲）。
+- **検証方法（番人/メイン領分・1スタジオ目本番化時・P7/P12境界テスト群で）**：①来訪中に端末時刻を**(i)数分戻す(ii)数分進める(iii)夏時間切替**を注入し、`active_sec` が負/異常膨張にならないか（単調時計 or ガードで吸収されるか）②正常時（時計無変更）に `performance.now()` 化しても従来の `active_sec` と一致するか（回帰）③箱の `activeView`(362行)も同様に保護されるか④`Date.now()` を使い続ける保存値（カレンダー時刻）に影響が出ていないか。**数字は実測で出す＝ここで作らない。**
+- **優先度**：**低〜中**＝頻度は低いが「起きても検知不能」ゆえ土台の信頼性として中。**(a)は数行の置換・(b)は1行**＝実装は軽い。判断はDaiya。
+- **位置づけ**：第35(CNAME)・第41(farbling)・第42(event-time)・第46(LPM)と続く「同一オリジン/素の設計ゆえ免疫＋残る1点をガード」系譜の中で、**本件は珍しく“免疫でなく本物の穴”＝しかも自分の過去ノート(第46回)の自己評価の訂正**。起源掘り#113（なぜ単調時計が作られたか）と対：発明が解いた「壁時計は時刻調整で壊れる」問題を、Lokuは今も `Date.now()` で素手で持っている。**新種P番号なし（45〜113継続）・目付第114回巡回からの還流・コード無変更。**
