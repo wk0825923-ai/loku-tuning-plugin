@@ -3046,3 +3046,34 @@ Safari 27（正式版・2026-09中旬出荷）に **Apple純正のMCPサーバ�
 - **検証方法（番人/メイン領分・1スタジオ目本番化時・P7/P12境界テスト群で）**：①来訪中に端末時刻を**(i)数分戻す(ii)数分進める(iii)夏時間切替**を注入し、`active_sec` が負/異常膨張にならないか（単調時計 or ガードで吸収されるか）②正常時（時計無変更）に `performance.now()` 化しても従来の `active_sec` と一致するか（回帰）③箱の `activeView`(362行)も同様に保護されるか④`Date.now()` を使い続ける保存値（カレンダー時刻）に影響が出ていないか。**数字は実測で出す＝ここで作らない。**
 - **優先度**：**低〜中**＝頻度は低いが「起きても検知不能」ゆえ土台の信頼性として中。**(a)は数行の置換・(b)は1行**＝実装は軽い。判断はDaiya。
 - **位置づけ**：第35(CNAME)・第41(farbling)・第42(event-time)・第46(LPM)と続く「同一オリジン/素の設計ゆえ免疫＋残る1点をガード」系譜の中で、**本件は珍しく“免疫でなく本物の穴”＝しかも自分の過去ノート(第46回)の自己評価の訂正**。起源掘り#113（なぜ単調時計が作られたか）と対：発明が解いた「壁時計は時刻調整で壊れる」問題を、Lokuは今も `Date.now()` で素手で持っている。**新種P番号なし（45〜113継続）・目付第114回巡回からの還流・コード無変更。**
+
+---
+
+## 追加観点（2026-11-20・目付第115回巡回からの還流）＝ビート1・2「計測精度の敵（離脱時送信の冪等性）」＝離脱flushは `visibilitychange(hidden)`＋`pagehide` の二重発火で**同一バッチが二度着信**しうる／**値型は P1 の max/先着/既存チェックで冪等＝鍵無しで effectively-once＝免疫**・**唯一の抜け＝append/件数型 `bot_excluded.push`（app.mjs 386）が二重発火で件数水増し**＝P1（単調増加マージ）への追加観点（新種P番号なし・コード無変更）
+
+### 【P1への追加観点＝二重着信(duplicate arrival)の“値/件数”切り分け／P1は値を鍵無しで冪等化＝免疫・件数型フィールドだけ射程外】新種P番号なし
+
+**前提**：以下は**新規P番号を起こさない**＝第44回P28以来の新種なし継続（45〜115）。本件は既存種 **P0（離脱flush実装）・P1（単調増加マージ）・P2（bot除外）** の**射程の精密化と“残る1点”の明示**。**追記前に本ファイル全読＝`二重`/`重複`/`idempot`/`冪等`/`dedup`/`batch_id`/`event_id`/`visibilitychange.*pagehide`/`bot_excluded` を grep し、以下の既存種と非重複を確認**：
+- **P0（離脱flush・line 21-28付近）**＝`visibilitychange(hidden)`＋`pagehide` の二段実装を提案し、line 28 に「`flush()` は冪等に（同一 `anon_id` で複数回来る前提）」と**送信側の意図**を記載。**だが“受け口のどのフィールドが冪等でどれが非冪等か”の切り分けは未記載**＝本件はその補完。
+- **P1（単調増加マージ・実装済）**＝「後着の**途中スナップショット（小さい“値”）**が確定値を巻き戻さないよう `Math.max`」＝**異なる中身のバッチ**を守る種。本件は「**同一の中身のバッチが同一遷移で二度来る**」側＝P1の“もう一つの効能（値の冪等化）”の明文化＋その射程外の件数型を指摘。
+- **P2（bot除外・実装済）**＝UA/挙動でbotを弾き `bot_excluded` に記録し件数可視化。**本件はその `bot_excluded.push` が“二重着信で水増しする非冪等経路”である点**＝P2の実装の副作用の指摘（bot判定ロジック自体はP2のまま・非重複）。
+- **P19（sendBeacon返り値/64KiB・line 483付近）**＝送信の成否/サイズ。本件は成否でなく「成功が二度起きた時の受け口の挙動」＝別facet。
+
+いずれも**「同一バッチの二度着信で、値は守られるが件数型だけ水増しする」切り分けは未記載**＝本件は既存種の射程精密化。**コードは触っていない。** 採否・優先度・実装・QAはDaiya／メイン領分。
+
+- **現象（S一次＋A実装者レポ＋現物grep A）**：
+  - **(1) 二重発火は仕様どおり起きる（S）**＝現物 index.html 475-476行は `document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush();})` と `window.addEventListener('pagehide',flush)` の**両方**を同じ `flush()`（465-473行＝`navigator.sendBeacon(FLUSH_ENDPOINT, Blob[application/json])`）に繋ぐ（grep確認）。MDN一次＝「`visibilitychange` は `pagehide` の**後に**delivered／最も確実なのは `visibilitychange` で送り `pagehide` をフォールバックに足すこと／`pagehide` はモバイルで確実に発火しない」。**スマホでアプリ切替→終了の典型フローでは両方鳴る＝同一ペイロードが二度 `sendBeacon` される**（＝二重着信）。
+  - **(2) 値型フィールドは P1 等で冪等＝免疫（現物grep A）**＝受け口 app.mjs collect は：`active_sec = Math.max(sess.active_sec||0, d.active_sec)`（429行）／box_stats の `active_view/engagement/revisits` も全て `Math.max`（443-445行）／`entry_*`・`referrer`・`target_id`・`change_id`・`utm`・`lt_ad` は `== null` ガードで**先着優先**（399-412/421-424行）／タグ発火は `recordFires`→既存チェック(`exists`)してから push（193行）。**同一バッチが二度届いても全フィールドが“同じ値で上書き/既にあるので足さない”＝結果不変＝実質 exactly-once（effectively-once-on-values）**。しかも**idempotency key（`batch_id`/`event_id`）を使わず**、`Math.max` という**演算自体が冪等**な性質で達成（CRDT的）＝鍵台帳が要らない綺麗な設計。
+  - **(3) 唯一の抜け＝append/件数型（現物grep A）**＝`if (BOT_UA_RE.test(ua)) { store.bot_excluded.push({reason:'bot_ua', ua, page_slug, at:Date.now()}); return send(200,{ok:true,excluded:'bot_ua'}); }`（385-388行）＝**bot UAを弾いた記録を届いた回数だけ1行 push**し、max統合に乗らず return。**botが離脱時に二重ビーコンを撃つと `bot_excluded` の件数が2倍**になりうる。これは因果/レポートの“値”ではなく、**コメント383行「GA4は黙って消すがうちは件数を可視化＝店主への信頼の担保」のそのカウンタ**＝水増しで信頼演出が過大表示。
+- **なぜ重要か**：Lokuの主役データ（滞在秒・視線）は**born免疫＝これは強い安心材料として店主に言える**（“二度届いても数字は動きません”）。一方 `bot_excluded` は「数字の正確さで売る」商品の**信頼カウンタ**ゆえ、水増しは実害小でも筋として放置しづらい。目付の存在理由「入力の件数まで含めて信用できるか」の一例。
+- **根拠URL（S/A）**：
+  - MDN「Navigator: sendBeacon()」（S・developer.mozilla.org は今回DNS遮断＝検索相互一致で確認）＝「the `visibilitychange` event … is delivered after the `pagehide` event」「most reliable: send in `visibilitychange`, add `pagehide` as a fallback」「`pagehide` is not reliably triggered, especially on mobile」 https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon
+  - oneuptime「Make Browser Beacons More Reliable During Navigation」2026-08-11（A・実装者レポ・oneuptime.com は今回DNS遮断＝検索一致で確認）＝「the collector should accept a duplicate batch without storing duplicate metrics／deduplication key: tenant + batchId／never send the same batch with Fetch after Beacon returns true」 https://oneuptime.com/blog/post/2026-08-11-browser-beacons-navigation-reliability/view
+  - 現物（A・grep 2026-11-20）：index.html 461-476行（P0 flush＝sendBeacon・visibilitychange+pagehide 二重配線・800ms間引きの土台あり）・app.mjs 385-388行（`bot_excluded.push`＋return＝非冪等）・429/443-445行（`Math.max`＝鍵無し冪等）・399-412/421-424行（先着優先）・193行（タグ既存チェック）。
+- **対策案（コードは触らない・提案のみ・採否と優先度はDaiya/メイン領分）**：
+  - **(a) 送信側に「1遷移1送信」の見張りフラグ（最小・推奨の第一候補）**＝`flush()` の先頭で「直近送信からNms（例：数百ms）以内なら無送信」の間引き（現物は既に800ms間引きの土台を持つ＝その延長で二重発火の一方を落とす）。※ただし `visibilitychange(hidden)` と `pagehide` は離脱の瞬間に近接するため、フラグは「送った」記録だけで足り、タイマー不要。
+  - **(b) 受け口の件数型フィールドに `batch_id` 重複排除（確実だが台帳が要る）**＝SDKが1回の離脱で1つの `batch_id` を払い（二重発火でも同じ `batch_id`）、受け口は `bot_excluded`（および将来の append/件数型）で**同一 `batch_id` の二度目を捨てる**。値型(max/先着)は**鍵不要のまま現状維持**でよい＝鍵は“数える系”にだけ付ける最小適用。
+  - **(c) どちらを採っても値型マージ（P1）とは独立**＝値は現状で既に免疫ゆえ改修不要。本件の対策は**件数型の水増しだけ**を対象にすればよい（過剰改修を避ける切り分け）。
+- **検証方法（番人/メイン領分・1スタジオ目本番化時・P7/P12境界テスト群で）**：①**同一遷移で `visibilitychange(hidden)`→`pagehide` を順に発火**させ collect が二度叩かれる状況を作り、(i) `active_sec`・box stats が**二重計上されない**（P1免疫の回帰確認）、(ii) **bot UAセッションで `bot_excluded` 件数が2倍にならないか**（唯一の抜けの実証）②対策(a)適用後に離脱データが**落ちない**こと（間引きしすぎて本送信まで消さない）③対策(b)適用時、正常な複数バッチ（異なる中身・P1が守る側）を `batch_id` 違いとして**潰さない**こと（値の巻き戻し防止と両立）。**数字は実測で出す＝ここで作らない。**
+- **優先度**：**低〜中**＝値（主役データ）は免疫ゆえ緊急でないが、信頼カウンタの正確さとして中。**(a)は数行**＝実装は軽い。判断はDaiya。
+- **位置づけ**：P0（離脱の実装）・P1（値の冪等マージ）が敷いた土台の上で、**「二度来ても値は壊れないが件数だけ膨らむ」という“あと一箇所”**を起源掘り#114（exactly-once断念→冪等受け口）の視点で照らした回。第114回（時計源）に続き**起源掘りが免疫確認で終わらず本物の抜けを射抜いた2回連続**。**新種P番号なし（45〜115継続）・目付第115回巡回からの還流・コード無変更。**
